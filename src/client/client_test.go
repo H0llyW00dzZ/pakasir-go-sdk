@@ -16,11 +16,13 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	neturl "net/url"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -367,6 +369,9 @@ func TestIsRetryable(t *testing.T) {
 		{"tls unknown authority", &x509.UnknownAuthorityError{}, false},
 		{"tls hostname error", &x509.HostnameError{}, false},
 		{"tls cert invalid", &x509.CertificateInvalidError{}, false},
+		{"tls cert verification", &tls.CertificateVerificationError{}, false},
+		{"url error wrapping transient", &neturl.Error{Op: "Get", Err: errors.New("timeout")}, true},
+		{"url error wrapping tls", &neturl.Error{Op: "Get", Err: &x509.UnknownAuthorityError{}}, false},
 	}
 
 	for _, tt := range tests {
@@ -374,4 +379,29 @@ func TestIsRetryable(t *testing.T) {
 			assert.Equal(t, tt.want, isRetryable(tt.err))
 		})
 	}
+}
+
+// --- Do non-retryable network error ---
+
+func TestDoNonRetryableNetworkError(t *testing.T) {
+	// Use a TLS server with a self-signed cert so the client gets
+	// an x509.UnknownAuthorityError, which is non-retryable.
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	// Use a plain HTTP client (no custom TLS config) so the cert fails.
+	c := New("proj", "key",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(&http.Client{}),
+		WithRetries(2),
+		WithRetryWait(1*time.Millisecond, 2*time.Millisecond),
+	)
+
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	// Must fail immediately with ErrRequestFailed, not ErrRequestFailedAfterRetries.
+	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailed)
+	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
 }
