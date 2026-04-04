@@ -82,7 +82,7 @@ type Client struct {
 	RetryWaitMax time.Duration
 
 	// bufferPool is the internal buffer pool for JSON serialization.
-	bufferPool *gc.Pool
+	bufferPool gc.Pool
 }
 
 // New creates a new Pakasir API [Client] with the given project slug, API key,
@@ -162,6 +162,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body io.Reader) ([
 		resp.Body.Close()
 
 		if readErr != nil {
+			buf.Reset()
 			c.bufferPool.Put(buf)
 			lastErr = readErr
 			continue
@@ -169,6 +170,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body io.Reader) ([
 
 		data := make([]byte, buf.Len())
 		copy(data, buf.Bytes())
+		buf.Reset()
 		c.bufferPool.Put(buf)
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
@@ -194,7 +196,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body io.Reader) ([
 }
 
 // GetBufferPool returns the client's buffer pool for use by services.
-func (c *Client) GetBufferPool() *gc.Pool {
+func (c *Client) GetBufferPool() gc.Pool {
 	return c.bufferPool
 }
 

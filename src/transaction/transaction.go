@@ -15,6 +15,7 @@
 package transaction
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -58,14 +59,17 @@ func (s *Service) Create(ctx context.Context, method constants.PaymentMethod, re
 	}
 
 	buf := s.client.GetBufferPool().Get()
-	defer s.client.GetBufferPool().Put(buf)
+	defer func() {
+		buf.Reset()
+		s.client.GetBufferPool().Put(buf)
+	}()
 
 	if err := json.NewEncoder(buf).Encode(body); err != nil {
 		return nil, fmt.Errorf("failed to encode request: %w", err)
 	}
 
 	path := fmt.Sprintf("/api/transactioncreate/%s", method)
-	data, err := s.client.Do(ctx, http.MethodPost, path, buf)
+	data, err := s.client.Do(ctx, http.MethodPost, path, bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -94,13 +98,16 @@ func (s *Service) Cancel(ctx context.Context, req *CancelRequest) error {
 	}
 
 	buf := s.client.GetBufferPool().Get()
-	defer s.client.GetBufferPool().Put(buf)
+	defer func() {
+		buf.Reset()
+		s.client.GetBufferPool().Put(buf)
+	}()
 
 	if err := json.NewEncoder(buf).Encode(body); err != nil {
 		return fmt.Errorf("failed to encode request: %w", err)
 	}
 
-	_, err := s.client.Do(ctx, http.MethodPost, "/api/transactioncancel", buf)
+	_, err := s.client.Do(ctx, http.MethodPost, "/api/transactioncancel", bytes.NewReader(buf.Bytes()))
 	return err
 }
 

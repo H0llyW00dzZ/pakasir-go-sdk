@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gc provides a memory-efficient buffer pool backed by [sync.Pool].
+// Package gc provides a memory-efficient buffer pool backed by [bytebufferpool].
 //
 // It is used internally by the Pakasir SDK to reduce allocation pressure
 // during JSON serialization and HTTP request/response processing.
@@ -20,7 +20,12 @@
 // # Basic Usage
 //
 //	buf := gc.Default.Get()
-//	defer gc.Default.Put(buf)
+//	defer func() {
+//	    buf.Reset()
+//	    gc.Default.Put(buf)
+//	}()
 //
 //	json.NewEncoder(buf).Encode(payload)
+//
+// [bytebufferpool]: https://github.com/valyala/bytebufferpool
 package gc
