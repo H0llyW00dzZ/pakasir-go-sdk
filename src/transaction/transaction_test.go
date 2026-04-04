@@ -32,11 +32,10 @@ import (
 func newTestService(t *testing.T, handler http.HandlerFunc) (*Service, *httptest.Server) {
 	t.Helper()
 	srv := httptest.NewServer(handler)
-	c, err := client.New("test-project", "test-key",
+	c := client.New("test-project", "test-key",
 		client.WithBaseURL(srv.URL),
 		client.WithRetries(0),
 	)
-	require.NoError(t, err)
 	return NewService(c), srv
 }
 

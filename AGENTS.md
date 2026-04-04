@@ -100,7 +100,7 @@ Alias `net/url` as `neturl` when inside the `url` package.
 - **Types**: PascalCase (`Client`, `Service`, `APIError`, `PaymentInfo`).
 - **Constants**: grouped in `const ()` blocks with consistent prefix — `Method*`, `Status*`, `Default*`, `Msg*`, `Err*`, `SDK*`.
 - **Enums**: typed strings (`PaymentMethod string`, `Language string`, `MessageKey string`) with a `Valid()` method and unexported validation map.
-- **Constructors**: `New(...)` for the primary type, `NewService(c)` for service types.
+- **Constructors**: `New(...)` returns `*Client` (no error); `NewService(c)` for service types. Credential validation is deferred to `Do()`.
 - **Functional options**: `type Option func(*Client)` with `With*` functions.
 - **Receivers**: single-letter matching the type (`c *Client`, `s *Service`, `e *Event`, `m PaymentMethod`).
 - **Unexported helpers**: camelCase (`isRetryable`, `calculateBackoff`, `validateRequest`).
@@ -124,7 +124,8 @@ type PaymentInfo struct {
 - **`fmt.Errorf` wrapping** for non-sentinel errors: `fmt.Errorf("context: %w", err)` with lowercase prefix.
 - **`APIError`** struct for HTTP error responses; checked with `errors.As()`.
 - **Package-prefixed messages** in standalone packages: `"webhook: ..."`, `"url: ..."`.
-- **Validate early, return immediately** at the top of functions.
+- **Validate early, return immediately** at the top of functions. `client.New` is an exception: it defers project/API-key validation to `Do()` so initialization is infallible.
+- **Nil-guard request pointers** in service methods before accessing fields.
 
 ### Documentation
 

@@ -19,7 +19,7 @@
 //
 // # Basic Usage
 //
-//	c, _ := client.New("my-project", "api-key-xxx")
+//	c := client.New("my-project", "api-key-xxx")
 //	txnService := transaction.NewService(c)
 //
 //	// Create a QRIS transaction

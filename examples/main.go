@@ -35,14 +35,11 @@ import (
 
 func main() {
 	// 1. Initialize the client with functional options.
-	c, err := client.New("depodomain", "xxx123",
+	c := client.New("depodomain", "xxx123",
 		client.WithTimeout(15*time.Second),
 		client.WithLanguage(i18n.Indonesian),
 		client.WithRetries(2),
 	)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
 
 	ctx := context.Background()
 
