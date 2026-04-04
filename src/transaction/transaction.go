@@ -152,11 +152,5 @@ func (s *Service) Detail(ctx context.Context, req *DetailRequest) (*DetailRespon
 
 // validateRequest performs common validation for transaction requests.
 func (s *Service) validateRequest(orderID string, amount int64) error {
-	if orderID == "" {
-		return sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
-	}
-	if amount <= 0 {
-		return sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidAmount, i18n.MsgInvalidAmount)
-	}
-	return nil
+	return request.ValidateOrderAndAmount(s.client.Language, orderID, amount)
 }

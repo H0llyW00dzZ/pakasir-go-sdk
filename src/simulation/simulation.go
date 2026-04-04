@@ -55,11 +55,8 @@ func (s *Service) Pay(ctx context.Context, req *PayRequest) error {
 	if req == nil {
 		return sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
 	}
-	if req.OrderID == "" {
-		return sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
-	}
-	if req.Amount <= 0 {
-		return sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidAmount, i18n.MsgInvalidAmount)
+	if err := request.ValidateOrderAndAmount(s.client.Language, req.OrderID, req.Amount); err != nil {
+		return err
 	}
 
 	body := request.Body{

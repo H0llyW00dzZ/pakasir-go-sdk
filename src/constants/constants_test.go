@@ -48,6 +48,31 @@ func TestPaymentMethodString(t *testing.T) {
 	assert.Equal(t, "bni_va", MethodBNIVA.String())
 }
 
+func TestTransactionStatusValid(t *testing.T) {
+	valid := []TransactionStatus{
+		StatusCompleted, StatusPending, StatusExpired, StatusCancelled,
+	}
+	for _, s := range valid {
+		t.Run(string(s), func(t *testing.T) {
+			assert.True(t, s.Valid(), "expected %q to be valid", s)
+		})
+	}
+}
+
+func TestTransactionStatusInvalid(t *testing.T) {
+	invalid := []TransactionStatus{"", "unknown", "failed", "refunded"}
+	for _, s := range invalid {
+		t.Run(string(s), func(t *testing.T) {
+			assert.False(t, s.Valid(), "expected %q to be invalid", s)
+		})
+	}
+}
+
+func TestTransactionStatusString(t *testing.T) {
+	assert.Equal(t, "completed", StatusCompleted.String())
+	assert.Equal(t, "pending", StatusPending.String())
+}
+
 func TestUserAgent(t *testing.T) {
 	ua := UserAgent()
 	assert.Contains(t, ua, SDKName)

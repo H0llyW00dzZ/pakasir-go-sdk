@@ -22,6 +22,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
 )
 
 const testPayload = `{"amount":22000,"order_id":"240910HDE7C9","project":"depodomain","status":"completed","payment_method":"qris","completed_at":"2024-09-10T08:07:02.819+07:00"}`
@@ -31,7 +33,7 @@ func assertValidEvent(t *testing.T, event *Event) {
 	assert.Equal(t, int64(22000), event.Amount)
 	assert.Equal(t, "240910HDE7C9", event.OrderID)
 	assert.Equal(t, "depodomain", event.Project)
-	assert.Equal(t, "completed", event.Status)
+	assert.Equal(t, constants.StatusCompleted, event.Status)
 	assert.Equal(t, "qris", event.PaymentMethod)
 }
 
@@ -72,6 +74,12 @@ func TestParseRequestSuccess(t *testing.T) {
 	event, err := ParseRequest(r)
 	require.NoError(t, err)
 	assertValidEvent(t, event)
+}
+
+func TestParseRequestNilRequest(t *testing.T) {
+	_, err := ParseRequest(nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "request body is nil")
 }
 
 func TestParseRequestNilBody(t *testing.T) {

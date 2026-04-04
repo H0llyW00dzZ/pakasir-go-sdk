@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/rand/v2"
 	"net/http"
 	neturl "net/url"
 	"time"
@@ -227,7 +228,7 @@ func (c *Client) buildRequest(ctx context.Context, method, path string, body []b
 	}
 
 	req.Header.Set("User-Agent", constants.UserAgent())
-	if method == http.MethodPost {
+	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
@@ -255,10 +256,15 @@ func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
 }
 
 // calculateBackoff returns the wait duration for the given attempt
-// using exponential backoff clamped to [RetryWaitMin, RetryWaitMax].
+// using exponential backoff with full jitter, clamped to [RetryWaitMin, RetryWaitMax].
+// The jitter randomizes the wait in [RetryWaitMin, computed] to avoid thundering herd.
 func (c *Client) calculateBackoff(attempt int) time.Duration {
 	mult := math.Pow(2, float64(attempt-1))
 	wait := min(time.Duration(float64(c.RetryWaitMin)*mult), c.RetryWaitMax)
+	// Full jitter: uniform random in [RetryWaitMin, wait].
+	if wait > c.RetryWaitMin {
+		wait = c.RetryWaitMin + time.Duration(rand.Int64N(int64(wait-c.RetryWaitMin+1)))
+	}
 	return wait
 }
 
