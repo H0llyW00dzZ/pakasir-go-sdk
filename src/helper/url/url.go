@@ -34,6 +34,7 @@ package url
 import (
 	"fmt"
 	neturl "net/url"
+	"strings"
 )
 
 // Options configures the payment redirect URL.
@@ -56,8 +57,12 @@ type Options struct {
 
 // Build generates a Pakasir payment redirect URL.
 //
-// It returns an error if the orderID is empty or the amount is not positive.
+// It returns an error if the project is empty, the orderID is empty,
+// or the amount is not positive.
 func Build(baseURL, project string, amount int64, opts Options) (string, error) {
+	if project == "" {
+		return "", fmt.Errorf("url: project is required")
+	}
 	if opts.OrderID == "" {
 		return "", fmt.Errorf("url: order ID is required")
 	}
@@ -70,7 +75,8 @@ func Build(baseURL, project string, amount int64, opts Options) (string, error) 
 		pathPrefix = "paypal"
 	}
 
-	u := fmt.Sprintf("%s/%s/%s/%d", baseURL, pathPrefix, project, amount)
+	base := strings.TrimRight(baseURL, "/")
+	u := fmt.Sprintf("%s/%s/%s/%d", base, pathPrefix, neturl.PathEscape(project), amount)
 
 	params := neturl.Values{}
 	params.Set("order_id", opts.OrderID)

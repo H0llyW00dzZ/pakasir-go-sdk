@@ -17,10 +17,14 @@ package client
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"math"
 	"net/http"
+	neturl "net/url"
 	"time"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
@@ -140,6 +144,13 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 		resp, err := c.HTTPClient.Do(req)
 		if err != nil {
 			lastErr = err
+			if !isRetryable(err) {
+				return nil, fmt.Errorf("%s: %w: %w",
+					fmt.Sprintf(i18n.Get(c.Language, i18n.MsgRequestFailedAfterRetries), c.Retries),
+					sdkerrors.ErrRequestFailed,
+					lastErr,
+				)
+			}
 			continue
 		}
 
@@ -158,7 +169,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 			Body:       string(data),
 		}
 
-		if !isRetryable(resp.StatusCode, nil) {
+		if !isRetryableStatus(resp.StatusCode) {
 			return nil, apiErr
 		}
 		lastErr = apiErr
@@ -181,7 +192,7 @@ func (c *Client) GetBufferPool() gc.Pool {
 // cancelled. On the first attempt (0) it returns immediately.
 func (c *Client) waitForRetry(ctx context.Context, attempt int) error {
 	if attempt == 0 {
-		return ctx.Err()
+		return nil
 	}
 
 	timer := time.NewTimer(c.calculateBackoff(attempt))
@@ -190,7 +201,7 @@ func (c *Client) waitForRetry(ctx context.Context, attempt int) error {
 		timer.Stop()
 		return ctx.Err()
 	case <-timer.C:
-		return ctx.Err()
+		return nil
 	}
 }
 
@@ -244,13 +255,9 @@ func (c *Client) calculateBackoff(attempt int) time.Duration {
 	return wait
 }
 
-// isRetryable determines whether a request should be retried
-// based on the HTTP status code and/or error.
-func isRetryable(statusCode int, err error) bool {
-	if err != nil {
-		// Network-level errors are generally retryable.
-		return true
-	}
+// isRetryableStatus determines whether a request should be retried
+// based on the HTTP status code.
+func isRetryableStatus(statusCode int) bool {
 	switch statusCode {
 	case http.StatusInternalServerError,
 		http.StatusBadGateway,
@@ -260,4 +267,36 @@ func isRetryable(statusCode int, err error) bool {
 	default:
 		return false
 	}
+}
+
+// isRetryable determines whether a network-level error is transient
+// and worth retrying. TLS certificate errors and other permanent
+// failures return false to avoid wasting retry attempts.
+func isRetryable(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// Unwrap *url.Error to inspect the underlying cause.
+	if urlErr, ok := errors.AsType[*neturl.Error](err); ok {
+		err = urlErr.Err
+	}
+
+	// TLS certificate errors are permanent — do not retry.
+	if _, ok := errors.AsType[*tls.CertificateVerificationError](err); ok {
+		return false
+	}
+	if _, ok := errors.AsType[*x509.UnknownAuthorityError](err); ok {
+		return false
+	}
+	if _, ok := errors.AsType[*x509.HostnameError](err); ok {
+		return false
+	}
+	if _, ok := errors.AsType[*x509.CertificateInvalidError](err); ok {
+		return false
+	}
+
+	// All other network errors (timeouts, connection refused, etc.)
+	// are considered transient.
+	return true
 }
