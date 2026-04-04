@@ -1,0 +1,77 @@
+# Copyright 2026 H0llyW00dzZ
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 🧪 Test Coverage
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.ignore'
+      - '.github/dependabot.yml'
+  pull_request:
+    branches: [ master ]
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.ignore'
+      - '.github/dependabot.yml'
+
+jobs:
+  coverage:
+    name: 🔢 Test Coverage on ${{ matrix.os }} (Go ${{ matrix.go-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-22.04, ubuntu-24.04-arm, ubuntu-22.04-arm, macos-latest, windows-latest, windows-2022, windows-11-arm]
+        go-version: ['1.26.0']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Run go vet
+      run: go vet ./src/...
+      shell: bash
+
+    - name: Run tests with coverage (with race detector)
+      if: ${{ matrix.os != 'windows-11-arm' }}
+      run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./src/...
+      shell: bash
+
+    - name: Run tests with coverage (without race detector)
+      if: ${{ matrix.os == 'windows-11-arm' }}
+      run: go test -v -coverprofile=coverage.txt -covermode=atomic ./src/...
+      shell: bash
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      with:
+        files: ./coverage.txt
+        flags: unittests
+        name: codecov-umbrella
+
