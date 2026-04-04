@@ -42,7 +42,8 @@
 //
 // # Error Handling
 //
-// All methods validate inputs before sending requests. Invalid inputs return
-// localized errors that support [errors.Is] against sentinel values from
-// the errors package (e.g., errors.ErrInvalidOrderID, errors.ErrInvalidAmount).
+// All methods validate inputs before sending requests. A nil request pointer
+// returns [errors.ErrNilRequest]. Invalid fields return localized errors that
+// support [errors.Is] against sentinel values from the errors package
+// (e.g., [errors.ErrInvalidOrderID], [errors.ErrInvalidAmount]).
 package transaction

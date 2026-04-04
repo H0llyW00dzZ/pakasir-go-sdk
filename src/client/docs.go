@@ -39,6 +39,18 @@
 //   - [WithRetryWait]: Configure backoff min/max durations (auto-swapped if inverted)
 //   - [WithBufferPool]: Provide a custom buffer pool
 //
+// # Encapsulation
+//
+// All [Client] struct fields are unexported. Read-only access is provided
+// via getter methods: [Client.Project], [Client.APIKey], [Client.Lang],
+// and [Client.GetBufferPool]. Configuration must be done through [New]
+// and functional options.
+//
+// # Thread Safety
+//
+// A [Client] must not be modified after first use. Concurrent calls to
+// [Client.Do] are safe.
+//
 // # Retry Logic
 //
 // The client automatically retries requests that encounter transient

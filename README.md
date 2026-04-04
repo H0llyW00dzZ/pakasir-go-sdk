@@ -64,6 +64,7 @@ func main() {
 - **Buffer Pooling** — Memory-efficient request serialization via [`bytebufferpool`](https://github.com/valyala/bytebufferpool)
 - **Exponential Backoff with Jitter** — Automatic retry for transient failures (5xx, network errors)
 - **i18n** — Localized error messages in English and Indonesian
+- **Sentinel Errors** — Programmatic error handling via `errors.Is` and `errors.As`
 - **URL Builder** — Helper for redirect-based payment integrations
 
 ## Project Structure
@@ -148,6 +149,16 @@ The webhook package works with **any Go HTTP framework** via three entry points:
 | `webhook.ParseRequest(r)` | `*http.Request` | net/http, Chi |
 | `webhook.ParseBytes(b)` | `[]byte` | Fiber |
 
+All parse functions return sentinel errors for programmatic handling via `errors.Is`:
+
+| Sentinel | Condition |
+|---|---|
+| `webhook.ErrNilReader` | nil `io.Reader` passed to `Parse` |
+| `webhook.ErrNilRequest` | nil `*http.Request` or nil body passed to `ParseRequest` |
+| `webhook.ErrEmptyBody` | empty payload passed to `ParseBytes` |
+| `webhook.ErrReadBody` | body read failure (wraps underlying cause) |
+| `webhook.ErrDecodeBody` | JSON decode failure (wraps underlying cause) |
+
 ```go
 // net/http
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
@@ -168,6 +179,30 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     w.WriteHeader(http.StatusOK)
+}
+```
+
+## Error Handling
+
+The SDK provides sentinel errors for programmatic handling via `errors.Is`:
+
+| Sentinel | Package | Condition |
+|---|---|---|
+| `errors.ErrInvalidProject` | `errors` | Empty project slug |
+| `errors.ErrInvalidAPIKey` | `errors` | Empty API key |
+| `errors.ErrInvalidOrderID` | `errors` | Empty order ID |
+| `errors.ErrInvalidAmount` | `errors` | Non-positive amount |
+| `errors.ErrInvalidPaymentMethod` | `errors` | Unsupported payment method |
+| `errors.ErrNilRequest` | `errors` | Nil request pointer passed to a service method |
+| `errors.ErrRequestFailed` | `errors` | Permanent request failure (non-retryable) |
+| `errors.ErrRequestFailedAfterRetries` | `errors` | All retry attempts exhausted |
+
+API error responses are returned as `*errors.APIError` and can be inspected via `errors.As`:
+
+```go
+var apiErr *sdkerrors.APIError
+if errors.As(err, &apiErr) {
+    fmt.Printf("Status: %d, Body: %s\n", apiErr.StatusCode, apiErr.Body)
 }
 ```
 
