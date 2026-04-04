@@ -218,6 +218,7 @@ func TestDoRetriesExhausted(t *testing.T) {
 	)
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
 	assert.Contains(t, err.Error(), "request failed after")
 }
 
@@ -279,6 +280,7 @@ func TestDoNetworkErrorRetryExhausted(t *testing.T) {
 
 	_, doErr := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, doErr)
+	assert.ErrorIs(t, doErr, sdkerrors.ErrRequestFailedAfterRetries)
 	assert.Contains(t, doErr.Error(), "request failed after")
 }
 
@@ -314,6 +316,20 @@ func TestCalculateBackoff(t *testing.T) {
 	assert.Equal(t, 100*time.Millisecond, c.calculateBackoff(1)) // 100ms * 2^0
 	assert.Equal(t, 200*time.Millisecond, c.calculateBackoff(2)) // 100ms * 2^1
 	assert.Equal(t, 1*time.Second, c.calculateBackoff(5))        // clamped to max
+}
+
+// --- Options ---
+
+func TestWithHTTPClientNilIgnored(t *testing.T) {
+	c, err := New("proj", "key", WithHTTPClient(nil))
+	require.NoError(t, err)
+	assert.NotNil(t, c.HTTPClient, "nil http client must be ignored")
+}
+
+func TestWithRetriesNegativeClamped(t *testing.T) {
+	c, err := New("proj", "key", WithRetries(-5))
+	require.NoError(t, err)
+	assert.Equal(t, 0, c.Retries, "negative retries must be clamped to 0")
 }
 
 // --- isRetryable ---

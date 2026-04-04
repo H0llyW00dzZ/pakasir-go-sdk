@@ -52,6 +52,9 @@ func NewService(c *client.Client) *Service {
 //
 // It sends a POST request to /api/paymentsimulation.
 func (s *Service) Pay(ctx context.Context, req *PayRequest) error {
+	if req == nil {
+		return sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
+	}
 	if req.OrderID == "" {
 		return sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
 	}

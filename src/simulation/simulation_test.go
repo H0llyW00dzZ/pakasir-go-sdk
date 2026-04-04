@@ -50,6 +50,14 @@ func TestPaySuccess(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestPayNilRequest(t *testing.T) {
+	svc, srv := newTestService(t, func(w http.ResponseWriter, r *http.Request) {})
+	defer srv.Close()
+
+	err := svc.Pay(context.Background(), nil)
+	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
+}
+
 func TestPayEmptyOrderID(t *testing.T) {
 	svc, srv := newTestService(t, func(w http.ResponseWriter, r *http.Request) {})
 	defer srv.Close()
