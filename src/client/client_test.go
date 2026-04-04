@@ -284,9 +284,9 @@ func TestGetBufferPool(t *testing.T) {
 func TestCalculateBackoff(t *testing.T) {
 	c, _ := New("proj", "key", WithRetryWait(100*time.Millisecond, 1*time.Second))
 
-	assert.Equal(t, 100*time.Millisecond, c.calculateBackoff(1))  // 100ms * 2^0
-	assert.Equal(t, 200*time.Millisecond, c.calculateBackoff(2))  // 100ms * 2^1
-	assert.Equal(t, 1*time.Second, c.calculateBackoff(5))          // clamped to max
+	assert.Equal(t, 100*time.Millisecond, c.calculateBackoff(1)) // 100ms * 2^0
+	assert.Equal(t, 200*time.Millisecond, c.calculateBackoff(2)) // 100ms * 2^1
+	assert.Equal(t, 1*time.Second, c.calculateBackoff(5))        // clamped to max
 }
 
 // --- isRetryable ---

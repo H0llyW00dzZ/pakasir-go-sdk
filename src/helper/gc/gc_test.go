@@ -142,14 +142,14 @@ func TestPoolConcurrency(t *testing.T) {
 // mockBuffer is a minimal Buffer implementation for testing Put type-assertion.
 type mockBuffer struct{}
 
-func (m *mockBuffer) Write([]byte) (int, error)      { return 0, nil }
-func (m *mockBuffer) WriteString(string) (int, error) { return 0, nil }
-func (m *mockBuffer) WriteByte(byte) error            { return nil }
-func (m *mockBuffer) WriteTo(w io.Writer) (int64, error) { return 0, nil }
+func (m *mockBuffer) Write([]byte) (int, error)           { return 0, nil }
+func (m *mockBuffer) WriteString(string) (int, error)     { return 0, nil }
+func (m *mockBuffer) WriteByte(byte) error                { return nil }
+func (m *mockBuffer) WriteTo(w io.Writer) (int64, error)  { return 0, nil }
 func (m *mockBuffer) ReadFrom(r io.Reader) (int64, error) { return 0, nil }
-func (m *mockBuffer) Bytes() []byte    { return nil }
-func (m *mockBuffer) String() string   { return "" }
-func (m *mockBuffer) Len() int         { return 0 }
-func (m *mockBuffer) Set([]byte)       {}
-func (m *mockBuffer) SetString(string) {}
-func (m *mockBuffer) Reset()           {}
+func (m *mockBuffer) Bytes() []byte                       { return nil }
+func (m *mockBuffer) String() string                      { return "" }
+func (m *mockBuffer) Len() int                            { return 0 }
+func (m *mockBuffer) Set([]byte)                          {}
+func (m *mockBuffer) SetString(string)                    {}
+func (m *mockBuffer) Reset()                              {}
