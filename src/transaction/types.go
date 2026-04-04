@@ -14,7 +14,11 @@
 
 package transaction
 
-import "time"
+import (
+	"time"
+
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
+)
 
 // CreateRequest contains the parameters for creating a new transaction.
 type CreateRequest struct {
@@ -107,7 +111,7 @@ type TransactionInfo struct {
 	Project string `json:"project"`
 
 	// Status is the current transaction status (e.g., "completed", "pending").
-	Status string `json:"status"`
+	Status constants.TransactionStatus `json:"status"`
 
 	// PaymentMethod is the payment channel used.
 	PaymentMethod string `json:"payment_method"`

@@ -20,6 +20,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
 )
 
 // Event represents a payment notification received from the Pakasir webhook.
@@ -40,7 +42,7 @@ type Event struct {
 	Project string `json:"project"`
 
 	// Status is the transaction status (typically "completed").
-	Status string `json:"status"`
+	Status constants.TransactionStatus `json:"status"`
 
 	// PaymentMethod is the payment channel used (e.g., "qris", "bni_va").
 	PaymentMethod string `json:"payment_method"`
@@ -78,7 +80,9 @@ func Parse(r io.Reader) (*Event, error) {
 		return nil, fmt.Errorf("webhook: reader is nil")
 	}
 
-	data, err := io.ReadAll(r)
+	// Limit body reads to 1 MB to guard against oversized payloads.
+	const maxBodySize = 1 << 20 // 1 MB
+	data, err := io.ReadAll(io.LimitReader(r, maxBodySize))
 	if err != nil {
 		return nil, fmt.Errorf("webhook: failed to read body: %w", err)
 	}
@@ -92,7 +96,7 @@ func Parse(r io.Reader) (*Event, error) {
 // It reads the full request body, closes it, and unmarshals the JSON
 // into an [Event] struct.
 func ParseRequest(r *http.Request) (*Event, error) {
-	if r.Body == nil {
+	if r == nil || r.Body == nil {
 		return nil, fmt.Errorf("webhook: request body is nil")
 	}
 	defer r.Body.Close()

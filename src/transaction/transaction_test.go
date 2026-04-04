@@ -17,6 +17,7 @@ package transaction
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,6 +28,7 @@ import (
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/client"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
 	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/gc"
 )
 
 func newTestService(t *testing.T, handler http.HandlerFunc) (*Service, *httptest.Server) {
@@ -172,7 +174,7 @@ func TestDetailSuccess(t *testing.T) {
 	mockResp := DetailResponse{
 		Transaction: TransactionInfo{
 			Amount: 22000, OrderID: "240910HDE7C9", Project: "test-project",
-			Status: "completed", PaymentMethod: "qris",
+			Status: constants.StatusCompleted, PaymentMethod: "qris",
 			CompletedAt: "2024-09-10T08:07:02.819+07:00",
 		},
 	}
@@ -188,7 +190,7 @@ func TestDetailSuccess(t *testing.T) {
 
 	resp, err := svc.Detail(context.Background(), &DetailRequest{OrderID: "240910HDE7C9", Amount: 22000})
 	require.NoError(t, err)
-	assert.Equal(t, "completed", resp.Transaction.Status)
+	assert.Equal(t, constants.StatusCompleted, resp.Transaction.Status)
 }
 
 func TestDetailEmptyOrderID(t *testing.T) {
@@ -266,5 +268,64 @@ func TestTransactionInfoParseCompletedAtNano(t *testing.T) {
 func TestTransactionInfoParseCompletedAtInvalid(t *testing.T) {
 	info := &TransactionInfo{CompletedAt: "invalid"}
 	_, err := info.ParseCompletedAt()
+	require.Error(t, err)
+}
+
+// --- Encode errors ---
+
+// errorBuffer is a [gc.Buffer] whose Write always fails.
+type errorBuffer struct{}
+
+func (errorBuffer) Write([]byte) (int, error)         { return 0, assert.AnError }
+func (errorBuffer) WriteString(string) (int, error)   { return 0, assert.AnError }
+func (errorBuffer) WriteByte(byte) error              { return assert.AnError }
+func (errorBuffer) WriteTo(io.Writer) (int64, error)  { return 0, nil }
+func (errorBuffer) ReadFrom(io.Reader) (int64, error) { return 0, nil }
+func (errorBuffer) Bytes() []byte                     { return nil }
+func (errorBuffer) String() string                    { return "" }
+func (errorBuffer) Len() int                          { return 0 }
+func (errorBuffer) Set([]byte)                        {}
+func (errorBuffer) SetString(string)                  {}
+func (errorBuffer) Reset()                            {}
+
+// errorPool returns an [errorBuffer] from Get.
+type errorPool struct{}
+
+func (errorPool) Get() gc.Buffer { return errorBuffer{} }
+func (errorPool) Put(gc.Buffer)  {}
+
+func newEncodeErrorClient() *client.Client {
+	return client.New("test-project", "test-key",
+		client.WithBaseURL("http://localhost"),
+		client.WithRetries(0),
+		client.WithBufferPool(errorPool{}),
+	)
+}
+
+func TestCreateEncodeError(t *testing.T) {
+	svc := NewService(newEncodeErrorClient())
+	_, err := svc.Create(context.Background(), constants.MethodQRIS, &CreateRequest{OrderID: "INV123", Amount: 99000})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to encode request")
+}
+
+func TestCancelEncodeError(t *testing.T) {
+	svc := NewService(newEncodeErrorClient())
+	err := svc.Cancel(context.Background(), &CancelRequest{OrderID: "INV123", Amount: 99000})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to encode request")
+}
+
+func TestDetailDoError(t *testing.T) {
+	// Point at a closed server to trigger a Do error.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	srv.Close()
+
+	c := client.New("test-project", "test-key",
+		client.WithBaseURL(srv.URL),
+		client.WithRetries(0),
+	)
+	svc := NewService(c)
+	_, err := svc.Detail(context.Background(), &DetailRequest{OrderID: "INV123", Amount: 22000})
 	require.Error(t, err)
 }

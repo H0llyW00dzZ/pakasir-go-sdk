@@ -32,6 +32,7 @@ import (
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
 	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/gc"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/i18n"
 )
 
@@ -291,6 +292,12 @@ type errorBody struct {
 func (e *errorBody) Read([]byte) (int, error) { return 0, e.err }
 func (e *errorBody) Close() error             { return nil }
 
+// customPool is a minimal [gc.Pool] for testing [WithBufferPool].
+type customPool struct{}
+
+func (customPool) Get() gc.Buffer { return nil }
+func (customPool) Put(gc.Buffer)  {}
+
 // roundTripFunc adapts a function into an [http.RoundTripper].
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -390,9 +397,22 @@ func TestGetBufferPool(t *testing.T) {
 func TestCalculateBackoff(t *testing.T) {
 	c := New("proj", "key", WithRetryWait(100*time.Millisecond, 1*time.Second))
 
-	assert.Equal(t, 100*time.Millisecond, c.calculateBackoff(1)) // 100ms * 2^0
-	assert.Equal(t, 200*time.Millisecond, c.calculateBackoff(2)) // 100ms * 2^1
-	assert.Equal(t, 1*time.Second, c.calculateBackoff(5))        // clamped to max
+	// Attempt 1: base = 100ms * 2^0 = 100ms, jitter range is [100ms, 100ms] → always 100ms.
+	assert.Equal(t, 100*time.Millisecond, c.calculateBackoff(1))
+
+	// Attempt 2: base = 100ms * 2^1 = 200ms, jitter in [100ms, 200ms].
+	for range 20 {
+		b := c.calculateBackoff(2)
+		assert.GreaterOrEqual(t, b, 100*time.Millisecond)
+		assert.LessOrEqual(t, b, 200*time.Millisecond)
+	}
+
+	// Attempt 5: clamped to max 1s, jitter in [100ms, 1s].
+	for range 20 {
+		b := c.calculateBackoff(5)
+		assert.GreaterOrEqual(t, b, 100*time.Millisecond)
+		assert.LessOrEqual(t, b, 1*time.Second)
+	}
 }
 
 // --- Options ---
@@ -402,9 +422,36 @@ func TestWithHTTPClientNilIgnored(t *testing.T) {
 	assert.NotNil(t, c.HTTPClient, "nil http client must be ignored")
 }
 
+func TestWithBufferPoolNilIgnored(t *testing.T) {
+	c := New("proj", "key", WithBufferPool(nil))
+	assert.NotNil(t, c.GetBufferPool(), "nil buffer pool must be ignored")
+}
+
+func TestWithBufferPoolCustom(t *testing.T) {
+	custom := &customPool{}
+	c := New("proj", "key", WithBufferPool(custom))
+	assert.Same(t, custom, c.GetBufferPool(), "custom pool must be set")
+}
+
 func TestWithRetriesNegativeClamped(t *testing.T) {
 	c := New("proj", "key", WithRetries(-5))
 	assert.Equal(t, 0, c.Retries, "negative retries must be clamped to 0")
+}
+
+func TestWithTimeoutZeroIgnored(t *testing.T) {
+	c := New("proj", "key", WithTimeout(0))
+	assert.Equal(t, DefaultTimeout, c.HTTPClient.Timeout, "zero timeout must be ignored")
+}
+
+func TestWithTimeoutNegativeIgnored(t *testing.T) {
+	c := New("proj", "key", WithTimeout(-1*time.Second))
+	assert.Equal(t, DefaultTimeout, c.HTTPClient.Timeout, "negative timeout must be ignored")
+}
+
+func TestWithRetryWaitSwapped(t *testing.T) {
+	c := New("proj", "key", WithRetryWait(5*time.Second, 1*time.Second))
+	assert.Equal(t, 1*time.Second, c.RetryWaitMin, "min > max must be swapped")
+	assert.Equal(t, 5*time.Second, c.RetryWaitMax, "min > max must be swapped")
 }
 
 // --- isRetryableStatus ---

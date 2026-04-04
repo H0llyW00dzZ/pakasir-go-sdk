@@ -14,8 +14,6 @@
 
 package constants
 
-import "fmt"
-
 // Version information for the Pakasir Go SDK.
 //
 // These values are used to construct the User-Agent header for HTTP requests.
@@ -31,6 +29,10 @@ const (
 	SDKRepository = "https://github.com/H0llyW00dzZ/pakasir-go-sdk"
 )
 
+// userAgent is the pre-computed User-Agent string, avoiding repeated
+// formatting on every HTTP request.
+var userAgent = SDKName + "/" + SDKVersion + " (+" + SDKRepository + ")"
+
 // UserAgent returns the formatted User-Agent string for HTTP requests.
 //
 // Format: pakasir-go-sdk/0.0.0-dev (+https://github.com/H0llyW00dzZ/pakasir-go-sdk)
@@ -38,5 +40,5 @@ const (
 // This header is automatically set on every request by the [client.Client]
 // and cannot be overridden, even when using a custom [http.Client].
 func UserAgent() string {
-	return fmt.Sprintf("%s/%s (+%s)", SDKName, SDKVersion, SDKRepository)
+	return userAgent
 }

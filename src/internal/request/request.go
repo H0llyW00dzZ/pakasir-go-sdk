@@ -14,6 +14,11 @@
 
 package request
 
+import (
+	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/i18n"
+)
+
 // Body is the standard request body structure used by the Pakasir API.
 // It is used internally by all services to build consistent API payloads.
 type Body struct {
@@ -21,4 +26,17 @@ type Body struct {
 	OrderID string `json:"order_id"`
 	Amount  int64  `json:"amount"`
 	APIKey  string `json:"api_key"`
+}
+
+// ValidateOrderAndAmount performs common validation for service requests.
+// It returns a localized error if the order ID is empty or the amount is
+// not positive.
+func ValidateOrderAndAmount(lang i18n.Language, orderID string, amount int64) error {
+	if orderID == "" {
+		return sdkerrors.New(lang, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
+	}
+	if amount <= 0 {
+		return sdkerrors.New(lang, sdkerrors.ErrInvalidAmount, i18n.MsgInvalidAmount)
+	}
+	return nil
 }

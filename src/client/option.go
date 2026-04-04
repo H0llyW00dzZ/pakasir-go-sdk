@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/gc"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/i18n"
 )
 
@@ -43,12 +44,17 @@ func WithHTTPClient(httpClient *http.Client) Option {
 	}
 }
 
-// WithTimeout sets the timeout for the default HTTP client.
-// This option is ignored if [WithHTTPClient] is also provided,
-// since the custom client manages its own timeout.
+// WithTimeout sets the timeout on the client's [http.Client].
+//
+// When combined with [WithHTTPClient], the result depends on ordering:
+// if WithTimeout is applied after WithHTTPClient, the custom client's
+// timeout is overridden. Apply WithHTTPClient last if the custom client
+// should control its own timeout.
 func WithTimeout(d time.Duration) Option {
 	return func(c *Client) {
-		c.HTTPClient.Timeout = d
+		if d > 0 {
+			c.HTTPClient.Timeout = d
+		}
 	}
 }
 
@@ -71,10 +77,23 @@ func WithRetries(n int) Option {
 	}
 }
 
+// WithBufferPool overrides the default buffer pool used for request
+// serialization. A nil value is ignored.
+func WithBufferPool(pool gc.Pool) Option {
+	return func(c *Client) {
+		if pool != nil {
+			c.bufferPool = pool
+		}
+	}
+}
+
 // WithRetryWait sets the minimum and maximum wait durations for
-// exponential backoff between retries.
+// exponential backoff between retries. If min > max, the values are swapped.
 func WithRetryWait(min, max time.Duration) Option {
 	return func(c *Client) {
+		if min > max {
+			min, max = max, min
+		}
 		c.RetryWaitMin = min
 		c.RetryWaitMax = max
 	}

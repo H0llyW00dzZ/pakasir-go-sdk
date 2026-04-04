@@ -16,6 +16,7 @@ package simulation
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/client"
 	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/gc"
 )
 
 func newTestService(t *testing.T, handler http.HandlerFunc) (*Service, *httptest.Server) {
@@ -84,4 +86,40 @@ func TestPayAPIError(t *testing.T) {
 	require.Error(t, err)
 	var apiErr *sdkerrors.APIError
 	assert.ErrorAs(t, err, &apiErr)
+}
+
+// --- Encode error ---
+
+// errorBuffer is a [gc.Buffer] whose Write always fails.
+type errorBuffer struct{}
+
+func (errorBuffer) Write([]byte) (int, error)         { return 0, assert.AnError }
+func (errorBuffer) WriteString(string) (int, error)   { return 0, assert.AnError }
+func (errorBuffer) WriteByte(byte) error              { return assert.AnError }
+func (errorBuffer) WriteTo(io.Writer) (int64, error)  { return 0, nil }
+func (errorBuffer) ReadFrom(io.Reader) (int64, error) { return 0, nil }
+func (errorBuffer) Bytes() []byte                     { return nil }
+func (errorBuffer) String() string                    { return "" }
+func (errorBuffer) Len() int                          { return 0 }
+func (errorBuffer) Set([]byte)                        {}
+func (errorBuffer) SetString(string)                  {}
+func (errorBuffer) Reset()                            {}
+
+// errorPool returns an [errorBuffer] from Get.
+type errorPool struct{}
+
+func (errorPool) Get() gc.Buffer { return errorBuffer{} }
+func (errorPool) Put(gc.Buffer)  {}
+
+func TestPayEncodeError(t *testing.T) {
+	c := client.New("test-project", "test-key",
+		client.WithBaseURL("http://localhost"),
+		client.WithRetries(0),
+		client.WithBufferPool(errorPool{}),
+	)
+	svc := NewService(c)
+
+	err := svc.Pay(context.Background(), &PayRequest{OrderID: "INV123", Amount: 99000})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to encode request")
 }

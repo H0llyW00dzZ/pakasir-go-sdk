@@ -14,10 +14,32 @@
 
 package constants
 
-// Transaction status values returned by the Pakasir API.
+// TransactionStatus represents a transaction status returned by the Pakasir API.
+type TransactionStatus string
+
+// Supported transaction status values.
 const (
-	StatusCompleted = "completed"
-	StatusPending   = "pending"
-	StatusExpired   = "expired"
-	StatusCancelled = "cancelled"
+	StatusCompleted TransactionStatus = "completed"
+	StatusPending   TransactionStatus = "pending"
+	StatusExpired   TransactionStatus = "expired"
+	StatusCancelled TransactionStatus = "cancelled"
 )
+
+// validStatuses is a set of all valid transaction statuses for O(1) lookup.
+var validStatuses = map[TransactionStatus]struct{}{
+	StatusCompleted: {},
+	StatusPending:   {},
+	StatusExpired:   {},
+	StatusCancelled: {},
+}
+
+// Valid reports whether the transaction status is a recognized Pakasir status.
+func (s TransactionStatus) Valid() bool {
+	_, ok := validStatuses[s]
+	return ok
+}
+
+// String returns the string representation of the transaction status.
+func (s TransactionStatus) String() string {
+	return string(s)
+}
