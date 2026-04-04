@@ -55,4 +55,3 @@ func TestUserAgent(t *testing.T) {
 	assert.Contains(t, ua, SDKRepository)
 	assert.Equal(t, "pakasir-go-sdk/0.0.0-dev (+https://github.com/H0llyW00dzZ/pakasir-go-sdk)", ua)
 }
-
