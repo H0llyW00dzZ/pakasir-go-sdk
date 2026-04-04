@@ -392,6 +392,15 @@ func TestGetBufferPool(t *testing.T) {
 	assert.NotNil(t, c.GetBufferPool())
 }
 
+// --- Getters ---
+
+func TestGetters(t *testing.T) {
+	c := New("my-project", "my-key", WithLanguage(i18n.Indonesian))
+	assert.Equal(t, "my-project", c.Project())
+	assert.Equal(t, "my-key", c.APIKey())
+	assert.Equal(t, i18n.Indonesian, c.Lang())
+}
+
 // --- calculateBackoff ---
 
 func TestCalculateBackoff(t *testing.T) {
