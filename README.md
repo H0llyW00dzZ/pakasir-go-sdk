@@ -5,13 +5,13 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![codecov](https://codecov.io/gh/H0llyW00dzZ/pakasir-go-sdk/graph/badge.svg?token=K6I5QCQPDA)](https://codecov.io/gh/H0llyW00dzZ/pakasir-go-sdk)
 
-> **Note:** This is an **unofficial** Go SDK for [Pakasir](https://app.pakasir.com). It is not affiliated with, endorsed by, or officially supported by Pakasir.
+> **Note:** This is an **unofficial** Go SDK for [Pakasir](https://pakasir.com). It is not affiliated with, endorsed by, or officially supported by Pakasir.
 
 > [!WARNING]
 > This SDK is still under active development and is **not recommended for production use**.
 > APIs may change without notice. Please wait for an official release from the repository owner before depending on this package.
 
-An idiomatic Go SDK for the [Pakasir](https://app.pakasir.com) payment gateway. Built with Functional Options, Service-Oriented Architecture, and full i18n support (English & Indonesian).
+An idiomatic Go SDK for the [Pakasir](https://pakasir.com) payment gateway. Built with Functional Options, Service-Oriented Architecture, and full i18n support (English & Indonesian).
 
 ## Installation
 
