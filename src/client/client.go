@@ -146,7 +146,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 			lastErr = err
 			if !isRetryable(err) {
 				return nil, fmt.Errorf("%s: %w: %w",
-					fmt.Sprintf(i18n.Get(c.Language, i18n.MsgRequestFailedAfterRetries), c.Retries),
+					i18n.Get(c.Language, i18n.MsgRequestFailedPermanent),
 					sdkerrors.ErrRequestFailed,
 					lastErr,
 				)
@@ -157,6 +157,13 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 		data, readErr := c.readResponseBody(resp)
 		if readErr != nil {
 			lastErr = readErr
+			if !isRetryable(readErr) {
+				return nil, fmt.Errorf("%s: %w: %w",
+					i18n.Get(c.Language, i18n.MsgRequestFailedPermanent),
+					sdkerrors.ErrRequestFailed,
+					lastErr,
+				)
+			}
 			continue
 		}
 

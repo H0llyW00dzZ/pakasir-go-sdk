@@ -31,6 +31,7 @@ func TestGetEnglish(t *testing.T) {
 		{MsgInvalidOrderID, "order ID is required"},
 		{MsgInvalidPaymentMethod, "unsupported payment method: %s"},
 		{MsgRequestFailed, "request failed with status %d"},
+		{MsgRequestFailedPermanent, "request failed due to permanent error"},
 		{MsgRequestFailedAfterRetries, "request failed after %d retries"},
 	}
 
@@ -52,6 +53,7 @@ func TestGetIndonesian(t *testing.T) {
 		{MsgInvalidOrderID, "ID pesanan wajib diisi"},
 		{MsgInvalidPaymentMethod, "metode pembayaran tidak didukung: %s"},
 		{MsgRequestFailed, "permintaan gagal dengan status %d"},
+		{MsgRequestFailedPermanent, "permintaan gagal karena kesalahan permanen"},
 		{MsgRequestFailedAfterRetries, "permintaan gagal setelah %d percobaan ulang"},
 	}
 
