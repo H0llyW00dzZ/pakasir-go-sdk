@@ -16,8 +16,12 @@
 // notifications.
 //
 // When a customer completes a payment, Pakasir sends an HTTP POST to
-// your configured webhook URL. Use [Parse] to decode the request body
-// into a typed [Event] struct.
+// your configured webhook URL. The package offers three entry points
+// to decode the payload into a typed [Event] struct:
+//
+//   - [Parse]: accepts an [io.Reader] — works with any Go HTTP framework
+//   - [ParseRequest]: accepts an [*http.Request] — convenience for net/http
+//   - [ParseBytes]: accepts raw []byte — for frameworks like Fiber
 //
 // # Important Security Note
 //
@@ -26,10 +30,10 @@
 // in your system. The SDK parses the webhook payload but does not perform
 // this validation — that is the caller's responsibility.
 //
-// # Basic Usage
+// # net/http
 //
 //	func webhookHandler(w http.ResponseWriter, r *http.Request) {
-//	    event, err := webhook.Parse(r)
+//	    event, err := webhook.ParseRequest(r)
 //	    if err != nil {
 //	        http.Error(w, "bad request", http.StatusBadRequest)
 //	        return
@@ -44,4 +48,19 @@
 //	    // Process the completed payment...
 //	    w.WriteHeader(http.StatusOK)
 //	}
+//
+// # Gin / Echo / Chi
+//
+//	// Gin
+//	event, err := webhook.Parse(c.Request.Body)
+//
+//	// Echo
+//	event, err := webhook.Parse(c.Request().Body)
+//
+//	// Chi (uses net/http)
+//	event, err := webhook.ParseRequest(r)
+//
+// # Fiber
+//
+//	event, err := webhook.ParseBytes(c.Body())
 package webhook

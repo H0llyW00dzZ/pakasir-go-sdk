@@ -59,22 +59,54 @@ func (e *Event) ParseCompletedAt() (time.Time, error) {
 	return t, err
 }
 
-// Parse reads and decodes a Pakasir webhook POST body from an [http.Request].
+// Parse decodes a Pakasir webhook payload from an [io.Reader].
 //
-// It reads the full request body, closes it, and unmarshals the JSON
-// into an [Event] struct.
+// This is the framework-agnostic entry point. It works with any Go HTTP
+// framework by accepting the request body reader directly:
+//
+//   - net/http: webhook.Parse(r.Body)
+//   - Gin:      webhook.Parse(c.Request.Body)
+//   - Echo:     webhook.Parse(c.Request().Body)
+//   - Chi:      webhook.Parse(r.Body)
+//
+// The caller is responsible for closing the reader if required.
 //
 // Important: Callers must validate the returned Event's Amount and OrderID
 // against their own system records, as recommended by the Pakasir documentation.
-func Parse(r *http.Request) (*Event, error) {
+func Parse(r io.Reader) (*Event, error) {
+	if r == nil {
+		return nil, fmt.Errorf("webhook: reader is nil")
+	}
+
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("webhook: failed to read body: %w", err)
+	}
+
+	return ParseBytes(data)
+}
+
+// ParseRequest is a convenience wrapper that decodes a Pakasir webhook
+// payload from a standard [http.Request].
+//
+// It reads the full request body, closes it, and unmarshals the JSON
+// into an [Event] struct.
+func ParseRequest(r *http.Request) (*Event, error) {
 	if r.Body == nil {
 		return nil, fmt.Errorf("webhook: request body is nil")
 	}
 	defer r.Body.Close()
 
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		return nil, fmt.Errorf("webhook: failed to read body: %w", err)
+	return Parse(r.Body)
+}
+
+// ParseBytes decodes a Pakasir webhook payload from raw bytes.
+//
+// This is useful for frameworks that provide the body as []byte
+// (e.g., Fiber's c.Body()) or when the body has already been read.
+func ParseBytes(data []byte) (*Event, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("webhook: body is empty")
 	}
 
 	var event Event

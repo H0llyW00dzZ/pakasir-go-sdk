@@ -15,6 +15,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -119,19 +120,22 @@ func New(project, apiKey string, opts ...Option) (*Client, error) {
 // Do executes an HTTP request with the configured retry logic.
 // It is exported for use by service packages within the SDK.
 //
-// The body parameter should be a pre-encoded [io.Reader] (e.g., a [bytes.Buffer]).
-// For GET requests, body may be nil.
-func (c *Client) Do(ctx context.Context, method, path string, body io.Reader) ([]byte, error) {
+// The body parameter is the pre-encoded request payload. A fresh
+// [bytes.Reader] is created for each attempt, so retries always send the
+// complete body. For GET requests, body may be nil.
+func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]byte, error) {
 	var lastErr error
 
 	for attempt := 0; attempt <= c.Retries; attempt++ {
 		if attempt > 0 {
 			waitTime := c.calculateBackoff(attempt)
 
+			timer := time.NewTimer(waitTime)
 			select {
 			case <-ctx.Done():
+				timer.Stop()
 				return nil, ctx.Err()
-			case <-time.After(waitTime):
+			case <-timer.C:
 			}
 		}
 
@@ -142,7 +146,12 @@ func (c *Client) Do(ctx context.Context, method, path string, body io.Reader) ([
 
 		url := c.BaseURL + path
 
-		req, err := http.NewRequestWithContext(ctx, method, url, body)
+		var bodyReader io.Reader
+		if body != nil {
+			bodyReader = bytes.NewReader(body)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}

@@ -24,12 +24,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseSuccess(t *testing.T) {
-	body := `{"amount":22000,"order_id":"240910HDE7C9","project":"depodomain","status":"completed","payment_method":"qris","completed_at":"2024-09-10T08:07:02.819+07:00"}`
-	r := &http.Request{Body: io.NopCloser(strings.NewReader(body))}
+const testPayload = `{"amount":22000,"order_id":"240910HDE7C9","project":"depodomain","status":"completed","payment_method":"qris","completed_at":"2024-09-10T08:07:02.819+07:00"}`
 
-	event, err := Parse(r)
-	require.NoError(t, err)
+func assertValidEvent(t *testing.T, event *Event) {
+	t.Helper()
 	assert.Equal(t, int64(22000), event.Amount)
 	assert.Equal(t, "240910HDE7C9", event.OrderID)
 	assert.Equal(t, "depodomain", event.Project)
@@ -37,26 +35,94 @@ func TestParseSuccess(t *testing.T) {
 	assert.Equal(t, "qris", event.PaymentMethod)
 }
 
-func TestParseNilBody(t *testing.T) {
-	_, err := Parse(&http.Request{Body: nil})
+// --- Parse (io.Reader) ---
+
+func TestParseSuccess(t *testing.T) {
+	event, err := Parse(strings.NewReader(testPayload))
+	require.NoError(t, err)
+	assertValidEvent(t, event)
+}
+
+func TestParseNilReader(t *testing.T) {
+	_, err := Parse(nil)
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "reader is nil")
 }
 
 func TestParseInvalidJSON(t *testing.T) {
-	r := &http.Request{Body: io.NopCloser(strings.NewReader(`not json`))}
-	_, err := Parse(r)
+	_, err := Parse(strings.NewReader(`not json`))
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to decode body")
 }
 
 type errorReader struct{}
 
 func (errorReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
-func (errorReader) Close() error             { return nil }
 
 func TestParseReadError(t *testing.T) {
-	_, err := Parse(&http.Request{Body: errorReader{}})
+	_, err := Parse(errorReader{})
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read body")
 }
+
+// --- ParseRequest (*http.Request) ---
+
+func TestParseRequestSuccess(t *testing.T) {
+	r := &http.Request{Body: io.NopCloser(strings.NewReader(testPayload))}
+	event, err := ParseRequest(r)
+	require.NoError(t, err)
+	assertValidEvent(t, event)
+}
+
+func TestParseRequestNilBody(t *testing.T) {
+	_, err := ParseRequest(&http.Request{Body: nil})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "request body is nil")
+}
+
+func TestParseRequestInvalidJSON(t *testing.T) {
+	r := &http.Request{Body: io.NopCloser(strings.NewReader(`not json`))}
+	_, err := ParseRequest(r)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to decode body")
+}
+
+type errorReadCloser struct{}
+
+func (errorReadCloser) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
+func (errorReadCloser) Close() error             { return nil }
+
+func TestParseRequestReadError(t *testing.T) {
+	_, err := ParseRequest(&http.Request{Body: errorReadCloser{}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read body")
+}
+
+// --- ParseBytes ---
+
+func TestParseBytesSuccess(t *testing.T) {
+	event, err := ParseBytes([]byte(testPayload))
+	require.NoError(t, err)
+	assertValidEvent(t, event)
+}
+
+func TestParseBytesEmpty(t *testing.T) {
+	_, err := ParseBytes(nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "body is empty")
+
+	_, err = ParseBytes([]byte{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "body is empty")
+}
+
+func TestParseBytesInvalidJSON(t *testing.T) {
+	_, err := ParseBytes([]byte(`not json`))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to decode body")
+}
+
+// --- Event.ParseCompletedAt ---
 
 func TestEventParseCompletedAtRFC3339(t *testing.T) {
 	e := &Event{CompletedAt: "2024-09-10T08:07:02+07:00"}

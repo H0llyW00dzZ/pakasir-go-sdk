@@ -15,7 +15,6 @@
 package simulation
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -77,6 +76,6 @@ func (s *Service) Pay(ctx context.Context, req *PayRequest) error {
 		return fmt.Errorf("failed to encode request: %w", err)
 	}
 
-	_, err := s.client.Do(ctx, http.MethodPost, "/api/paymentsimulation", bytes.NewReader(buf.Bytes()))
+	_, err := s.client.Do(ctx, http.MethodPost, "/api/paymentsimulation", buf.Bytes())
 	return err
 }
