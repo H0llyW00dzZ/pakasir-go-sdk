@@ -16,10 +16,12 @@ package client
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -153,10 +155,10 @@ func TestDo4xxReturnsAPIError(t *testing.T) {
 }
 
 func TestDoRetryOn5xxThenSuccess(t *testing.T) {
-	attempt := 0
+	var attempt atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		attempt++
-		if attempt <= 2 {
+		n := attempt.Add(1)
+		if n <= 2 {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			w.Write([]byte(`unavailable`))
 			return
@@ -173,17 +175,17 @@ func TestDoRetryOn5xxThenSuccess(t *testing.T) {
 	data, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"ok":true}`, string(data))
-	assert.Equal(t, 3, attempt)
+	assert.Equal(t, int32(3), attempt.Load())
 }
 
 func TestDoPostRetryWithBody(t *testing.T) {
-	attempt := 0
+	var attempt atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		attempt++
+		n := attempt.Add(1)
 		body, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
-		assert.JSONEq(t, `{"key":"value"}`, string(body), "body must be complete on attempt %d", attempt)
-		if attempt <= 2 {
+		assert.JSONEq(t, `{"key":"value"}`, string(body), "body must be complete on attempt %d", n)
+		if n <= 2 {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			w.Write([]byte(`unavailable`))
 			return
@@ -200,7 +202,7 @@ func TestDoPostRetryWithBody(t *testing.T) {
 	data, err := c.Do(context.Background(), http.MethodPost, "/test", []byte(`{"key":"value"}`))
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"ok":true}`, string(data))
-	assert.Equal(t, 3, attempt)
+	assert.Equal(t, int32(3), attempt.Load())
 }
 
 func TestDoRetriesExhausted(t *testing.T) {
@@ -325,30 +327,51 @@ func TestWithRetriesNegativeClamped(t *testing.T) {
 	assert.Equal(t, 0, c.Retries, "negative retries must be clamped to 0")
 }
 
-// --- isRetryable ---
+// --- isRetryableStatus ---
 
-func TestIsRetryable(t *testing.T) {
+func TestIsRetryableStatus(t *testing.T) {
 	tests := []struct {
 		name   string
 		status int
-		err    error
 		want   bool
 	}{
-		{"network error", 0, errors.New("timeout"), true},
-		{"500", http.StatusInternalServerError, nil, true},
-		{"502", http.StatusBadGateway, nil, true},
-		{"503", http.StatusServiceUnavailable, nil, true},
-		{"504", http.StatusGatewayTimeout, nil, true},
-		{"400", http.StatusBadRequest, nil, false},
-		{"401", http.StatusUnauthorized, nil, false},
-		{"403", http.StatusForbidden, nil, false},
-		{"404", http.StatusNotFound, nil, false},
-		{"200", http.StatusOK, nil, false},
+		{"500", http.StatusInternalServerError, true},
+		{"502", http.StatusBadGateway, true},
+		{"503", http.StatusServiceUnavailable, true},
+		{"504", http.StatusGatewayTimeout, true},
+		{"400", http.StatusBadRequest, false},
+		{"401", http.StatusUnauthorized, false},
+		{"403", http.StatusForbidden, false},
+		{"404", http.StatusNotFound, false},
+		{"200", http.StatusOK, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, isRetryable(tt.status, tt.err))
+			assert.Equal(t, tt.want, isRetryableStatus(tt.status))
+		})
+	}
+}
+
+// --- isRetryable ---
+
+func TestIsRetryable(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"nil error", nil, false},
+		{"generic network error", errors.New("timeout"), true},
+		{"connection refused", errors.New("connection refused"), true},
+		{"tls unknown authority", &x509.UnknownAuthorityError{}, false},
+		{"tls hostname error", &x509.HostnameError{}, false},
+		{"tls cert invalid", &x509.CertificateInvalidError{}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isRetryable(tt.err))
 		})
 	}
 }

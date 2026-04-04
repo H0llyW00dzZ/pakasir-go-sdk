@@ -78,3 +78,22 @@ func TestBuildNegativeAmount(t *testing.T) {
 	_, err := Build("https://app.pakasir.com", "proj", -100, Options{OrderID: "INV1"})
 	require.Error(t, err)
 }
+
+func TestBuildEmptyProject(t *testing.T) {
+	_, err := Build("https://app.pakasir.com", "", 22000, Options{OrderID: "INV1"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "project is required")
+}
+
+func TestBuildTrailingSlashBaseURL(t *testing.T) {
+	u, err := Build("https://app.pakasir.com/", "proj", 22000, Options{OrderID: "INV1"})
+	require.NoError(t, err)
+	assert.Contains(t, u, "https://app.pakasir.com/pay/proj/22000?")
+	assert.NotContains(t, u, "//pay")
+}
+
+func TestBuildProjectWithSpecialChars(t *testing.T) {
+	u, err := Build("https://app.pakasir.com", "my project/test", 22000, Options{OrderID: "INV1"})
+	require.NoError(t, err)
+	assert.Contains(t, u, "my%20project%2Ftest")
+}
