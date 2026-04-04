@@ -47,11 +47,11 @@ func newTestClient(t *testing.T, serverURL string, opts ...Option) *Client {
 
 func TestNewSuccess(t *testing.T) {
 	c := New("my-project", "my-key")
-	assert.Equal(t, "my-project", c.Project)
-	assert.Equal(t, "my-key", c.APIKey)
-	assert.Equal(t, DefaultBaseURL, c.BaseURL)
-	assert.Equal(t, i18n.English, c.Language)
-	assert.Equal(t, DefaultRetries, c.Retries)
+	assert.Equal(t, "my-project", c.project)
+	assert.Equal(t, "my-key", c.apiKey)
+	assert.Equal(t, DefaultBaseURL, c.baseURL)
+	assert.Equal(t, i18n.English, c.language)
+	assert.Equal(t, DefaultRetries, c.retries)
 }
 
 func TestNewWithAllOptions(t *testing.T) {
@@ -63,17 +63,17 @@ func TestNewWithAllOptions(t *testing.T) {
 		WithRetries(5),
 		WithRetryWait(100*time.Millisecond, 2*time.Second),
 	)
-	assert.Equal(t, "https://custom.api.com", c.BaseURL)
-	assert.Same(t, customHTTP, c.HTTPClient)
-	assert.Equal(t, i18n.Indonesian, c.Language)
-	assert.Equal(t, 5, c.Retries)
-	assert.Equal(t, 100*time.Millisecond, c.RetryWaitMin)
-	assert.Equal(t, 2*time.Second, c.RetryWaitMax)
+	assert.Equal(t, "https://custom.api.com", c.baseURL)
+	assert.Same(t, customHTTP, c.httpClient)
+	assert.Equal(t, i18n.Indonesian, c.language)
+	assert.Equal(t, 5, c.retries)
+	assert.Equal(t, 100*time.Millisecond, c.retryWaitMin)
+	assert.Equal(t, 2*time.Second, c.retryWaitMax)
 }
 
 func TestWithTimeout(t *testing.T) {
 	c := New("proj", "key", WithTimeout(5*time.Second))
-	assert.Equal(t, 5*time.Second, c.HTTPClient.Timeout)
+	assert.Equal(t, 5*time.Second, c.httpClient.Timeout)
 }
 
 // --- Do ---
@@ -419,7 +419,7 @@ func TestCalculateBackoff(t *testing.T) {
 
 func TestWithHTTPClientNilIgnored(t *testing.T) {
 	c := New("proj", "key", WithHTTPClient(nil))
-	assert.NotNil(t, c.HTTPClient, "nil http client must be ignored")
+	assert.NotNil(t, c.httpClient, "nil http client must be ignored")
 }
 
 func TestWithBufferPoolNilIgnored(t *testing.T) {
@@ -435,23 +435,23 @@ func TestWithBufferPoolCustom(t *testing.T) {
 
 func TestWithRetriesNegativeClamped(t *testing.T) {
 	c := New("proj", "key", WithRetries(-5))
-	assert.Equal(t, 0, c.Retries, "negative retries must be clamped to 0")
+	assert.Equal(t, 0, c.retries, "negative retries must be clamped to 0")
 }
 
 func TestWithTimeoutZeroIgnored(t *testing.T) {
 	c := New("proj", "key", WithTimeout(0))
-	assert.Equal(t, DefaultTimeout, c.HTTPClient.Timeout, "zero timeout must be ignored")
+	assert.Equal(t, DefaultTimeout, c.httpClient.Timeout, "zero timeout must be ignored")
 }
 
 func TestWithTimeoutNegativeIgnored(t *testing.T) {
 	c := New("proj", "key", WithTimeout(-1*time.Second))
-	assert.Equal(t, DefaultTimeout, c.HTTPClient.Timeout, "negative timeout must be ignored")
+	assert.Equal(t, DefaultTimeout, c.httpClient.Timeout, "negative timeout must be ignored")
 }
 
 func TestWithRetryWaitSwapped(t *testing.T) {
 	c := New("proj", "key", WithRetryWait(5*time.Second, 1*time.Second))
-	assert.Equal(t, 1*time.Second, c.RetryWaitMin, "min > max must be swapped")
-	assert.Equal(t, 5*time.Second, c.RetryWaitMax, "min > max must be swapped")
+	assert.Equal(t, 1*time.Second, c.retryWaitMin, "min > max must be swapped")
+	assert.Equal(t, 5*time.Second, c.retryWaitMax, "min > max must be swapped")
 }
 
 // --- isRetryableStatus ---

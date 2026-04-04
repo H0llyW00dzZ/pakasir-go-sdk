@@ -46,20 +46,20 @@ func NewService(c *client.Client) *Service {
 // the payment details including the QR string or Virtual Account number.
 func (s *Service) Create(ctx context.Context, method constants.PaymentMethod, req *CreateRequest) (*CreateResponse, error) {
 	if req == nil {
-		return nil, sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
+		return nil, sdkerrors.New(s.client.Lang(), sdkerrors.ErrNilRequest, i18n.MsgNilRequest)
 	}
 	if !method.Valid() {
-		return nil, sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidPaymentMethod, i18n.MsgInvalidPaymentMethod, method.String())
+		return nil, sdkerrors.New(s.client.Lang(), sdkerrors.ErrInvalidPaymentMethod, i18n.MsgInvalidPaymentMethod, method.String())
 	}
 	if err := s.validateRequest(req.OrderID, req.Amount); err != nil {
 		return nil, err
 	}
 
 	body := request.Body{
-		Project: s.client.Project,
+		Project: s.client.Project(),
 		OrderID: req.OrderID,
 		Amount:  req.Amount,
-		APIKey:  s.client.APIKey,
+		APIKey:  s.client.APIKey(),
 	}
 
 	buf := s.client.GetBufferPool().Get()
@@ -91,17 +91,17 @@ func (s *Service) Create(ctx context.Context, method constants.PaymentMethod, re
 // It sends a POST request to /api/transactioncancel.
 func (s *Service) Cancel(ctx context.Context, req *CancelRequest) error {
 	if req == nil {
-		return sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
+		return sdkerrors.New(s.client.Lang(), sdkerrors.ErrNilRequest, i18n.MsgNilRequest)
 	}
 	if err := s.validateRequest(req.OrderID, req.Amount); err != nil {
 		return err
 	}
 
 	body := request.Body{
-		Project: s.client.Project,
+		Project: s.client.Project(),
 		OrderID: req.OrderID,
 		Amount:  req.Amount,
-		APIKey:  s.client.APIKey,
+		APIKey:  s.client.APIKey(),
 	}
 
 	buf := s.client.GetBufferPool().Get()
@@ -123,17 +123,17 @@ func (s *Service) Cancel(ctx context.Context, req *CancelRequest) error {
 // It sends a GET request to /api/transactiondetail with query parameters.
 func (s *Service) Detail(ctx context.Context, req *DetailRequest) (*DetailResponse, error) {
 	if req == nil {
-		return nil, sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
+		return nil, sdkerrors.New(s.client.Lang(), sdkerrors.ErrNilRequest, i18n.MsgNilRequest)
 	}
 	if err := s.validateRequest(req.OrderID, req.Amount); err != nil {
 		return nil, err
 	}
 
 	params := url.Values{}
-	params.Set("project", s.client.Project)
+	params.Set("project", s.client.Project())
 	params.Set("amount", strconv.FormatInt(req.Amount, 10))
 	params.Set("order_id", req.OrderID)
-	params.Set("api_key", s.client.APIKey)
+	params.Set("api_key", s.client.APIKey())
 
 	path := "/api/transactiondetail?" + params.Encode()
 
@@ -152,5 +152,5 @@ func (s *Service) Detail(ctx context.Context, req *DetailRequest) (*DetailRespon
 
 // validateRequest performs common validation for transaction requests.
 func (s *Service) validateRequest(orderID string, amount int64) error {
-	return request.ValidateOrderAndAmount(s.client.Language, orderID, amount)
+	return request.ValidateOrderAndAmount(s.client.Lang(), orderID, amount)
 }

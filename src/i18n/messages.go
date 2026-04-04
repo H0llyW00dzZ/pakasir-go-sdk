@@ -24,6 +24,7 @@ const (
 	MsgInvalidAmount             MessageKey = "invalid_amount"
 	MsgInvalidOrderID            MessageKey = "invalid_order_id"
 	MsgInvalidPaymentMethod      MessageKey = "invalid_payment_method"
+	MsgNilRequest                MessageKey = "nil_request"
 	MsgRequestFailed             MessageKey = "request_failed"
 	MsgRequestFailedPermanent    MessageKey = "request_failed_permanent"
 	MsgRequestFailedAfterRetries MessageKey = "request_failed_after_retries"
@@ -37,6 +38,7 @@ var translations = map[Language]map[MessageKey]string{
 		MsgInvalidAmount:             "amount must be greater than 0",
 		MsgInvalidOrderID:            "order ID is required",
 		MsgInvalidPaymentMethod:      "unsupported payment method: %s",
+		MsgNilRequest:                "request must not be nil",
 		MsgRequestFailed:             "request failed with status %d",
 		MsgRequestFailedPermanent:    "request failed due to permanent error",
 		MsgRequestFailedAfterRetries: "request failed after %d retries",
@@ -47,6 +49,7 @@ var translations = map[Language]map[MessageKey]string{
 		MsgInvalidAmount:             "jumlah harus lebih dari 0",
 		MsgInvalidOrderID:            "ID pesanan wajib diisi",
 		MsgInvalidPaymentMethod:      "metode pembayaran tidak didukung: %s",
+		MsgNilRequest:                "permintaan tidak boleh nil",
 		MsgRequestFailed:             "permintaan gagal dengan status %d",
 		MsgRequestFailedPermanent:    "permintaan gagal karena kesalahan permanen",
 		MsgRequestFailedAfterRetries: "permintaan gagal setelah %d percobaan ulang",

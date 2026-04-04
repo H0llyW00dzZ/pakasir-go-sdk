@@ -39,6 +39,9 @@ var (
 	// ErrInvalidPaymentMethod is returned when an unsupported payment method is used.
 	ErrInvalidPaymentMethod = errors.New("invalid payment method")
 
+	// ErrNilRequest is returned when a nil request pointer is passed to a service method.
+	ErrNilRequest = errors.New("nil request")
+
 	// ErrRequestFailed is returned when the API returns a non-2xx status code.
 	ErrRequestFailed = errors.New("request failed")
 

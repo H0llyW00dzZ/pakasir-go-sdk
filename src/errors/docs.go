@@ -24,6 +24,7 @@
 //   - [ErrInvalidAmount]: amount is not positive
 //   - [ErrInvalidOrderID]: order ID is empty
 //   - [ErrInvalidPaymentMethod]: unsupported payment method
+//   - [ErrNilRequest]: nil request pointer passed to a service method
 //   - [ErrRequestFailed]: HTTP non-2xx response
 //   - [ErrRequestFailedAfterRetries]: all retry attempts exhausted
 //

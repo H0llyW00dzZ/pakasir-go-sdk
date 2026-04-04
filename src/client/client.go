@@ -55,6 +55,9 @@ const (
 // It manages HTTP communication, authentication, retry logic,
 // and buffer pooling for efficient request processing.
 //
+// A Client must not be modified after first use. Concurrent calls
+// to [Client.Do] are safe.
+//
 // Create a new client using [New] with functional options:
 //
 //	c := client.New("my-project", "api-key-xxx",
@@ -62,32 +65,23 @@ const (
 //	    client.WithLanguage(i18n.Indonesian),
 //	)
 type Client struct {
-	// Project is the Pakasir project slug.
-	Project string
-
-	// APIKey is the API key for authenticating requests.
-	APIKey string
-
-	// BaseURL is the Pakasir API base URL.
-	// Defaults to [DefaultBaseURL].
-	BaseURL string
-
-	// HTTPClient is the underlying HTTP client used for requests.
-	HTTPClient *http.Client
-
-	// Language determines the locale for SDK error messages.
-	Language i18n.Language
-
-	// Retries is the maximum number of retry attempts for transient failures.
-	Retries int
-
-	// RetryWaitMin is the minimum backoff duration between retries.
-	RetryWaitMin time.Duration
-
-	// RetryWaitMax is the maximum backoff duration between retries.
-	RetryWaitMax time.Duration
-
-	// bufferPool is the internal buffer pool for JSON serialization.
+	// project is the Pakasir project slug.
+	project string
+	// apiKey is the Pakasir API key.
+	apiKey string
+	// baseURL is the Pakasir API base URL.
+	baseURL string
+	// httpClient is the HTTP client used to make requests.
+	httpClient *http.Client
+	// language is the language used for SDK error messages.
+	language i18n.Language
+	// retries is the number of retry attempts.
+	retries int
+	// retryWaitMin is the minimum wait time between retries.
+	retryWaitMin time.Duration
+	// retryWaitMax is the maximum wait time between retries.
+	retryWaitMax time.Duration
+	// bufferPool is the buffer pool used to allocate buffers for request and response bodies.
 	bufferPool gc.Pool
 }
 
@@ -98,14 +92,14 @@ type Client struct {
 // so callers do not need to handle an error at initialization time.
 func New(project, apiKey string, opts ...Option) *Client {
 	c := &Client{
-		Project:      project,
-		APIKey:       apiKey,
-		BaseURL:      DefaultBaseURL,
-		HTTPClient:   &http.Client{Timeout: DefaultTimeout},
-		Language:     i18n.English,
-		Retries:      DefaultRetries,
-		RetryWaitMin: DefaultRetryWaitMin,
-		RetryWaitMax: DefaultRetryWaitMax,
+		project:      project,
+		apiKey:       apiKey,
+		baseURL:      DefaultBaseURL,
+		httpClient:   &http.Client{Timeout: DefaultTimeout},
+		language:     i18n.English,
+		retries:      DefaultRetries,
+		retryWaitMin: DefaultRetryWaitMin,
+		retryWaitMax: DefaultRetryWaitMax,
 		bufferPool:   gc.Default,
 	}
 
@@ -123,16 +117,16 @@ func New(project, apiKey string, opts ...Option) *Client {
 // [bytes.Reader] is created for each attempt, so retries always send the
 // complete body. For GET requests, body may be nil.
 func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]byte, error) {
-	if c.Project == "" {
-		return nil, sdkerrors.New(c.Language, sdkerrors.ErrInvalidProject, i18n.MsgInvalidProject)
+	if c.project == "" {
+		return nil, sdkerrors.New(c.language, sdkerrors.ErrInvalidProject, i18n.MsgInvalidProject)
 	}
-	if c.APIKey == "" {
-		return nil, sdkerrors.New(c.Language, sdkerrors.ErrInvalidAPIKey, i18n.MsgInvalidAPIKey)
+	if c.apiKey == "" {
+		return nil, sdkerrors.New(c.language, sdkerrors.ErrInvalidAPIKey, i18n.MsgInvalidAPIKey)
 	}
 
 	var lastErr error
 
-	for attempt := 0; attempt <= c.Retries; attempt++ {
+	for attempt := 0; attempt <= c.retries; attempt++ {
 		if err := c.waitForRetry(ctx, attempt); err != nil {
 			return nil, err
 		}
@@ -142,12 +136,12 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 			return nil, err
 		}
 
-		resp, err := c.HTTPClient.Do(req)
+		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			lastErr = err
 			if !isRetryable(err) {
 				return nil, fmt.Errorf("%s: %w: %w",
-					i18n.Get(c.Language, i18n.MsgRequestFailedPermanent),
+					i18n.Get(c.language, i18n.MsgRequestFailedPermanent),
 					sdkerrors.ErrRequestFailed,
 					lastErr,
 				)
@@ -160,7 +154,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 			lastErr = readErr
 			if !isRetryable(readErr) {
 				return nil, fmt.Errorf("%s: %w: %w",
-					i18n.Get(c.Language, i18n.MsgRequestFailedPermanent),
+					i18n.Get(c.language, i18n.MsgRequestFailedPermanent),
 					sdkerrors.ErrRequestFailed,
 					lastErr,
 				)
@@ -185,7 +179,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 
 	// All retries exhausted.
 	return nil, fmt.Errorf("%s: %w: %w",
-		fmt.Sprintf(i18n.Get(c.Language, i18n.MsgRequestFailedAfterRetries), c.Retries),
+		fmt.Sprintf(i18n.Get(c.language, i18n.MsgRequestFailedAfterRetries), c.retries),
 		sdkerrors.ErrRequestFailedAfterRetries,
 		lastErr,
 	)
@@ -194,6 +188,21 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 // GetBufferPool returns the client's buffer pool for use by services.
 func (c *Client) GetBufferPool() gc.Pool {
 	return c.bufferPool
+}
+
+// Project returns the Pakasir project slug.
+func (c *Client) Project() string {
+	return c.project
+}
+
+// APIKey returns the API key for authenticating requests.
+func (c *Client) APIKey() string {
+	return c.apiKey
+}
+
+// Lang returns the language used for SDK error messages.
+func (c *Client) Lang() i18n.Language {
+	return c.language
 }
 
 // waitForRetry blocks until the backoff timer fires or the context is
@@ -222,7 +231,7 @@ func (c *Client) buildRequest(ctx context.Context, method, path string, body []b
 		bodyReader = bytes.NewReader(body)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+path, bodyReader)
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -245,7 +254,7 @@ func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
 	if readErr != nil {
 		buf.Reset()
 		c.bufferPool.Put(buf)
-		return nil, readErr
+		return nil, fmt.Errorf("reading response body: %w", readErr)
 	}
 
 	data := make([]byte, buf.Len())
@@ -260,10 +269,10 @@ func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
 // The jitter randomizes the wait in [RetryWaitMin, computed] to avoid thundering herd.
 func (c *Client) calculateBackoff(attempt int) time.Duration {
 	mult := math.Pow(2, float64(attempt-1))
-	wait := min(time.Duration(float64(c.RetryWaitMin)*mult), c.RetryWaitMax)
-	// Full jitter: uniform random in [RetryWaitMin, wait].
-	if wait > c.RetryWaitMin {
-		wait = c.RetryWaitMin + time.Duration(rand.Int64N(int64(wait-c.RetryWaitMin+1)))
+	wait := min(time.Duration(float64(c.retryWaitMin)*mult), c.retryWaitMax)
+	// Full jitter: uniform random in [retryWaitMin, wait].
+	if wait > c.retryWaitMin {
+		wait = c.retryWaitMin + time.Duration(rand.Int64N(int64(wait-c.retryWaitMin+1)))
 	}
 	return wait
 }
