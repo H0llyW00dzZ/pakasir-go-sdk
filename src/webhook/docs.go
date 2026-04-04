@@ -23,6 +23,11 @@
 //   - [ParseRequest]: accepts an [*http.Request] — convenience for net/http
 //   - [ParseBytes]: accepts raw []byte — for frameworks like Fiber
 //
+// # Body Size Limit
+//
+// The [Parse] and [ParseRequest] functions limit the maximum request body
+// to 1 MB to guard against oversized payloads.
+//
 // # Important Security Note
 //
 // As stated in the Pakasir documentation, you must always verify that

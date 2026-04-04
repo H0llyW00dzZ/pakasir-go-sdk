@@ -37,21 +37,20 @@ Coverage is uploaded to Codecov from ubuntu-latest only.
 
 ```
 src/
-  client/        — Core HTTP client, functional options, retry/backoff
-  constants/     — PaymentMethod enum, transaction statuses, SDK version
-  errors/        — Sentinel errors (ErrInvalid*), APIError type, i18n wrapping
-  i18n/          — Language type (en/id), message keys, translation map
-  transaction/   — Service: Create, Cancel, Detail
-  simulation/    — Service: Pay (sandbox)
-  webhook/       — Parse webhook HTTP requests into Event structs
-  helper/gc/     — Buffer/Pool interfaces wrapping bytebufferpool
-  helper/url/    — Payment redirect URL builder
-  internal/request/ — Shared request body struct (unexported)
-examples/        — Example usage (build-tagged with //go:build ignore)
+  client/           — Core HTTP client, functional options, retry/backoff
+  constants/        — PaymentMethod/TransactionStatus enums, SDK version
+  errors/           — Sentinel errors (ErrInvalid*), APIError type, i18n wrapping
+  i18n/             — Language type (en/id), message keys, translation map
+  transaction/      — Service: Create, Cancel, Detail
+  simulation/       — Service: Pay (sandbox)
+  webhook/          — Parse webhook HTTP requests into Event structs
+  helper/gc/        — Buffer/Pool interfaces wrapping bytebufferpool
+  helper/url/       — Payment redirect URL builder
+  internal/request/ — Shared request body struct and validation (unexported)
+examples/           — Example usage (build-tagged with //go:build ignore)
 ```
 
-Every package has a `docs.go` with package-level godoc. Every package except
-`internal/request` has tests.
+Every package has a `docs.go` with package-level godoc. Every package has tests.
 
 ## Code Style
 
@@ -99,10 +98,10 @@ Alias `net/url` as `neturl` when inside the `url` package.
 - **Packages**: lowercase single-word (`client`, `constants`, `gc`, `i18n`).
 - **Types**: PascalCase (`Client`, `Service`, `APIError`, `PaymentInfo`).
 - **Constants**: grouped in `const ()` blocks with consistent prefix — `Method*`, `Status*`, `Default*`, `Msg*`, `Err*`, `SDK*`.
-- **Enums**: typed strings (`PaymentMethod string`, `Language string`, `MessageKey string`) with a `Valid()` method and unexported validation map.
+- **Enums**: typed strings (`PaymentMethod string`, `TransactionStatus string`, `Language string`, `MessageKey string`) with a `Valid()` method and unexported validation map.
 - **Constructors**: `New(...)` returns `*Client` (no error); `NewService(c)` for service types. Credential validation is deferred to `Do()`.
 - **Functional options**: `type Option func(*Client)` with `With*` functions.
-- **Receivers**: single-letter matching the type (`c *Client`, `s *Service`, `e *Event`, `m PaymentMethod`).
+- **Receivers**: single-letter matching the type (`c *Client`, `s *Service`, `e *Event`, `m PaymentMethod`, `s TransactionStatus`).
 - **Unexported helpers**: camelCase (`isRetryable`, `calculateBackoff`, `validateRequest`).
 
 ### Struct Tags
@@ -176,4 +175,5 @@ Only two direct dependencies — keep the footprint minimal:
 - No global mutable state (except the buffer pool `gc.Default`).
 - Service-oriented architecture: each API domain is a `Service` wrapping `*client.Client`.
 - Functional options for client configuration.
-- Internal packages (`src/internal/`) for shared types not exposed to consumers.
+- Internal packages (`src/internal/`) for shared types and validation not exposed to consumers.
+- Shared validation via `request.ValidateOrderAndAmount` (avoid duplicating order/amount checks).

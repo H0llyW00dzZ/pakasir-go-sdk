@@ -15,7 +15,7 @@
 // Package client provides the core HTTP client for the Pakasir payment gateway SDK.
 //
 // It handles authentication, request execution, buffer pooling, and
-// automatic retry with exponential backoff for transient failures.
+// automatic retry with exponential backoff and jitter for transient failures.
 //
 // # Basic Usage
 //
@@ -33,14 +33,16 @@
 //
 //   - [WithBaseURL]: Override the API base URL (e.g., for staging)
 //   - [WithHTTPClient]: Provide a custom [http.Client]
-//   - [WithTimeout]: Set the HTTP request timeout
+//   - [WithTimeout]: Set the HTTP request timeout (zero/negative ignored)
 //   - [WithLanguage]: Set the locale for SDK error messages
 //   - [WithRetries]: Configure the number of retry attempts
-//   - [WithRetryWait]: Configure backoff min/max durations
+//   - [WithRetryWait]: Configure backoff min/max durations (auto-swapped if inverted)
+//   - [WithBufferPool]: Provide a custom buffer pool
 //
 // # Retry Logic
 //
 // The client automatically retries requests that encounter transient
 // failures (5xx server errors and network errors) using exponential
-// backoff. Client errors (4xx) are never retried.
+// backoff with full jitter. Client errors (4xx) and permanent TLS
+// certificate errors are never retried.
 package client
