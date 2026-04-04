@@ -64,7 +64,7 @@ func main() {
 - **Service-Oriented** — Separate `transaction`, `simulation`, and `webhook` services
 - **Context-First** — All I/O operations accept `context.Context`
 - **Typed Requests/Responses** — No raw maps; fully typed structs with JSON tags
-- **Buffer Pooling** — Memory-efficient request serialization via `sync.Pool`
+- **Buffer Pooling** — Memory-efficient request serialization via [`bytebufferpool`](https://github.com/valyala/bytebufferpool)
 - **Exponential Backoff** — Automatic retry for transient failures (5xx, network errors)
 - **i18n** — Localized error messages in English and Indonesian
 - **URL Builder** — Helper for redirect-based payment integrations
