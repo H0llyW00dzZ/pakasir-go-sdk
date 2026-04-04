@@ -62,7 +62,7 @@ func main() {
 - **Context-First** — All I/O operations accept `context.Context`
 - **Typed Requests/Responses** — No raw maps; fully typed structs with JSON tags
 - **Buffer Pooling** — Memory-efficient request serialization via [`bytebufferpool`](https://github.com/valyala/bytebufferpool)
-- **Exponential Backoff** — Automatic retry for transient failures (5xx, network errors)
+- **Exponential Backoff with Jitter** — Automatic retry for transient failures (5xx, network errors)
 - **i18n** — Localized error messages in English and Indonesian
 - **URL Builder** — Helper for redirect-based payment integrations
 
@@ -72,7 +72,7 @@ func main() {
 pakasir-go-sdk/
 ├── src/
 │   ├── client/          # Core HTTP client, configuration, buffer pool
-│   ├── constants/       # Payment methods, transaction statuses
+│   ├── constants/       # Payment methods, typed transaction statuses
 │   ├── errors/          # Sentinel errors, APIError type
 │   ├── i18n/            # Internationalization (EN, ID)
 │   ├── transaction/     # Transaction service (create, cancel, detail)
@@ -82,7 +82,7 @@ pakasir-go-sdk/
 │   │   ├── gc/          # Buffer pool management
 │   │   └── url/         # Payment URL builder
 │   └── internal/
-│       └── request/     # Shared request body builder
+│       └── request/     # Shared request body and validation
 ├── examples/            # Usage examples
 ├── LICENSE              # Apache License 2.0
 └── README.md
@@ -115,6 +115,15 @@ pakasir-go-sdk/
 | `constants.MethodArthaGrahaVA` | `artha_graha_va` |
 | `constants.MethodPaypal` | `paypal` |
 
+## Transaction Statuses
+
+| Constant | Value |
+|---|---|
+| `constants.StatusCompleted` | `completed` |
+| `constants.StatusPending` | `pending` |
+| `constants.StatusExpired` | `expired` |
+| `constants.StatusCancelled` | `cancelled` |
+
 ## Client Options
 
 ```go
@@ -125,6 +134,7 @@ c := client.New("project", "api-key",
     client.WithLanguage(i18n.Indonesian),               // Localized errors
     client.WithRetries(5),                              // Retry attempts
     client.WithRetryWait(500*time.Millisecond, 1*time.Minute), // Backoff config
+    client.WithBufferPool(customPool),                  // Custom buffer pool
 )
 ```
 

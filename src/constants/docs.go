@@ -24,6 +24,7 @@
 //
 // # Transaction Statuses
 //
-// Status constants (e.g., [StatusCompleted], [StatusPending]) represent
-// the lifecycle states of a Pakasir transaction.
+// The [TransactionStatus] type provides type-safe constants for transaction
+// lifecycle states (e.g., [StatusCompleted], [StatusPending]). Use the
+// [TransactionStatus.Valid] method to verify a status value.
 package constants
