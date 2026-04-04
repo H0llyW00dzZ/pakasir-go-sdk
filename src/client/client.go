@@ -128,37 +128,13 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 	var lastErr error
 
 	for attempt := 0; attempt <= c.Retries; attempt++ {
-		if attempt > 0 {
-			waitTime := c.calculateBackoff(attempt)
-
-			timer := time.NewTimer(waitTime)
-			select {
-			case <-ctx.Done():
-				timer.Stop()
-				return nil, ctx.Err()
-			case <-timer.C:
-			}
-		}
-
-		// Check context before making the request.
-		if err := ctx.Err(); err != nil {
+		if err := c.waitForRetry(ctx, attempt); err != nil {
 			return nil, err
 		}
 
-		url := c.BaseURL + path
-
-		var bodyReader io.Reader
-		if body != nil {
-			bodyReader = bytes.NewReader(body)
-		}
-
-		req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
+		req, err := c.buildRequest(ctx, method, path, body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %w", err)
-		}
-		req.Header.Set("User-Agent", constants.UserAgent())
-		if method == http.MethodPost {
-			req.Header.Set("Content-Type", "application/json")
+			return nil, err
 		}
 
 		resp, err := c.HTTPClient.Do(req)
@@ -167,21 +143,11 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 			continue
 		}
 
-		buf := c.bufferPool.Get()
-		_, readErr := buf.ReadFrom(resp.Body)
-		resp.Body.Close()
-
+		data, readErr := c.readResponseBody(resp)
 		if readErr != nil {
-			buf.Reset()
-			c.bufferPool.Put(buf)
 			lastErr = readErr
 			continue
 		}
-
-		data := make([]byte, buf.Len())
-		copy(data, buf.Bytes())
-		buf.Reset()
-		c.bufferPool.Put(buf)
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			return data, nil
@@ -209,6 +175,65 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 // GetBufferPool returns the client's buffer pool for use by services.
 func (c *Client) GetBufferPool() gc.Pool {
 	return c.bufferPool
+}
+
+// waitForRetry blocks until the backoff timer fires or the context is
+// cancelled. On the first attempt (0) it returns immediately.
+func (c *Client) waitForRetry(ctx context.Context, attempt int) error {
+	if attempt == 0 {
+		return ctx.Err()
+	}
+
+	timer := time.NewTimer(c.calculateBackoff(attempt))
+	select {
+	case <-ctx.Done():
+		timer.Stop()
+		return ctx.Err()
+	case <-timer.C:
+		return ctx.Err()
+	}
+}
+
+// buildRequest creates a fully-formed [http.Request] with the SDK
+// headers set. A fresh [bytes.Reader] wraps body on each call so
+// retries always send the complete payload.
+func (c *Client) buildRequest(ctx context.Context, method, path string, body []byte) (*http.Request, error) {
+	var bodyReader io.Reader
+	if body != nil {
+		bodyReader = bytes.NewReader(body)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+path, bodyReader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("User-Agent", constants.UserAgent())
+	if method == http.MethodPost {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	return req, nil
+}
+
+// readResponseBody drains the response into a pooled buffer, copies the
+// data out, and returns the buffer to the pool.
+func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
+	buf := c.bufferPool.Get()
+	_, readErr := buf.ReadFrom(resp.Body)
+	resp.Body.Close()
+
+	if readErr != nil {
+		buf.Reset()
+		c.bufferPool.Put(buf)
+		return nil, readErr
+	}
+
+	data := make([]byte, buf.Len())
+	copy(data, buf.Bytes())
+	buf.Reset()
+	c.bufferPool.Put(buf)
+	return data, nil
 }
 
 // calculateBackoff returns the wait duration for the given attempt
