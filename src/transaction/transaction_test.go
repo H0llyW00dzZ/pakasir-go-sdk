@@ -120,6 +120,14 @@ func TestCreateInvalidJSONResponse(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to decode response")
 }
 
+func TestCreateNilRequest(t *testing.T) {
+	svc, srv := newTestService(t, func(w http.ResponseWriter, r *http.Request) {})
+	defer srv.Close()
+
+	_, err := svc.Create(context.Background(), constants.MethodQRIS, nil)
+	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
+}
+
 // --- Cancel ---
 
 func TestCancelSuccess(t *testing.T) {
@@ -149,6 +157,14 @@ func TestCancelInvalidAmount(t *testing.T) {
 
 	err := svc.Cancel(context.Background(), &CancelRequest{OrderID: "INV123", Amount: 0})
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAmount)
+}
+
+func TestCancelNilRequest(t *testing.T) {
+	svc, srv := newTestService(t, func(w http.ResponseWriter, r *http.Request) {})
+	defer srv.Close()
+
+	err := svc.Cancel(context.Background(), nil)
+	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
 }
 
 // --- Detail ---
@@ -202,6 +218,14 @@ func TestDetailInvalidJSONResponse(t *testing.T) {
 	_, err := svc.Detail(context.Background(), &DetailRequest{OrderID: "INV123", Amount: 22000})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to decode response")
+}
+
+func TestDetailNilRequest(t *testing.T) {
+	svc, srv := newTestService(t, func(w http.ResponseWriter, r *http.Request) {})
+	defer srv.Close()
+
+	_, err := svc.Detail(context.Background(), nil)
+	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
 }
 
 // --- Time Parsers ---

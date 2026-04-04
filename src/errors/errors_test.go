@@ -101,6 +101,15 @@ func TestSentinelErrors(t *testing.T) {
 	}
 }
 
+func TestNewContextStrOnNonFormatMessage(t *testing.T) {
+	// MsgInvalidProject = "project slug is required" (no %s verb).
+	// Passing a contextStr should append it as a suffix, not garble the message.
+	err := New(i18n.English, ErrInvalidProject, i18n.MsgInvalidProject, "extra-context")
+	assert.ErrorIs(t, err, ErrInvalidProject)
+	assert.Contains(t, err.Error(), "project slug is required: extra-context")
+	assert.NotContains(t, err.Error(), "EXTRA")
+}
+
 func TestNewMultipleCauses(t *testing.T) {
 	cause1 := errors.New("first")
 	cause2 := errors.New("second")

@@ -34,9 +34,12 @@ func WithBaseURL(baseURL string) Option {
 
 // WithHTTPClient sets a custom [http.Client] for the Pakasir client.
 // Use this to configure custom transports, proxies, or TLS settings.
+// A nil value is ignored and the default client is retained.
 func WithHTTPClient(httpClient *http.Client) Option {
 	return func(c *Client) {
-		c.HTTPClient = httpClient
+		if httpClient != nil {
+			c.HTTPClient = httpClient
+		}
 	}
 }
 
@@ -58,9 +61,12 @@ func WithLanguage(lang i18n.Language) Option {
 }
 
 // WithRetries sets the maximum number of retry attempts for transient failures.
-// Set to 0 to disable retries.
+// Set to 0 to disable retries. Negative values are clamped to 0.
 func WithRetries(n int) Option {
 	return func(c *Client) {
+		if n < 0 {
+			n = 0
+		}
 		c.Retries = n
 	}
 }

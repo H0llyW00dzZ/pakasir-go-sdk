@@ -17,6 +17,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/i18n"
 )
@@ -85,9 +86,14 @@ func New(lang i18n.Language, sentinel error, key i18n.MessageKey, args ...any) e
 		}
 	}
 
-	// Format the message with contextStr if it looks like a format string.
+	// Format the message with contextStr if the template contains a %s verb.
+	// Otherwise, append the context as a suffix to avoid garbled output.
 	if contextStr != "" {
-		msg = fmt.Sprintf(msg, contextStr)
+		if strings.Contains(msg, "%s") {
+			msg = fmt.Sprintf(msg, contextStr)
+		} else {
+			msg = msg + ": " + contextStr
+		}
 	}
 
 	if cause != nil {

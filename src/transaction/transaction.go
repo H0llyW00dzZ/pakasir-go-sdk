@@ -45,6 +45,9 @@ func NewService(c *client.Client) *Service {
 // It sends a POST request to /api/transactioncreate/{method} and returns
 // the payment details including the QR string or Virtual Account number.
 func (s *Service) Create(ctx context.Context, method constants.PaymentMethod, req *CreateRequest) (*CreateResponse, error) {
+	if req == nil {
+		return nil, sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
+	}
 	if !method.Valid() {
 		return nil, sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidPaymentMethod, i18n.MsgInvalidPaymentMethod, method.String())
 	}
@@ -87,6 +90,9 @@ func (s *Service) Create(ctx context.Context, method constants.PaymentMethod, re
 //
 // It sends a POST request to /api/transactioncancel.
 func (s *Service) Cancel(ctx context.Context, req *CancelRequest) error {
+	if req == nil {
+		return sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
+	}
 	if err := s.validateRequest(req.OrderID, req.Amount); err != nil {
 		return err
 	}
@@ -116,6 +122,9 @@ func (s *Service) Cancel(ctx context.Context, req *CancelRequest) error {
 //
 // It sends a GET request to /api/transactiondetail with query parameters.
 func (s *Service) Detail(ctx context.Context, req *DetailRequest) (*DetailResponse, error) {
+	if req == nil {
+		return nil, sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
+	}
 	if err := s.validateRequest(req.OrderID, req.Amount); err != nil {
 		return nil, err
 	}

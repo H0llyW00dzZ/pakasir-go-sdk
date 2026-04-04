@@ -198,8 +198,9 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 	}
 
 	// All retries exhausted.
-	return nil, fmt.Errorf("%s: %w",
+	return nil, fmt.Errorf("%s: %w: %w",
 		fmt.Sprintf(i18n.Get(c.Language, i18n.MsgRequestFailedAfterRetries), c.Retries),
+		sdkerrors.ErrRequestFailedAfterRetries,
 		lastErr,
 	)
 }
