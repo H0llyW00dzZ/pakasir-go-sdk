@@ -126,7 +126,7 @@ func TestCreateNilRequest(t *testing.T) {
 	defer srv.Close()
 
 	_, err := svc.Create(context.Background(), constants.MethodQRIS, nil)
-	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
+	assert.ErrorIs(t, err, sdkerrors.ErrNilRequest)
 }
 
 // --- Cancel ---
@@ -165,7 +165,7 @@ func TestCancelNilRequest(t *testing.T) {
 	defer srv.Close()
 
 	err := svc.Cancel(context.Background(), nil)
-	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
+	assert.ErrorIs(t, err, sdkerrors.ErrNilRequest)
 }
 
 // --- Detail ---
@@ -226,7 +226,7 @@ func TestDetailNilRequest(t *testing.T) {
 	defer srv.Close()
 
 	_, err := svc.Detail(context.Background(), nil)
-	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
+	assert.ErrorIs(t, err, sdkerrors.ErrNilRequest)
 }
 
 // --- Time Parsers ---

@@ -15,6 +15,7 @@
 package webhook
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -48,13 +49,13 @@ func TestParseSuccess(t *testing.T) {
 func TestParseNilReader(t *testing.T) {
 	_, err := Parse(nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "reader is nil")
+	assert.ErrorIs(t, err, ErrNilReader)
 }
 
 func TestParseInvalidJSON(t *testing.T) {
 	_, err := Parse(strings.NewReader(`not json`))
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to decode body")
+	assert.ErrorIs(t, err, ErrDecodeBody)
 }
 
 type errorReader struct{}
@@ -64,7 +65,8 @@ func (errorReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
 func TestParseReadError(t *testing.T) {
 	_, err := Parse(errorReader{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to read body")
+	assert.ErrorIs(t, err, ErrReadBody)
+	assert.True(t, errors.Is(err, io.ErrUnexpectedEOF), "should wrap the underlying cause")
 }
 
 // --- ParseRequest (*http.Request) ---
@@ -79,20 +81,20 @@ func TestParseRequestSuccess(t *testing.T) {
 func TestParseRequestNilRequest(t *testing.T) {
 	_, err := ParseRequest(nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "request body is nil")
+	assert.ErrorIs(t, err, ErrNilRequest)
 }
 
 func TestParseRequestNilBody(t *testing.T) {
 	_, err := ParseRequest(&http.Request{Body: nil})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "request body is nil")
+	assert.ErrorIs(t, err, ErrNilRequest)
 }
 
 func TestParseRequestInvalidJSON(t *testing.T) {
 	r := &http.Request{Body: io.NopCloser(strings.NewReader(`not json`))}
 	_, err := ParseRequest(r)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to decode body")
+	assert.ErrorIs(t, err, ErrDecodeBody)
 }
 
 type errorReadCloser struct{}
@@ -103,7 +105,7 @@ func (errorReadCloser) Close() error             { return nil }
 func TestParseRequestReadError(t *testing.T) {
 	_, err := ParseRequest(&http.Request{Body: errorReadCloser{}})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to read body")
+	assert.ErrorIs(t, err, ErrReadBody)
 }
 
 // --- ParseBytes ---
@@ -117,17 +119,17 @@ func TestParseBytesSuccess(t *testing.T) {
 func TestParseBytesEmpty(t *testing.T) {
 	_, err := ParseBytes(nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "body is empty")
+	assert.ErrorIs(t, err, ErrEmptyBody)
 
 	_, err = ParseBytes([]byte{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "body is empty")
+	assert.ErrorIs(t, err, ErrEmptyBody)
 }
 
 func TestParseBytesInvalidJSON(t *testing.T) {
 	_, err := ParseBytes([]byte(`not json`))
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to decode body")
+	assert.ErrorIs(t, err, ErrDecodeBody)
 }
 
 // --- Event.ParseCompletedAt ---

@@ -57,9 +57,15 @@ type Options struct {
 
 // Build generates a Pakasir payment redirect URL.
 //
-// It returns an error if the project is empty, the orderID is empty,
-// or the amount is not positive.
+// The baseURL must be a fully qualified URL with a scheme
+// (e.g., "https://app.pakasir.com"). Trailing slashes are trimmed.
+//
+// It returns an error if the baseURL is empty, the project is empty,
+// the orderID is empty, or the amount is not positive.
 func Build(baseURL, project string, amount int64, opts Options) (string, error) {
+	if baseURL == "" {
+		return "", fmt.Errorf("url: base URL is required")
+	}
 	if project == "" {
 		return "", fmt.Errorf("url: project is required")
 	}

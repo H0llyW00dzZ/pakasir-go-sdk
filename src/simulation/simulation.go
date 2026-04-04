@@ -53,17 +53,17 @@ func NewService(c *client.Client) *Service {
 // It sends a POST request to /api/paymentsimulation.
 func (s *Service) Pay(ctx context.Context, req *PayRequest) error {
 	if req == nil {
-		return sdkerrors.New(s.client.Language, sdkerrors.ErrInvalidOrderID, i18n.MsgInvalidOrderID)
+		return sdkerrors.New(s.client.Lang(), sdkerrors.ErrNilRequest, i18n.MsgNilRequest)
 	}
-	if err := request.ValidateOrderAndAmount(s.client.Language, req.OrderID, req.Amount); err != nil {
+	if err := request.ValidateOrderAndAmount(s.client.Lang(), req.OrderID, req.Amount); err != nil {
 		return err
 	}
 
 	body := request.Body{
-		Project: s.client.Project,
+		Project: s.client.Project(),
 		OrderID: req.OrderID,
 		Amount:  req.Amount,
-		APIKey:  s.client.APIKey,
+		APIKey:  s.client.APIKey(),
 	}
 
 	buf := s.client.GetBufferPool().Get()

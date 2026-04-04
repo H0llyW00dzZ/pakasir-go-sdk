@@ -56,7 +56,7 @@ func TestPayNilRequest(t *testing.T) {
 	defer srv.Close()
 
 	err := svc.Pay(context.Background(), nil)
-	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
+	assert.ErrorIs(t, err, sdkerrors.ErrNilRequest)
 }
 
 func TestPayEmptyOrderID(t *testing.T) {

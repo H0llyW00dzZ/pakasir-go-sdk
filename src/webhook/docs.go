@@ -23,6 +23,17 @@
 //   - [ParseRequest]: accepts an [*http.Request] — convenience for net/http
 //   - [ParseBytes]: accepts raw []byte — for frameworks like Fiber
 //
+// # Sentinel Errors
+//
+// All parse functions return sentinel errors for programmatic handling
+// via [errors.Is]:
+//
+//   - [ErrNilReader]: nil reader passed to [Parse]
+//   - [ErrNilRequest]: nil request or body passed to [ParseRequest]
+//   - [ErrEmptyBody]: empty payload passed to [ParseBytes]
+//   - [ErrReadBody]: body read failure (wraps underlying cause)
+//   - [ErrDecodeBody]: JSON decode failure (wraps underlying cause)
+//
 // # Body Size Limit
 //
 // The [Parse] and [ParseRequest] functions limit the maximum request body

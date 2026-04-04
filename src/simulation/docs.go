@@ -28,4 +28,9 @@
 //	    OrderID: "INV123456",
 //	    Amount:  99000,
 //	})
+//
+// # Error Handling
+//
+// A nil request pointer returns [errors.ErrNilRequest]. Invalid fields
+// return localized errors via [errors.Is] (e.g., [errors.ErrInvalidOrderID]).
 package simulation

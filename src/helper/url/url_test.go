@@ -97,3 +97,9 @@ func TestBuildProjectWithSpecialChars(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, u, "my%20project%2Ftest")
 }
+
+func TestBuildEmptyBaseURL(t *testing.T) {
+	_, err := Build("", "proj", 22000, Options{OrderID: "INV1"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "base URL is required")
+}

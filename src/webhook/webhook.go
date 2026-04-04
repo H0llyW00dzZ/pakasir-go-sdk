@@ -16,12 +16,32 @@ package webhook
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
+)
+
+// Sentinel errors for programmatic handling via [errors.Is].
+var (
+	// ErrNilReader is returned when a nil [io.Reader] is passed to [Parse].
+	ErrNilReader = errors.New("webhook: reader is nil")
+
+	// ErrNilRequest is returned when a nil [http.Request] or nil body
+	// is passed to [ParseRequest].
+	ErrNilRequest = errors.New("webhook: request body is nil")
+
+	// ErrEmptyBody is returned when the webhook payload is empty.
+	ErrEmptyBody = errors.New("webhook: body is empty")
+
+	// ErrReadBody is returned when reading the webhook body fails.
+	ErrReadBody = errors.New("webhook: failed to read body")
+
+	// ErrDecodeBody is returned when JSON decoding of the webhook body fails.
+	ErrDecodeBody = errors.New("webhook: failed to decode body")
 )
 
 // Event represents a payment notification received from the Pakasir webhook.
@@ -77,14 +97,14 @@ func (e *Event) ParseCompletedAt() (time.Time, error) {
 // against their own system records, as recommended by the Pakasir documentation.
 func Parse(r io.Reader) (*Event, error) {
 	if r == nil {
-		return nil, fmt.Errorf("webhook: reader is nil")
+		return nil, ErrNilReader
 	}
 
 	// Limit body reads to 1 MB to guard against oversized payloads.
 	const maxBodySize = 1 << 20 // 1 MB
 	data, err := io.ReadAll(io.LimitReader(r, maxBodySize))
 	if err != nil {
-		return nil, fmt.Errorf("webhook: failed to read body: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrReadBody, err)
 	}
 
 	return ParseBytes(data)
@@ -97,7 +117,7 @@ func Parse(r io.Reader) (*Event, error) {
 // into an [Event] struct.
 func ParseRequest(r *http.Request) (*Event, error) {
 	if r == nil || r.Body == nil {
-		return nil, fmt.Errorf("webhook: request body is nil")
+		return nil, ErrNilRequest
 	}
 	defer r.Body.Close()
 
@@ -110,12 +130,12 @@ func ParseRequest(r *http.Request) (*Event, error) {
 // (e.g., Fiber's c.Body()) or when the body has already been read.
 func ParseBytes(data []byte) (*Event, error) {
 	if len(data) == 0 {
-		return nil, fmt.Errorf("webhook: body is empty")
+		return nil, ErrEmptyBody
 	}
 
 	var event Event
 	if err := json.Unmarshal(data, &event); err != nil {
-		return nil, fmt.Errorf("webhook: failed to decode body: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrDecodeBody, err)
 	}
 
 	return &event, nil

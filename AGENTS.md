@@ -101,6 +101,7 @@ Alias `net/url` as `neturl` when inside the `url` package.
 - **Enums**: typed strings (`PaymentMethod string`, `TransactionStatus string`, `Language string`, `MessageKey string`) with a `Valid()` method and unexported validation map.
 - **Constructors**: `New(...)` returns `*Client` (no error); `NewService(c)` for service types. Credential validation is deferred to `Do()`.
 - **Functional options**: `type Option func(*Client)` with `With*` functions.
+- **Getters**: exported read-only accessors for encapsulated fields — `Project()`, `APIKey()`, `Lang()`, `GetBufferPool()`. Service packages use these to read client state.
 - **Receivers**: single-letter matching the type (`c *Client`, `s *Service`, `e *Event`, `m PaymentMethod`, `s TransactionStatus`).
 - **Unexported helpers**: camelCase (`isRetryable`, `calculateBackoff`, `validateRequest`).
 
@@ -119,12 +120,13 @@ type PaymentInfo struct {
 ### Error Handling
 
 - **Sentinel errors** defined with `errors.New()` in `src/errors/`, prefixed `Err*`.
+- **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, etc.
 - **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey)` — always wraps with `%w` so `errors.Is()` works.
 - **`fmt.Errorf` wrapping** for non-sentinel errors: `fmt.Errorf("context: %w", err)` with lowercase prefix.
 - **`APIError`** struct for HTTP error responses; checked with `errors.As()`.
 - **Package-prefixed messages** in standalone packages: `"webhook: ..."`, `"url: ..."`.
 - **Validate early, return immediately** at the top of functions. `client.New` is an exception: it defers project/API-key validation to `Do()` so initialization is infallible.
-- **Nil-guard request pointers** in service methods before accessing fields.
+- **Nil-guard request pointers** in service methods using `sdkerrors.ErrNilRequest` — distinct from `ErrInvalidOrderID`.
 
 ### Documentation
 
@@ -175,5 +177,6 @@ Only two direct dependencies — keep the footprint minimal:
 - No global mutable state (except the buffer pool `gc.Default`).
 - Service-oriented architecture: each API domain is a `Service` wrapping `*client.Client`.
 - Functional options for client configuration.
+- Encapsulated client fields: all `Client` struct fields are unexported; use `Project()`, `APIKey()`, `Lang()`, `GetBufferPool()` getters from service packages.
 - Internal packages (`src/internal/`) for shared types and validation not exposed to consumers.
 - Shared validation via `request.ValidateOrderAndAmount` (avoid duplicating order/amount checks).

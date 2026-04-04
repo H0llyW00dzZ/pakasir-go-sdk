@@ -29,7 +29,7 @@ type Option func(*Client)
 // This is useful for testing or pointing to a staging environment.
 func WithBaseURL(baseURL string) Option {
 	return func(c *Client) {
-		c.BaseURL = baseURL
+		c.baseURL = baseURL
 	}
 }
 
@@ -39,7 +39,7 @@ func WithBaseURL(baseURL string) Option {
 func WithHTTPClient(httpClient *http.Client) Option {
 	return func(c *Client) {
 		if httpClient != nil {
-			c.HTTPClient = httpClient
+			c.httpClient = httpClient
 		}
 	}
 }
@@ -53,7 +53,7 @@ func WithHTTPClient(httpClient *http.Client) Option {
 func WithTimeout(d time.Duration) Option {
 	return func(c *Client) {
 		if d > 0 {
-			c.HTTPClient.Timeout = d
+			c.httpClient.Timeout = d
 		}
 	}
 }
@@ -62,7 +62,7 @@ func WithTimeout(d time.Duration) Option {
 // Supported values are [i18n.English] and [i18n.Indonesian].
 func WithLanguage(lang i18n.Language) Option {
 	return func(c *Client) {
-		c.Language = lang
+		c.language = lang
 	}
 }
 
@@ -73,7 +73,7 @@ func WithRetries(n int) Option {
 		if n < 0 {
 			n = 0
 		}
-		c.Retries = n
+		c.retries = n
 	}
 }
 
@@ -94,7 +94,7 @@ func WithRetryWait(min, max time.Duration) Option {
 		if min > max {
 			min, max = max, min
 		}
-		c.RetryWaitMin = min
-		c.RetryWaitMax = max
+		c.retryWaitMin = min
+		c.retryWaitMax = max
 	}
 }
