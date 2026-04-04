@@ -283,21 +283,99 @@ func TestDoNetworkErrorRetryExhausted(t *testing.T) {
 	assert.Contains(t, doErr.Error(), "request failed after")
 }
 
-func TestDoReadBodyError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Length", "100000")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("partial"))
-		if hj, ok := w.(http.Hijacker); ok {
-			conn, _, _ := hj.Hijack()
-			conn.Close()
-		}
-	}))
-	defer srv.Close()
+// errorBody is an io.ReadCloser that always returns a configurable error on Read.
+type errorBody struct {
+	err error
+}
 
-	c := newTestClient(t, srv.URL, WithRetries(0))
-	// Exercises the readErr path — outcome depends on timing.
-	c.Do(context.Background(), http.MethodGet, "/test", nil)
+func (e *errorBody) Read([]byte) (int, error) { return 0, e.err }
+func (e *errorBody) Close() error             { return nil }
+
+// roundTripFunc adapts a function into an [http.RoundTripper].
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestDoReadBodyError(t *testing.T) {
+	c := New("proj", "key",
+		WithRetries(0),
+		WithHTTPClient(&http.Client{
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       &errorBody{err: io.ErrUnexpectedEOF},
+				}, nil
+			}),
+		}),
+	)
+
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	// With 0 retries the read error becomes the last error and retries are exhausted.
+	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
+}
+
+func TestDoReadBodyErrorRetried(t *testing.T) {
+	var attempt atomic.Int32
+	c := New("proj", "key",
+		WithRetries(2),
+		WithRetryWait(1*time.Millisecond, 2*time.Millisecond),
+		WithHTTPClient(&http.Client{
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				n := attempt.Add(1)
+				if n <= 2 {
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       &errorBody{err: io.ErrUnexpectedEOF},
+					}, nil
+				}
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(io.LimitReader(errlessReader("ok"), 2)),
+				}, nil
+			}),
+		}),
+	)
+
+	// First two attempts fail on body read; third succeeds.
+	data, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.NoError(t, err)
+	assert.Equal(t, "ok", string(data))
+	assert.Equal(t, int32(3), attempt.Load())
+}
+
+// errlessReader is a string-backed reader that avoids importing strings.
+type errlessReader string
+
+func (r errlessReader) Read(p []byte) (int, error) {
+	n := copy(p, string(r))
+	return n, io.EOF
+}
+
+func TestDoReadBodyNonRetryableError(t *testing.T) {
+	var attempt atomic.Int32
+	c := New("proj", "key",
+		WithRetries(3),
+		WithRetryWait(1*time.Millisecond, 2*time.Millisecond),
+		WithHTTPClient(&http.Client{
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				attempt.Add(1)
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       &errorBody{err: &x509.UnknownAuthorityError{}},
+				}, nil
+			}),
+		}),
+	)
+
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	// Must fail immediately with ErrRequestFailed, not exhaust retries.
+	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailed)
+	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
+	assert.Contains(t, err.Error(), "permanent error")
+	// Only one attempt — no retries wasted.
+	assert.Equal(t, int32(1), attempt.Load())
 }
 
 // --- GetBufferPool ---
@@ -404,4 +482,5 @@ func TestDoNonRetryableNetworkError(t *testing.T) {
 	// Must fail immediately with ErrRequestFailed, not ErrRequestFailedAfterRetries.
 	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailed)
 	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
+	assert.Contains(t, err.Error(), "permanent error")
 }
