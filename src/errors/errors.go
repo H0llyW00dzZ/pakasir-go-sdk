@@ -68,38 +68,44 @@ func (e *APIError) Error() string {
 //
 // The returned error supports [errors.Is] against the sentinel.
 func New(lang i18n.Language, sentinel error, key i18n.MessageKey, args ...any) error {
-	msg := i18n.Get(lang, key)
+	msg := formatMessage(i18n.Get(lang, key), parseContextStr(args))
 
-	var cause error
-	var contextStr string
-
-	for _, arg := range args {
-		switch v := arg.(type) {
-		case error:
-			if cause == nil {
-				cause = v
-			}
-		case string:
-			if contextStr == "" && v != "" {
-				contextStr = v
-			}
-		}
-	}
-
-	// Format the message with contextStr if the template contains a %s verb.
-	// Otherwise, append the context as a suffix to avoid garbled output.
-	if contextStr != "" {
-		if strings.Contains(msg, "%s") {
-			msg = fmt.Sprintf(msg, contextStr)
-		} else {
-			msg = msg + ": " + contextStr
-		}
-	}
-
-	if cause != nil {
+	if cause := parseCause(args); cause != nil {
 		return fmt.Errorf("%s: %w: %w", msg, sentinel, cause)
 	}
 	return fmt.Errorf("%s: %w", msg, sentinel)
+}
+
+// parseCause returns the first error value found in args, or nil.
+func parseCause(args []any) error {
+	for _, arg := range args {
+		if e, ok := arg.(error); ok {
+			return e
+		}
+	}
+	return nil
+}
+
+// parseContextStr returns the first non-empty string value found in args.
+func parseContextStr(args []any) string {
+	for _, arg := range args {
+		if s, ok := arg.(string); ok && s != "" {
+			return s
+		}
+	}
+	return ""
+}
+
+// formatMessage applies contextStr to msg. If msg contains a %s verb the
+// context is substituted in; otherwise it is appended as a suffix.
+func formatMessage(msg, contextStr string) string {
+	if contextStr == "" {
+		return msg
+	}
+	if strings.Contains(msg, "%s") {
+		return fmt.Sprintf(msg, contextStr)
+	}
+	return msg + ": " + contextStr
 }
 
 // NewWithFormat creates a localized error wrapping the provided sentinel error,
