@@ -21,7 +21,7 @@
 //
 // # Basic Usage
 //
-//	c, _ := client.New("my-project", "api-key-xxx")
+//	c := client.New("my-project", "api-key-xxx")
 //	simService := simulation.NewService(c)
 //
 //	err := simService.Pay(ctx, &simulation.PayRequest{

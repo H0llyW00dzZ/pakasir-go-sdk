@@ -52,7 +52,7 @@ const (
 //
 // Create a new client using [New] with functional options:
 //
-//	c, err := client.New("my-project", "api-key-xxx",
+//	c := client.New("my-project", "api-key-xxx",
 //	    client.WithTimeout(10 * time.Second),
 //	    client.WithLanguage(i18n.Indonesian),
 //	)
@@ -89,8 +89,9 @@ type Client struct {
 // New creates a new Pakasir API [Client] with the given project slug, API key,
 // and optional configuration via functional options.
 //
-// It returns an error if the project or API key is empty.
-func New(project, apiKey string, opts ...Option) (*Client, error) {
+// Credential validation (project and API key) is deferred to [Client.Do],
+// so callers do not need to handle an error at initialization time.
+func New(project, apiKey string, opts ...Option) *Client {
 	c := &Client{
 		Project:      project,
 		APIKey:       apiKey,
@@ -107,14 +108,7 @@ func New(project, apiKey string, opts ...Option) (*Client, error) {
 		opt(c)
 	}
 
-	if c.Project == "" {
-		return nil, sdkerrors.New(c.Language, sdkerrors.ErrInvalidProject, i18n.MsgInvalidProject)
-	}
-	if c.APIKey == "" {
-		return nil, sdkerrors.New(c.Language, sdkerrors.ErrInvalidAPIKey, i18n.MsgInvalidAPIKey)
-	}
-
-	return c, nil
+	return c
 }
 
 // Do executes an HTTP request with the configured retry logic.
@@ -124,6 +118,13 @@ func New(project, apiKey string, opts ...Option) (*Client, error) {
 // [bytes.Reader] is created for each attempt, so retries always send the
 // complete body. For GET requests, body may be nil.
 func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]byte, error) {
+	if c.Project == "" {
+		return nil, sdkerrors.New(c.Language, sdkerrors.ErrInvalidProject, i18n.MsgInvalidProject)
+	}
+	if c.APIKey == "" {
+		return nil, sdkerrors.New(c.Language, sdkerrors.ErrInvalidAPIKey, i18n.MsgInvalidAPIKey)
+	}
+
 	var lastErr error
 
 	for attempt := 0; attempt <= c.Retries; attempt++ {

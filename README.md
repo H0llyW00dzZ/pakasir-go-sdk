@@ -38,10 +38,7 @@ import (
 
 func main() {
     // Initialize client
-    c, err := client.New("your-project-slug", "your-api-key")
-    if err != nil {
-        log.Fatal(err)
-    }
+    c := client.New("your-project-slug", "your-api-key")
 
     // Create a QRIS transaction
     txnService := transaction.NewService(c)
@@ -121,7 +118,7 @@ pakasir-go-sdk/
 ## Client Options
 
 ```go
-c, err := client.New("project", "api-key",
+c := client.New("project", "api-key",
     client.WithBaseURL("https://custom.api.com"),     // Custom base URL
     client.WithTimeout(10 * time.Second),              // HTTP timeout
     client.WithHTTPClient(customHTTPClient),            // Custom http.Client

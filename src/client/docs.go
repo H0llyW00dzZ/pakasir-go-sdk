@@ -19,13 +19,10 @@
 //
 // # Basic Usage
 //
-//	c, err := client.New("my-project", "api-key-xxx",
+//	c := client.New("my-project", "api-key-xxx",
 //	    client.WithTimeout(10 * time.Second),
 //	    client.WithLanguage(i18n.Indonesian),
 //	)
-//	if err != nil {
-//	    log.Fatal(err)
-//	}
 //
 //	// Use c with service packages:
 //	txnService := transaction.NewService(c)

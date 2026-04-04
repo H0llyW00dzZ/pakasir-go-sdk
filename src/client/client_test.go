@@ -35,16 +35,13 @@ func newTestClient(t *testing.T, serverURL string, opts ...Option) *Client {
 	t.Helper()
 	allOpts := []Option{WithBaseURL(serverURL), WithRetries(0)}
 	allOpts = append(allOpts, opts...)
-	c, err := New("test-project", "test-api-key", allOpts...)
-	require.NoError(t, err)
-	return c
+	return New("test-project", "test-api-key", allOpts...)
 }
 
 // --- New ---
 
 func TestNewSuccess(t *testing.T) {
-	c, err := New("my-project", "my-key")
-	require.NoError(t, err)
+	c := New("my-project", "my-key")
 	assert.Equal(t, "my-project", c.Project)
 	assert.Equal(t, "my-key", c.APIKey)
 	assert.Equal(t, DefaultBaseURL, c.BaseURL)
@@ -52,34 +49,15 @@ func TestNewSuccess(t *testing.T) {
 	assert.Equal(t, DefaultRetries, c.Retries)
 }
 
-func TestNewEmptyProject(t *testing.T) {
-	_, err := New("", "my-key")
-	require.Error(t, err)
-	assert.ErrorIs(t, err, sdkerrors.ErrInvalidProject)
-}
-
-func TestNewEmptyAPIKey(t *testing.T) {
-	_, err := New("my-project", "")
-	require.Error(t, err)
-	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAPIKey)
-}
-
-func TestNewEmptyProjectIndonesian(t *testing.T) {
-	_, err := New("", "my-key", WithLanguage(i18n.Indonesian))
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "slug proyek wajib diisi")
-}
-
 func TestNewWithAllOptions(t *testing.T) {
 	customHTTP := &http.Client{Timeout: 5 * time.Second}
-	c, err := New("proj", "key",
+	c := New("proj", "key",
 		WithBaseURL("https://custom.api.com"),
 		WithHTTPClient(customHTTP),
 		WithLanguage(i18n.Indonesian),
 		WithRetries(5),
 		WithRetryWait(100*time.Millisecond, 2*time.Second),
 	)
-	require.NoError(t, err)
 	assert.Equal(t, "https://custom.api.com", c.BaseURL)
 	assert.Same(t, customHTTP, c.HTTPClient)
 	assert.Equal(t, i18n.Indonesian, c.Language)
@@ -89,8 +67,7 @@ func TestNewWithAllOptions(t *testing.T) {
 }
 
 func TestWithTimeout(t *testing.T) {
-	c, err := New("proj", "key", WithTimeout(5*time.Second))
-	require.NoError(t, err)
+	c := New("proj", "key", WithTimeout(5*time.Second))
 	assert.Equal(t, 5*time.Second, c.HTTPClient.Timeout)
 }
 
@@ -107,6 +84,27 @@ func TestDoSuccess(t *testing.T) {
 	data, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"status":"ok"}`, string(data))
+}
+
+func TestDoEmptyProject(t *testing.T) {
+	c := New("", "my-key")
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, sdkerrors.ErrInvalidProject)
+}
+
+func TestDoEmptyAPIKey(t *testing.T) {
+	c := New("my-project", "")
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAPIKey)
+}
+
+func TestDoEmptyProjectIndonesian(t *testing.T) {
+	c := New("", "my-key", WithLanguage(i18n.Indonesian))
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "slug proyek wajib diisi")
 }
 
 func TestDoSetsUserAgent(t *testing.T) {
@@ -262,21 +260,18 @@ func TestDoNetworkError(t *testing.T) {
 }
 
 func TestDoInvalidURL(t *testing.T) {
-	c, err := New("proj", "key", WithBaseURL("://invalid"), WithRetries(0))
-	require.NoError(t, err)
-
+	c := New("proj", "key", WithBaseURL("://invalid"), WithRetries(0))
 	_, doErr := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, doErr)
 	assert.Contains(t, doErr.Error(), "failed to create request")
 }
 
 func TestDoNetworkErrorRetryExhausted(t *testing.T) {
-	c, err := New("proj", "key",
+	c := New("proj", "key",
 		WithBaseURL("http://127.0.0.1:1"),
 		WithRetries(1),
 		WithRetryWait(1*time.Millisecond, 2*time.Millisecond),
 	)
-	require.NoError(t, err)
 
 	_, doErr := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, doErr)
@@ -304,14 +299,14 @@ func TestDoReadBodyError(t *testing.T) {
 // --- GetBufferPool ---
 
 func TestGetBufferPool(t *testing.T) {
-	c, _ := New("proj", "key")
+	c := New("proj", "key")
 	assert.NotNil(t, c.GetBufferPool())
 }
 
 // --- calculateBackoff ---
 
 func TestCalculateBackoff(t *testing.T) {
-	c, _ := New("proj", "key", WithRetryWait(100*time.Millisecond, 1*time.Second))
+	c := New("proj", "key", WithRetryWait(100*time.Millisecond, 1*time.Second))
 
 	assert.Equal(t, 100*time.Millisecond, c.calculateBackoff(1)) // 100ms * 2^0
 	assert.Equal(t, 200*time.Millisecond, c.calculateBackoff(2)) // 100ms * 2^1
@@ -321,14 +316,12 @@ func TestCalculateBackoff(t *testing.T) {
 // --- Options ---
 
 func TestWithHTTPClientNilIgnored(t *testing.T) {
-	c, err := New("proj", "key", WithHTTPClient(nil))
-	require.NoError(t, err)
+	c := New("proj", "key", WithHTTPClient(nil))
 	assert.NotNil(t, c.HTTPClient, "nil http client must be ignored")
 }
 
 func TestWithRetriesNegativeClamped(t *testing.T) {
-	c, err := New("proj", "key", WithRetries(-5))
-	require.NoError(t, err)
+	c := New("proj", "key", WithRetries(-5))
 	assert.Equal(t, 0, c.Retries, "negative retries must be clamped to 0")
 }
 
