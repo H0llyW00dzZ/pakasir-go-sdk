@@ -17,9 +17,9 @@ package client
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -134,7 +134,7 @@ func TestDoPostSetsContentType(t *testing.T) {
 	defer srv.Close()
 
 	c := newTestClient(t, srv.URL)
-	_, err := c.Do(context.Background(), http.MethodPost, "/test", strings.NewReader(`{}`))
+	_, err := c.Do(context.Background(), http.MethodPost, "/test", []byte(`{}`))
 	require.NoError(t, err)
 }
 
@@ -173,6 +173,33 @@ func TestDoRetryOn5xxThenSuccess(t *testing.T) {
 		WithRetryWait(1*time.Millisecond, 5*time.Millisecond),
 	)
 	data, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"ok":true}`, string(data))
+	assert.Equal(t, 3, attempt)
+}
+
+func TestDoPostRetryWithBody(t *testing.T) {
+	attempt := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempt++
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"key":"value"}`, string(body), "body must be complete on attempt %d", attempt)
+		if attempt <= 2 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(`unavailable`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL,
+		WithRetries(3),
+		WithRetryWait(1*time.Millisecond, 5*time.Millisecond),
+	)
+	data, err := c.Do(context.Background(), http.MethodPost, "/test", []byte(`{"key":"value"}`))
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"ok":true}`, string(data))
 	assert.Equal(t, 3, attempt)

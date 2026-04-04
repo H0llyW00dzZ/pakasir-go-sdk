@@ -133,9 +133,18 @@ c, err := client.New("project", "api-key",
 
 ## Webhook Handling
 
+The webhook package works with **any Go HTTP framework** via three entry points:
+
+| Function | Input | Use With |
+|---|---|---|
+| `webhook.Parse(r)` | `io.Reader` | Gin, Echo, any framework |
+| `webhook.ParseRequest(r)` | `*http.Request` | net/http, Chi |
+| `webhook.ParseBytes(b)` | `[]byte` | Fiber |
+
 ```go
+// net/http
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
-    event, err := webhook.Parse(r)
+    event, err := webhook.ParseRequest(r)
     if err != nil {
         http.Error(w, "bad request", http.StatusBadRequest)
         return

@@ -15,11 +15,12 @@
 package transaction
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/client"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
@@ -69,7 +70,7 @@ func (s *Service) Create(ctx context.Context, method constants.PaymentMethod, re
 	}
 
 	path := fmt.Sprintf("/api/transactioncreate/%s", method)
-	data, err := s.client.Do(ctx, http.MethodPost, path, bytes.NewReader(buf.Bytes()))
+	data, err := s.client.Do(ctx, http.MethodPost, path, buf.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +108,7 @@ func (s *Service) Cancel(ctx context.Context, req *CancelRequest) error {
 		return fmt.Errorf("failed to encode request: %w", err)
 	}
 
-	_, err := s.client.Do(ctx, http.MethodPost, "/api/transactioncancel", bytes.NewReader(buf.Bytes()))
+	_, err := s.client.Do(ctx, http.MethodPost, "/api/transactioncancel", buf.Bytes())
 	return err
 }
 
@@ -119,12 +120,13 @@ func (s *Service) Detail(ctx context.Context, req *DetailRequest) (*DetailRespon
 		return nil, err
 	}
 
-	path := fmt.Sprintf("/api/transactiondetail?project=%s&amount=%d&order_id=%s&api_key=%s",
-		s.client.Project,
-		req.Amount,
-		req.OrderID,
-		s.client.APIKey,
-	)
+	params := url.Values{}
+	params.Set("project", s.client.Project)
+	params.Set("amount", strconv.FormatInt(req.Amount, 10))
+	params.Set("order_id", req.OrderID)
+	params.Set("api_key", s.client.APIKey)
+
+	path := "/api/transactiondetail?" + params.Encode()
 
 	data, err := s.client.Do(ctx, http.MethodGet, path, nil)
 	if err != nil {
