@@ -27,4 +27,10 @@
 // The [TransactionStatus] type provides type-safe constants for transaction
 // lifecycle states (e.g., [StatusCompleted], [StatusPending]). Use the
 // [TransactionStatus.Valid] method to verify a status value.
+//
+// # SDK Version
+//
+// The package also provides SDK version metadata ([SDKName], [SDKVersion],
+// [SDKRepository]) and a pre-computed [UserAgent] function used by the
+// HTTP client for all outgoing requests.
 package constants

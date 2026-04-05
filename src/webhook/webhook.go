@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/internal/timefmt"
 )
 
 // Sentinel errors for programmatic handling via [errors.Is].
@@ -71,14 +72,10 @@ type Event struct {
 	CompletedAt string `json:"completed_at"`
 }
 
-// ParseCompletedAt parses the [Event.CompletedAt] field into a [time.Time].
-// It attempts RFC3339 and RFC3339Nano formats.
-func (e *Event) ParseCompletedAt() (time.Time, error) {
-	t, err := time.Parse(time.RFC3339Nano, e.CompletedAt)
-	if err != nil {
-		t, err = time.Parse(time.RFC3339, e.CompletedAt)
-	}
-	return t, err
+// ParseTime parses the [Event.CompletedAt] field into a [time.Time].
+// It attempts RFC3339Nano first, then falls back to RFC3339.
+func (e *Event) ParseTime() (time.Time, error) {
+	return timefmt.Parse(e.CompletedAt)
 }
 
 // Parse decodes a Pakasir webhook payload from an [io.Reader].

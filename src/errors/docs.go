@@ -40,4 +40,10 @@
 //	err := errors.New(i18n.Indonesian, errors.ErrInvalidAmount, i18n.MsgInvalidAmount)
 //	// err.Error() => "jumlah harus lebih dari 0: invalid amount"
 //	// errors.Is(err, errors.ErrInvalidAmount) => true
+//
+// Use [NewWithFormat] when the message template requires format arguments
+// (e.g., status codes, retry counts):
+//
+//	err := errors.NewWithFormat(i18n.English, errors.ErrRequestFailed, i18n.MsgRequestFailed, 500)
+//	// err.Error() => "request failed with status 500: request failed"
 package errors

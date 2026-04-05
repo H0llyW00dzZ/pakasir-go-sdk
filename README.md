@@ -65,6 +65,7 @@ func main() {
 - **Exponential Backoff with Jitter** — Automatic retry for transient failures (5xx, network errors)
 - **i18n** — Localized error messages in English and Indonesian
 - **Sentinel Errors** — Programmatic error handling via `errors.Is` and `errors.As`
+- **Time Parsing Helpers** — Unified `ParseTime()` on response types
 - **URL Builder** — Helper for redirect-based payment integrations
 
 ## Project Structure
@@ -83,7 +84,8 @@ pakasir-go-sdk/
 │   │   ├── gc/          # Buffer pool management
 │   │   └── url/         # Payment URL builder
 │   └── internal/
-│       └── request/     # Shared request body and validation
+│       ├── request/     # Shared request body and validation
+│       └── timefmt/     # Shared RFC3339 time-parsing helper
 ├── examples/            # Usage examples
 ├── LICENSE              # Apache License 2.0
 └── README.md
@@ -204,6 +206,25 @@ var apiErr *sdkerrors.APIError
 if errors.As(err, &apiErr) {
     fmt.Printf("Status: %d, Body: %s\n", apiErr.StatusCode, apiErr.Body)
 }
+```
+
+## Response Types
+
+The SDK provides typed response structs with convenience methods for time parsing:
+
+| Type | Helper Method | Description |
+|---|---|---|
+| `transaction.PaymentInfo` | `ParseTime()` | Parse payment expiration timestamp |
+| `transaction.TransactionInfo` | `ParseTime()` | Parse transaction completion timestamp |
+| `webhook.Event` | `ParseTime()` | Parse webhook event completion timestamp |
+
+```go
+// Parse expiration time from a create response
+expiry, err := resp.Payment.ParseTime()
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Expires at: %s\n", expiry)
 ```
 
 ## Disclaimer

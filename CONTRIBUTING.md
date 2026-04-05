@@ -42,7 +42,8 @@ pakasir-go-sdk/
 │   │   ├── gc/          # Buffer pool management
 │   │   └── url/         # Payment URL builder
 │   └── internal/
-│       └── request/     # Shared internal request body
+│       ├── request/     # Shared internal request body
+│       └── timefmt/     # Shared RFC3339 time-parsing helper
 ├── examples/            # Usage examples
 ├── LICENSE              # Apache License 2.0
 └── README.md

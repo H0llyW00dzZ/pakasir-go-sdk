@@ -46,4 +46,10 @@
 // returns [errors.ErrNilRequest]. Invalid fields return localized errors that
 // support [errors.Is] against sentinel values from the errors package
 // (e.g., [errors.ErrInvalidOrderID], [errors.ErrInvalidAmount]).
+//
+// # Time Parsing
+//
+// Response types include a unified [PaymentInfo.ParseTime] and
+// [TransactionInfo.ParseTime] method for parsing API timestamp fields.
+// Both attempt RFC3339Nano first, then fall back to RFC3339.
 package transaction
