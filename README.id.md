@@ -68,6 +68,7 @@ func main() {
 - **Sentinel Errors** — Penanganan error secara programatik melalui `errors.Is` dan `errors.As`
 - **Helper Parsing Waktu** — Method `ParseTime()` pada tipe response
 - **URL Builder** — Helper untuk integrasi pembayaran berbasis redirect
+- **Pembuatan Kode QR** — Render string pembayaran QRIS menjadi gambar PNG dengan ukuran, tingkat pemulihan, dan warna yang dapat dikonfigurasi
 
 ## Struktur Proyek
 
@@ -83,6 +84,7 @@ pakasir-go-sdk/
 │   ├── webhook/         # Helper parsing webhook
 │   ├── helper/
 │   │   ├── gc/          # Pengelolaan buffer pool
+│   │   ├── qr/          # Pembuatan kode QR untuk pembayaran QRIS
 │   │   └── url/         # Pembangun URL pembayaran
 │   └── internal/
 │       ├── request/     # Body request internal bersama
@@ -139,8 +141,37 @@ c := client.New("proyek", "api-key",
     client.WithRetries(5),                              // Jumlah percobaan ulang
     client.WithRetryWait(500*time.Millisecond, 1*time.Minute), // Konfigurasi backoff
     client.WithBufferPool(customPool),                  // Buffer pool kustom
+    client.WithQRCodeOptions(qr.WithSize(512)),         // Pengaturan kode QR
 )
 ```
+
+## Pembuatan Kode QR
+
+Paket `qr` merender string pembayaran QRIS menjadi gambar PNG. Dapat digunakan melalui klien atau secara mandiri:
+
+```go
+// Melalui klien (dikonfigurasi dengan WithQRCodeOptions)
+png, err := c.QR().Encode(resp.Payment.PaymentNumber)
+
+// Mandiri
+q := qr.New(qr.WithSize(512), qr.WithRecoveryLevel(qr.RecoveryHigh))
+png, err := q.Encode(paymentNumber)
+```
+
+Sajikan kode QR langsung melalui HTTP dengan framework apapun:
+
+```go
+// net/http
+w.Header().Set("Content-Type", "image/png")
+err := c.QR().Write(w, resp.Payment.PaymentNumber)
+```
+
+| Opsi | Keterangan | Default |
+|---|---|---|
+| `qr.WithSize(pixels)` | Lebar/tinggi gambar dalam piksel | 256 |
+| `qr.WithRecoveryLevel(level)` | Tingkat koreksi error | `RecoveryMedium` |
+| `qr.WithForegroundColor(color)` | Warna modul QR | `color.Black` |
+| `qr.WithBackgroundColor(color)` | Warna latar belakang | `color.White` |
 
 ## Penanganan Webhook
 
