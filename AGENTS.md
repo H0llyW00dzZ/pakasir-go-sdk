@@ -136,6 +136,9 @@ type PaymentInfo struct {
 - Use `# Heading` syntax and `[TypeName]` bracket references in godoc.
 - Every exported symbol has a doc comment starting with its name.
 - Code examples in comments are indented with a leading space.
+- `README.md` and `CONTRIBUTING.md` have Indonesian translations: `README.id.md` and `CONTRIBUTING.id.md`.
+- Each English doc includes a badge linking to the Indonesian version, and vice versa.
+- When updating `README.md` or `CONTRIBUTING.md`, always update the corresponding `.id.md` file to keep translations in sync.
 
 ### i18n
 
