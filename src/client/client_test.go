@@ -116,7 +116,7 @@ func TestDoEmptyProjectIndonesian(t *testing.T) {
 func TestDoSetsUserAgent(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ua := r.Header.Get("User-Agent")
-		assert.Contains(t, ua, "pakasir-go-sdk")
+		assert.Contains(t, ua, constants.SDKName)
 		assert.Contains(t, ua, constants.SDKVersion)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{}`))
