@@ -306,14 +306,14 @@ func TestCreateEncodeError(t *testing.T) {
 	svc := NewService(newEncodeErrorClient())
 	_, err := svc.Create(context.Background(), constants.MethodQRIS, &CreateRequest{OrderID: "INV123", Amount: 99000})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to encode request")
+	assert.ErrorIs(t, err, sdkerrors.ErrEncodeJSON)
 }
 
 func TestCancelEncodeError(t *testing.T) {
 	svc := NewService(newEncodeErrorClient())
 	err := svc.Cancel(context.Background(), &CancelRequest{OrderID: "INV123", Amount: 99000})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to encode request")
+	assert.ErrorIs(t, err, sdkerrors.ErrEncodeJSON)
 }
 
 func TestDetailDoError(t *testing.T) {

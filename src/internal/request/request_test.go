@@ -55,7 +55,7 @@ func TestValidateOrderAndAmountIndonesian(t *testing.T) {
 
 func TestEncodeJSONSuccess(t *testing.T) {
 	body := Body{Project: "proj", OrderID: "INV1", Amount: 100, APIKey: "key"}
-	data, err := EncodeJSON(gc.Default, body)
+	data, err := EncodeJSON(gc.Default, i18n.English, body)
 	require.NoError(t, err)
 	assert.Contains(t, string(data), `"project":"proj"`)
 	assert.Contains(t, string(data), `"order_id":"INV1"`)
@@ -63,11 +63,11 @@ func TestEncodeJSONSuccess(t *testing.T) {
 
 func TestEncodeJSONReturnsIndependentBytes(t *testing.T) {
 	body := Body{Project: "proj", OrderID: "INV1", Amount: 100, APIKey: "key"}
-	data1, err := EncodeJSON(gc.Default, body)
+	data1, err := EncodeJSON(gc.Default, i18n.English, body)
 	require.NoError(t, err)
 
 	body.OrderID = "INV2"
-	data2, err := EncodeJSON(gc.Default, body)
+	data2, err := EncodeJSON(gc.Default, i18n.English, body)
 	require.NoError(t, err)
 
 	// data1 must not be affected by the second encode.
@@ -81,7 +81,7 @@ type unencodable struct{}
 func (unencodable) MarshalJSON() ([]byte, error) { return nil, assert.AnError }
 
 func TestEncodeJSONError(t *testing.T) {
-	_, err := EncodeJSON(gc.Default, unencodable{})
+	_, err := EncodeJSON(gc.Default, i18n.English, unencodable{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to encode request")
+	assert.ErrorIs(t, err, sdkerrors.ErrEncodeJSON)
 }
