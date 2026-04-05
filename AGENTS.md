@@ -46,7 +46,7 @@ src/
   webhook/          — Parse webhook HTTP requests into Event structs
   helper/gc/        — Buffer/Pool interfaces wrapping bytebufferpool
   helper/url/       — Payment redirect URL builder
-  internal/request/ — Shared request body struct and validation (unexported)
+  internal/request/ — Shared request body struct, validation, and JSON encoding (unexported)
   internal/timefmt/ — Shared RFC3339 time-parsing helper (unexported)
 examples/           — Example usage (build-tagged with //go:build ignore)
 ```
@@ -182,3 +182,4 @@ Only two direct dependencies — keep the footprint minimal:
 - Encapsulated client fields: all `Client` struct fields are unexported; use `Project()`, `APIKey()`, `Lang()`, `GetBufferPool()` getters from service packages.
 - Internal packages (`src/internal/`) for shared types and validation not exposed to consumers.
 - Shared validation via `request.ValidateOrderAndAmount` (avoid duplicating order/amount checks).
+- Shared JSON encoding via `request.EncodeJSON` (centralizes buffer pool acquire/encode/release).
