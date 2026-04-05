@@ -25,8 +25,10 @@
 // # Transaction Statuses
 //
 // The [TransactionStatus] type provides type-safe constants for transaction
-// lifecycle states (e.g., [StatusCompleted], [StatusPending]). Use the
-// [TransactionStatus.Valid] method to verify a status value.
+// lifecycle states (e.g., [StatusCompleted], [StatusPending], [StatusCancelled]).
+// Both [StatusCancelled] ("cancelled") and [StatusCanceled] ("canceled")
+// spellings are accepted. Use the [TransactionStatus.Valid] method to verify
+// a status value.
 //
 // # SDK Version
 //

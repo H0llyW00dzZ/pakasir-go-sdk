@@ -40,6 +40,13 @@
 //	c.Response().Header().Set("Content-Type", "image/png")
 //	err := q.Write(c.Response(), paymentInfo.PaymentNumber)
 //
+// # Saving to File
+//
+// The [QR.WriteFile] method encodes and saves a QR code directly to a
+// PNG file:
+//
+//	err := q.WriteFile("payment_qr.png", paymentInfo.PaymentNumber)
+//
 // # Customization
 //
 // QR code size, error correction level, and colors are configurable
@@ -51,6 +58,14 @@
 //	    qr.WithForegroundColor(color.Black),
 //	    qr.WithBackgroundColor(color.White),
 //	)
+//
+// # Error Handling
+//
+// All methods return sentinel errors for programmatic handling via
+// [errors.Is]:
+//
+//   - [ErrEmptyContent]: returned when an empty string is passed
+//   - [ErrEncodeFailed]: returned when QR encoding fails (wraps cause)
 //
 // # Thread Safety
 //
