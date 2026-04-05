@@ -42,6 +42,7 @@ pakasir-go-sdk/
 │   ├── webhook/         # Webhook parsing
 │   ├── helper/
 │   │   ├── gc/          # Buffer pool management
+│   │   ├── qr/          # QR code generation
 │   │   └── url/         # Payment URL builder
 │   └── internal/
 │       ├── request/     # Shared internal request body
