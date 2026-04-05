@@ -222,6 +222,13 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // Event sandbox tidak boleh memicu fulfillment sesungguhnya
+    if event.IsSandbox {
+        log.Println("webhook sandbox diterima, melewati fulfillment")
+        w.WriteHeader(http.StatusOK)
+        return
+    }
+
     if event.Status == constants.StatusCompleted {
         // Proses pembayaran yang sudah selesai...
     }

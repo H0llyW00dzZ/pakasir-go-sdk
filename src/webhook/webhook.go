@@ -70,6 +70,10 @@ type Event struct {
 
 	// CompletedAt is the payment completion timestamp as returned by Pakasir.
 	CompletedAt string `json:"completed_at"`
+
+	// IsSandbox indicates whether this event was generated in sandbox mode.
+	// Production webhooks set this to false (or omit the field entirely).
+	IsSandbox bool `json:"is_sandbox"`
 }
 
 // ParseTime parses the [Event.CompletedAt] field into a [time.Time].

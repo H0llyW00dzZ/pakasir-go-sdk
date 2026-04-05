@@ -39,6 +39,13 @@
 // The [Parse] and [ParseRequest] functions limit the maximum request body
 // to 1 MB to guard against oversized payloads.
 //
+// # Sandbox Mode
+//
+// The [Event.IsSandbox] field indicates whether the event was generated in
+// sandbox (testing) mode. Production webhooks set this to false or omit
+// the field entirely. Callers can use this flag to route sandbox events to
+// a separate processing path or to skip real fulfillment logic.
+//
 // # Important Security Note
 //
 // As stated in the Pakasir documentation, you must always verify that
