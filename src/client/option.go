@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/gc"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/qr"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/i18n"
 )
 
@@ -96,5 +97,26 @@ func WithRetryWait(min, max time.Duration) Option {
 		}
 		c.retryWaitMin = min
 		c.retryWaitMax = max
+	}
+}
+
+// WithQRCodeOptions sets options for QR code generation.
+//
+// These options configure the [qr.QR] instance returned by [Client.QR].
+// If not set, the client uses default QR settings (256px, medium recovery,
+// black/white).
+//
+// Example:
+//
+//	c := client.New("my-project", "api-key",
+//	    client.WithQRCodeOptions(
+//	        qr.WithSize(512),
+//	        qr.WithRecoveryLevel(qr.RecoveryHigh),
+//	    ),
+//	)
+//	png, err := c.QR().Encode(paymentInfo.PaymentNumber)
+func WithQRCodeOptions(opts ...qr.Option) Option {
+	return func(c *Client) {
+		c.qrGen = qr.New(opts...)
 	}
 }
