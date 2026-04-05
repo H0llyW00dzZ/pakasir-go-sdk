@@ -197,6 +197,7 @@ SDK ini menyediakan sentinel error untuk penanganan programatik melalui `errors.
 | `errors.ErrInvalidAmount` | `errors` | Amount tidak positif |
 | `errors.ErrInvalidPaymentMethod` | `errors` | Metode pembayaran tidak didukung |
 | `errors.ErrNilRequest` | `errors` | Pointer request nil diberikan ke method layanan |
+| `errors.ErrEncodeJSON` | `errors` | Gagal marshaling JSON pada body request |
 | `errors.ErrRequestFailed` | `errors` | Kegagalan request permanen (tidak bisa di-retry) |
 | `errors.ErrRequestFailedAfterRetries` | `errors` | Semua percobaan retry habis |
 

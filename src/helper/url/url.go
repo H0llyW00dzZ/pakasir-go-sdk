@@ -12,23 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package url provides a builder for Pakasir payment redirect URLs.
-//
-// Use this package for redirect-based (non-API) integrations where you
-// direct customers to the Pakasir hosted payment page.
-//
-// # Basic Usage
-//
-//	payURL, err := url.Build("https://app.pakasir.com", "my-project", 99000, url.Options{
-//	    OrderID: "INV123456",
-//	})
-//	// payURL => "https://app.pakasir.com/pay/my-project/99000?order_id=INV123456"
-//
-// # Options
-//
-//   - Redirect: Set a custom redirect URL after payment completion
-//   - QRISOnly: Force QRIS-only mode (customer sees QR code immediately)
-//   - UsePaypal: Use the /paypal/ endpoint instead of /pay/
 package url
 
 import (
