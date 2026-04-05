@@ -129,6 +129,7 @@ pakasir-go-sdk/
 | `constants.StatusPending` | `pending` |
 | `constants.StatusExpired` | `expired` |
 | `constants.StatusCancelled` | `cancelled` |
+| `constants.StatusCanceled` | `canceled` |
 
 ## Client Options
 
@@ -165,6 +166,19 @@ Serve QR codes directly via HTTP with any framework:
 w.Header().Set("Content-Type", "image/png")
 err := c.QR().Write(w, resp.Payment.PaymentNumber)
 ```
+
+Save QR codes to a file:
+
+```go
+err := c.QR().WriteFile("payment_qr.png", resp.Payment.PaymentNumber)
+```
+
+All QR methods return sentinel errors for programmatic handling via `errors.Is`:
+
+| Sentinel | Condition |
+|---|---|
+| `qr.ErrEmptyContent` | Empty string passed to `Encode`, `Write`, or `WriteFile` |
+| `qr.ErrEncodeFailed` | Underlying QR encoding failed (wraps underlying cause) |
 
 | Option | Description | Default |
 |---|---|---|

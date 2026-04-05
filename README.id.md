@@ -129,6 +129,7 @@ pakasir-go-sdk/
 | `constants.StatusPending` | `pending` |
 | `constants.StatusExpired` | `expired` |
 | `constants.StatusCancelled` | `cancelled` |
+| `constants.StatusCanceled` | `canceled` |
 
 ## Opsi Klien
 
@@ -165,6 +166,19 @@ Sajikan kode QR langsung melalui HTTP dengan framework apapun:
 w.Header().Set("Content-Type", "image/png")
 err := c.QR().Write(w, resp.Payment.PaymentNumber)
 ```
+
+Simpan kode QR ke file:
+
+```go
+err := c.QR().WriteFile("payment_qr.png", resp.Payment.PaymentNumber)
+```
+
+Semua method QR mengembalikan sentinel error untuk penanganan programatik melalui `errors.Is`:
+
+| Sentinel | Kondisi |
+|---|---|
+| `qr.ErrEmptyContent` | String kosong diberikan ke `Encode`, `Write`, atau `WriteFile` |
+| `qr.ErrEncodeFailed` | Encoding QR gagal (membungkus penyebab asli) |
 
 | Opsi | Keterangan | Default |
 |---|---|---|

@@ -21,12 +21,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/client"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
+	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/qr"
 	urlhelper "github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/url"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/i18n"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/simulation"
@@ -39,6 +42,7 @@ func main() {
 		client.WithTimeout(15*time.Second),
 		client.WithLanguage(i18n.Indonesian),
 		client.WithRetries(2),
+		client.WithQRCodeOptions(qr.WithSize(512)),
 	)
 
 	ctx := context.Background()
@@ -50,6 +54,11 @@ func main() {
 		Amount:  99000,
 	})
 	if err != nil {
+		// Check for API errors (non-2xx responses).
+		var apiErr *sdkerrors.APIError
+		if errors.As(err, &apiErr) {
+			log.Fatalf("API error: status=%d body=%s", apiErr.StatusCode, apiErr.Body)
+		}
 		log.Fatalf("Failed to create transaction: %v", err)
 	}
 
@@ -62,7 +71,13 @@ func main() {
 	fmt.Printf("Payment Number: %s\n", createResp.Payment.PaymentNumber)
 	fmt.Printf("Expired At:     %s\n", createResp.Payment.ExpiredAt)
 
-	// 3. Simulate payment (sandbox only).
+	// 3. Generate a QR code for the QRIS payment number.
+	if err := c.QR().WriteFile("payment_qr.png", createResp.Payment.PaymentNumber); err != nil {
+		log.Fatalf("Failed to generate QR code: %v", err)
+	}
+	fmt.Println("\n=== QR Code Saved to payment_qr.png ===")
+
+	// 4. Simulate payment (sandbox only).
 	simService := simulation.NewService(c)
 	if err := simService.Pay(ctx, &simulation.PayRequest{
 		OrderID: "INV123123",
@@ -72,7 +87,7 @@ func main() {
 	}
 	fmt.Println("\n=== Payment Simulated ===")
 
-	// 4. Check transaction detail.
+	// 5. Check transaction detail.
 	detail, err := txnService.Detail(ctx, &transaction.DetailRequest{
 		OrderID: "INV123123",
 		Amount:  99000,
@@ -86,7 +101,7 @@ func main() {
 	fmt.Printf("Payment Method: %s\n", detail.Transaction.PaymentMethod)
 	fmt.Printf("Completed At:   %s\n", detail.Transaction.CompletedAt)
 
-	// 5. Build a payment redirect URL.
+	// 6. Build a payment redirect URL.
 	payURL, err := urlhelper.Build(client.DefaultBaseURL, "depodomain", 22000, urlhelper.Options{
 		OrderID:  "240910HDE7C9",
 		QRISOnly: true,
