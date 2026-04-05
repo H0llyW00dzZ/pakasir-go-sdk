@@ -23,6 +23,7 @@ const (
 	StatusPending   TransactionStatus = "pending"
 	StatusExpired   TransactionStatus = "expired"
 	StatusCancelled TransactionStatus = "cancelled"
+	StatusCanceled  TransactionStatus = "canceled"
 )
 
 // validStatuses is a set of all valid transaction statuses for O(1) lookup.
@@ -31,6 +32,7 @@ var validStatuses = map[TransactionStatus]struct{}{
 	StatusPending:   {},
 	StatusExpired:   {},
 	StatusCancelled: {},
+	StatusCanceled:  {},
 }
 
 // Valid reports whether the transaction status is a recognized Pakasir status.

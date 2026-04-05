@@ -50,7 +50,7 @@ func TestPaymentMethodString(t *testing.T) {
 
 func TestTransactionStatusValid(t *testing.T) {
 	valid := []TransactionStatus{
-		StatusCompleted, StatusPending, StatusExpired, StatusCancelled,
+		StatusCompleted, StatusPending, StatusExpired, StatusCancelled, StatusCanceled,
 	}
 	for _, s := range valid {
 		t.Run(string(s), func(t *testing.T) {
@@ -78,5 +78,5 @@ func TestUserAgent(t *testing.T) {
 	assert.Contains(t, ua, SDKName)
 	assert.Contains(t, ua, SDKVersion)
 	assert.Contains(t, ua, SDKRepository)
-	assert.Equal(t, "pakasir-go-sdk/0.0.0-dev (+https://github.com/H0llyW00dzZ/pakasir-go-sdk)", ua)
+	assert.Equal(t, SDKName+"/"+SDKVersion+" (+"+SDKRepository+")", ua)
 }
