@@ -132,23 +132,23 @@ func TestParseBytesInvalidJSON(t *testing.T) {
 	assert.ErrorIs(t, err, ErrDecodeBody)
 }
 
-// --- Event.ParseCompletedAt ---
+// --- Event.ParseTime ---
 
-func TestEventParseCompletedAtRFC3339(t *testing.T) {
+func TestEventParseTimeRFC3339(t *testing.T) {
 	e := &Event{CompletedAt: "2024-09-10T08:07:02+07:00"}
-	ts, err := e.ParseCompletedAt()
+	ts, err := e.ParseTime()
 	require.NoError(t, err)
 	assert.Equal(t, 2024, ts.Year())
 }
 
-func TestEventParseCompletedAtNano(t *testing.T) {
+func TestEventParseTimeNano(t *testing.T) {
 	e := &Event{CompletedAt: "2024-09-10T08:07:02.819000000+07:00"}
-	ts, err := e.ParseCompletedAt()
+	ts, err := e.ParseTime()
 	require.NoError(t, err)
 	assert.Equal(t, 2024, ts.Year())
 }
 
-func TestEventParseCompletedAtInvalid(t *testing.T) {
-	_, err := (&Event{CompletedAt: "bad"}).ParseCompletedAt()
+func TestEventParseTimeInvalid(t *testing.T) {
+	_, err := (&Event{CompletedAt: "bad"}).ParseTime()
 	require.Error(t, err)
 }

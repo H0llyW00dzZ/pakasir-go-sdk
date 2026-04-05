@@ -47,6 +47,7 @@ src/
   helper/gc/        — Buffer/Pool interfaces wrapping bytebufferpool
   helper/url/       — Payment redirect URL builder
   internal/request/ — Shared request body struct and validation (unexported)
+  internal/timefmt/ — Shared RFC3339 time-parsing helper (unexported)
 examples/           — Example usage (build-tagged with //go:build ignore)
 ```
 
@@ -124,6 +125,7 @@ type PaymentInfo struct {
 - **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey)` — always wraps with `%w` so `errors.Is()` works.
 - **`fmt.Errorf` wrapping** for non-sentinel errors: `fmt.Errorf("context: %w", err)` with lowercase prefix.
 - **`APIError`** struct for HTTP error responses; checked with `errors.As()`.
+- **`errors.AsType[T]`** (Go 1.26 generics) for type-asserting errors without a separate variable — used in `isRetryable` to unwrap `*url.Error` and detect TLS certificate errors.
 - **Package-prefixed messages** in standalone packages: `"webhook: ..."`, `"url: ..."`.
 - **Validate early, return immediately** at the top of functions. `client.New` is an exception: it defers project/API-key validation to `Do()` so initialization is infallible.
 - **Nil-guard request pointers** in service methods using `sdkerrors.ErrNilRequest` — distinct from `ErrInvalidOrderID`.

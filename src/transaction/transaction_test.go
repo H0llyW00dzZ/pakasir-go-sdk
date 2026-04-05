@@ -231,43 +231,43 @@ func TestDetailNilRequest(t *testing.T) {
 
 // --- Time Parsers ---
 
-func TestPaymentInfoParseExpiredAtNano(t *testing.T) {
+func TestPaymentInfoParseTimeNano(t *testing.T) {
 	p := &PaymentInfo{ExpiredAt: "2025-09-19T01:18:49.678622564Z"}
-	ts, err := p.ParseExpiredAt()
+	ts, err := p.ParseTime()
 	require.NoError(t, err)
 	assert.Equal(t, 2025, ts.Year())
 }
 
-func TestPaymentInfoParseExpiredAtRFC3339(t *testing.T) {
+func TestPaymentInfoParseTimeRFC3339(t *testing.T) {
 	p := &PaymentInfo{ExpiredAt: "2025-09-19T01:18:49Z"}
-	ts, err := p.ParseExpiredAt()
+	ts, err := p.ParseTime()
 	require.NoError(t, err)
 	assert.Equal(t, 2025, ts.Year())
 }
 
-func TestPaymentInfoParseExpiredAtInvalid(t *testing.T) {
+func TestPaymentInfoParseTimeInvalid(t *testing.T) {
 	p := &PaymentInfo{ExpiredAt: "not-a-date"}
-	_, err := p.ParseExpiredAt()
+	_, err := p.ParseTime()
 	require.Error(t, err)
 }
 
-func TestTransactionInfoParseCompletedAtRFC3339(t *testing.T) {
+func TestTransactionInfoParseTimeRFC3339(t *testing.T) {
 	info := &TransactionInfo{CompletedAt: "2024-09-10T08:07:02+07:00"}
-	ts, err := info.ParseCompletedAt()
+	ts, err := info.ParseTime()
 	require.NoError(t, err)
 	assert.Equal(t, 2024, ts.Year())
 }
 
-func TestTransactionInfoParseCompletedAtNano(t *testing.T) {
+func TestTransactionInfoParseTimeNano(t *testing.T) {
 	info := &TransactionInfo{CompletedAt: "2024-09-10T08:07:02.819000000+07:00"}
-	ts, err := info.ParseCompletedAt()
+	ts, err := info.ParseTime()
 	require.NoError(t, err)
 	assert.Equal(t, 2024, ts.Year())
 }
 
-func TestTransactionInfoParseCompletedAtInvalid(t *testing.T) {
+func TestTransactionInfoParseTimeInvalid(t *testing.T) {
 	info := &TransactionInfo{CompletedAt: "invalid"}
-	_, err := info.ParseCompletedAt()
+	_, err := info.ParseTime()
 	require.Error(t, err)
 }
 

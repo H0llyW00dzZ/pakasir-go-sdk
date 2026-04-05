@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/internal/timefmt"
 )
 
 // CreateRequest contains the parameters for creating a new transaction.
@@ -66,14 +67,10 @@ type PaymentInfo struct {
 	ExpiredAt string `json:"expired_at"`
 }
 
-// ParseExpiredAt parses the [PaymentInfo.ExpiredAt] field into a [time.Time].
-// It attempts RFC3339 and RFC3339Nano formats.
-func (p *PaymentInfo) ParseExpiredAt() (time.Time, error) {
-	t, err := time.Parse(time.RFC3339Nano, p.ExpiredAt)
-	if err != nil {
-		t, err = time.Parse(time.RFC3339, p.ExpiredAt)
-	}
-	return t, err
+// ParseTime parses the [PaymentInfo.ExpiredAt] field into a [time.Time].
+// It attempts RFC3339Nano first, then falls back to RFC3339.
+func (p *PaymentInfo) ParseTime() (time.Time, error) {
+	return timefmt.Parse(p.ExpiredAt)
 }
 
 // CancelRequest contains the parameters for cancelling a transaction.
@@ -121,12 +118,8 @@ type TransactionInfo struct {
 	CompletedAt string `json:"completed_at"`
 }
 
-// ParseCompletedAt parses the [TransactionInfo.CompletedAt] field into a [time.Time].
-// It attempts RFC3339 and RFC3339Nano formats.
-func (t *TransactionInfo) ParseCompletedAt() (time.Time, error) {
-	parsed, err := time.Parse(time.RFC3339Nano, t.CompletedAt)
-	if err != nil {
-		parsed, err = time.Parse(time.RFC3339, t.CompletedAt)
-	}
-	return parsed, err
+// ParseTime parses the [TransactionInfo.CompletedAt] field into a [time.Time].
+// It attempts RFC3339Nano first, then falls back to RFC3339.
+func (t *TransactionInfo) ParseTime() (time.Time, error) {
+	return timefmt.Parse(t.CompletedAt)
 }
