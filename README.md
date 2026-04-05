@@ -4,8 +4,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/H0llyW00dzZ/pakasir-go-sdk)](https://goreportcard.com/report/github.com/H0llyW00dzZ/pakasir-go-sdk)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![codecov](https://codecov.io/gh/H0llyW00dzZ/pakasir-go-sdk/graph/badge.svg?token=K6I5QCQPDA)](https://codecov.io/gh/H0llyW00dzZ/pakasir-go-sdk)
+[![Baca dalam Bahasa Indonesia](https://img.shields.io/badge/%F0%9F%87%AE%F0%9F%87%A9_Baca_dalam_Bahasa_Indonesia-red)](README.id.md)
 
-> **Note:** This is an **unofficial** Go SDK for [Pakasir](https://pakasir.com). It is not affiliated with, endorsed by, or officially supported by Pakasir.
+> **Note:** This is an **unofficial** Go SDK for [Pakasir](https://pakasir.com). It is not affiliated with, endorsed by, or officially supported by Pakasir. This SDK is unofficial because the official API only provides documentation and support for their REST API and Node.js SDK. This library was created to add proper Go support, and it is actively used by the owner of this repository.
 
 > [!WARNING]
 > This SDK is still under active development and is **not recommended for production use**.
@@ -229,7 +230,7 @@ fmt.Printf("Expires at: %s\n", expiry)
 
 ## Disclaimer
 
-This is an **unofficial** SDK. It is not affiliated with, endorsed by, or officially supported by Pakasir. Use at your own risk.
+This is an **unofficial** SDK. It is not affiliated with, endorsed by, or officially supported by Pakasir. This SDK is unofficial because the official API only provides documentation and support for their REST API and Node.js SDK. This library was created to add proper Go support, and it is actively used by the owner of this repository. Use at your own risk.
 
 ## License
 

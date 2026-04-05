@@ -1,5 +1,7 @@
 # Contributing to Pakasir Go SDK
 
+[![Baca dalam Bahasa Indonesia](https://img.shields.io/badge/%F0%9F%87%AE%F0%9F%87%A9_Baca_dalam_Bahasa_Indonesia-red)](CONTRIBUTING.id.md)
+
 Thank you for your interest in contributing! This guide will help you get set up and contribute effectively.
 
 ## Prerequisites
