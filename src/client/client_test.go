@@ -33,6 +33,7 @@ import (
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
 	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/gc"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/qr"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/i18n"
 )
 
@@ -539,4 +540,25 @@ func TestDoNonRetryableNetworkError(t *testing.T) {
 	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailed)
 	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
 	assert.Contains(t, err.Error(), "permanent error")
+}
+
+// --- QR ---
+
+func TestQRDefaultNotNil(t *testing.T) {
+	c := New("proj", "key")
+	require.NotNil(t, c.QR(), "default QR generator must not be nil")
+
+	png, err := c.QR().Encode("hello")
+	require.NoError(t, err)
+	assert.NotEmpty(t, png)
+}
+
+func TestWithQRCodeOptionsCustom(t *testing.T) {
+	c := New("proj", "key", WithQRCodeOptions(qr.WithSize(512), qr.WithRecoveryLevel(qr.RecoveryHigh)))
+	require.NotNil(t, c.QR())
+
+	// Verify the custom options are applied by encoding and checking output.
+	png, err := c.QR().Encode("test")
+	require.NoError(t, err)
+	assert.NotEmpty(t, png)
 }

@@ -68,6 +68,7 @@ func main() {
 - **Sentinel Errors** — Programmatic error handling via `errors.Is` and `errors.As`
 - **Time Parsing Helpers** — Unified `ParseTime()` on response types
 - **URL Builder** — Helper for redirect-based payment integrations
+- **QR Code Generation** — Render QRIS payment strings as PNG images with configurable size, recovery level, and colors
 
 ## Project Structure
 
@@ -83,6 +84,7 @@ pakasir-go-sdk/
 │   ├── webhook/         # Webhook parsing helper
 │   ├── helper/
 │   │   ├── gc/          # Buffer pool management
+│   │   ├── qr/          # QR code generation for QRIS payments
 │   │   └── url/         # Payment URL builder
 │   └── internal/
 │       ├── request/     # Shared request body and validation
@@ -139,8 +141,37 @@ c := client.New("project", "api-key",
     client.WithRetries(5),                              // Retry attempts
     client.WithRetryWait(500*time.Millisecond, 1*time.Minute), // Backoff config
     client.WithBufferPool(customPool),                  // Custom buffer pool
+    client.WithQRCodeOptions(qr.WithSize(512)),         // QR code settings
 )
 ```
+
+## QR Code Generation
+
+The `qr` package renders QRIS payment strings as PNG images. It can be used via the client or standalone:
+
+```go
+// Via client (configured with WithQRCodeOptions)
+png, err := c.QR().Encode(resp.Payment.PaymentNumber)
+
+// Standalone
+q := qr.New(qr.WithSize(512), qr.WithRecoveryLevel(qr.RecoveryHigh))
+png, err := q.Encode(paymentNumber)
+```
+
+Serve QR codes directly via HTTP with any framework:
+
+```go
+// net/http
+w.Header().Set("Content-Type", "image/png")
+err := c.QR().Write(w, resp.Payment.PaymentNumber)
+```
+
+| Option | Description | Default |
+|---|---|---|
+| `qr.WithSize(pixels)` | Image width/height in pixels | 256 |
+| `qr.WithRecoveryLevel(level)` | Error correction level | `RecoveryMedium` |
+| `qr.WithForegroundColor(color)` | QR module color | `color.Black` |
+| `qr.WithBackgroundColor(color)` | Background color | `color.White` |
 
 ## Webhook Handling
 

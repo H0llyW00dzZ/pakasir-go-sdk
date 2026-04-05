@@ -38,13 +38,14 @@
 //   - [WithRetries]: Configure the number of retry attempts
 //   - [WithRetryWait]: Configure backoff min/max durations (auto-swapped if inverted)
 //   - [WithBufferPool]: Provide a custom buffer pool
+//   - [WithQRCodeOptions]: Configure QR code generation settings
 //
 // # Encapsulation
 //
 // All [Client] struct fields are unexported. Read-only access is provided
 // via getter methods: [Client.Project], [Client.APIKey], [Client.Lang],
-// and [Client.GetBufferPool]. Configuration must be done through [New]
-// and functional options.
+// [Client.GetBufferPool], and [Client.QR]. Configuration must be done
+// through [New] and functional options.
 //
 // # Thread Safety
 //
@@ -57,4 +58,20 @@
 // failures (5xx server errors and network errors) using exponential
 // backoff with full jitter. Client errors (4xx) and permanent TLS
 // certificate errors are never retried.
+//
+// # QR Code Generation
+//
+// The client exposes a pre-configured QR code generator via [Client.QR].
+// This is used to render QRIS payment_number strings (from transaction
+// create responses) as PNG images for display to customers.
+//
+//	c := client.New("my-project", "api-key",
+//	    client.WithQRCodeOptions(qr.WithSize(512)),
+//	)
+//	png, err := c.QR().Encode(paymentInfo.PaymentNumber)
+//
+// The QR code generator can also be used standalone via the [qr] package:
+//
+//	q := qr.New(qr.WithSize(512))
+//	png, err := q.Encode(paymentNumber)
 package client

@@ -45,6 +45,7 @@ src/
   simulation/       — Service: Pay (sandbox)
   webhook/          — Parse webhook HTTP requests into Event structs
   helper/gc/        — Buffer/Pool interfaces wrapping bytebufferpool
+  helper/qr/        — QR code generation for QRIS payment strings (go-qrcode)
   helper/url/       — Payment redirect URL builder
   internal/request/ — Shared request body struct, validation, and JSON encoding (unexported)
   internal/timefmt/ — Shared RFC3339 time-parsing helper (unexported)
@@ -102,7 +103,7 @@ Alias `net/url` as `neturl` when inside the `url` package.
 - **Enums**: typed strings (`PaymentMethod string`, `TransactionStatus string`, `Language string`, `MessageKey string`) with a `Valid()` method and unexported validation map.
 - **Constructors**: `New(...)` returns `*Client` (no error); `NewService(c)` for service types. Credential validation is deferred to `Do()`.
 - **Functional options**: `type Option func(*Client)` with `With*` functions.
-- **Getters**: exported read-only accessors for encapsulated fields — `Project()`, `APIKey()`, `Lang()`, `GetBufferPool()`. Service packages use these to read client state.
+- **Getters**: exported read-only accessors for encapsulated fields — `Project()`, `APIKey()`, `Lang()`, `GetBufferPool()`, `QR()`. Service packages use these to read client state.
 - **Receivers**: single-letter matching the type (`c *Client`, `s *Service`, `e *Event`, `m PaymentMethod`, `s TransactionStatus`).
 - **Unexported helpers**: camelCase (`isRetryable`, `calculateBackoff`, `validateRequest`).
 
@@ -172,9 +173,10 @@ defer func() {
 
 ### Dependencies
 
-Only two direct dependencies — keep the footprint minimal:
+Three direct dependencies — keep the footprint minimal:
 - `github.com/stretchr/testify` (test only)
 - `github.com/valyala/bytebufferpool`
+- `github.com/skip2/go-qrcode`
 
 ### Patterns to Preserve
 
@@ -182,7 +184,7 @@ Only two direct dependencies — keep the footprint minimal:
 - No global mutable state (except the buffer pool `gc.Default`).
 - Service-oriented architecture: each API domain is a `Service` wrapping `*client.Client`.
 - Functional options for client configuration.
-- Encapsulated client fields: all `Client` struct fields are unexported; use `Project()`, `APIKey()`, `Lang()`, `GetBufferPool()` getters from service packages.
+- Encapsulated client fields: all `Client` struct fields are unexported; use `Project()`, `APIKey()`, `Lang()`, `GetBufferPool()`, `QR()` getters from service packages.
 - Internal packages (`src/internal/`) for shared types and validation not exposed to consumers.
 - Shared validation via `request.ValidateOrderAndAmount` (avoid duplicating order/amount checks).
 - Shared JSON encoding via `request.EncodeJSON` (centralizes buffer pool acquire/encode/release).

@@ -31,6 +31,7 @@ import (
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
 	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/gc"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/qr"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/i18n"
 )
 
@@ -83,6 +84,8 @@ type Client struct {
 	retryWaitMax time.Duration
 	// bufferPool is the buffer pool used to allocate buffers for request and response bodies.
 	bufferPool gc.Pool
+	// qrGen is the pre-configured QR code generator.
+	qrGen *qr.QR
 }
 
 // New creates a new Pakasir API [Client] with the given project slug, API key,
@@ -101,6 +104,7 @@ func New(project, apiKey string, opts ...Option) *Client {
 		retryWaitMin: DefaultRetryWaitMin,
 		retryWaitMax: DefaultRetryWaitMax,
 		bufferPool:   gc.Default,
+		qrGen:        qr.New(),
 	}
 
 	for _, opt := range opts {
@@ -186,24 +190,31 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 }
 
 // GetBufferPool returns the client's buffer pool for use by services.
-func (c *Client) GetBufferPool() gc.Pool {
-	return c.bufferPool
-}
+func (c *Client) GetBufferPool() gc.Pool { return c.bufferPool }
 
 // Project returns the Pakasir project slug.
-func (c *Client) Project() string {
-	return c.project
-}
+func (c *Client) Project() string { return c.project }
 
 // APIKey returns the API key for authenticating requests.
-func (c *Client) APIKey() string {
-	return c.apiKey
-}
+func (c *Client) APIKey() string { return c.apiKey }
 
 // Lang returns the language used for SDK error messages.
-func (c *Client) Lang() i18n.Language {
-	return c.language
-}
+func (c *Client) Lang() i18n.Language { return c.language }
+
+// QR returns the client's pre-configured QR code generator.
+//
+// The returned [qr.QR] instance can be used to encode QRIS payment strings
+// into PNG images. Configure QR options via [WithQRCodeOptions] when
+// creating the client.
+//
+// Example:
+//
+//	png, err := c.QR().Encode(paymentInfo.PaymentNumber)
+//
+//	// Or serve directly via HTTP:
+//	w.Header().Set("Content-Type", "image/png")
+//	err := c.QR().Write(w, paymentInfo.PaymentNumber)
+func (c *Client) QR() *qr.QR { return c.qrGen }
 
 // waitForRetry blocks until the backoff timer fires or the context is
 // cancelled. On the first attempt (0) it returns immediately.
