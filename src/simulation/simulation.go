@@ -16,8 +16,6 @@ package simulation
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/client"
@@ -66,16 +64,11 @@ func (s *Service) Pay(ctx context.Context, req *PayRequest) error {
 		APIKey:  s.client.APIKey(),
 	}
 
-	buf := s.client.GetBufferPool().Get()
-	defer func() {
-		buf.Reset()
-		s.client.GetBufferPool().Put(buf)
-	}()
-
-	if err := json.NewEncoder(buf).Encode(body); err != nil {
-		return fmt.Errorf("failed to encode request: %w", err)
+	data, err := request.EncodeJSON(s.client.GetBufferPool(), body)
+	if err != nil {
+		return err
 	}
 
-	_, err := s.client.Do(ctx, http.MethodPost, "/api/paymentsimulation", buf.Bytes())
+	_, err = s.client.Do(ctx, http.MethodPost, "/api/paymentsimulation", data)
 	return err
 }
