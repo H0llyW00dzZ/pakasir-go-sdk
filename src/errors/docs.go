@@ -25,6 +25,7 @@
 //   - [ErrInvalidOrderID]: order ID is empty
 //   - [ErrInvalidPaymentMethod]: unsupported payment method
 //   - [ErrNilRequest]: nil request pointer passed to a service method
+//   - [ErrEncodeJSON]: JSON marshaling of a request body failed
 //   - [ErrRequestFailed]: HTTP non-2xx response
 //   - [ErrRequestFailedAfterRetries]: all retry attempts exhausted
 //

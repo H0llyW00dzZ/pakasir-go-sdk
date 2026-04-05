@@ -197,6 +197,7 @@ The SDK provides sentinel errors for programmatic handling via `errors.Is`:
 | `errors.ErrInvalidAmount` | `errors` | Non-positive amount |
 | `errors.ErrInvalidPaymentMethod` | `errors` | Unsupported payment method |
 | `errors.ErrNilRequest` | `errors` | Nil request pointer passed to a service method |
+| `errors.ErrEncodeJSON` | `errors` | JSON marshaling of a request body failed |
 | `errors.ErrRequestFailed` | `errors` | Permanent request failure (non-retryable) |
 | `errors.ErrRequestFailedAfterRetries` | `errors` | All retry attempts exhausted |
 
