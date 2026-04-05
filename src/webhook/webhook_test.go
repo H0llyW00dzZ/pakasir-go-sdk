@@ -27,7 +27,9 @@ import (
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
 )
 
-const testPayload = `{"amount":22000,"order_id":"240910HDE7C9","project":"depodomain","status":"completed","payment_method":"qris","completed_at":"2024-09-10T08:07:02.819+07:00"}`
+const testPayload = `{"amount":22000,"order_id":"240910HDE7C9","project":"depodomain","status":"completed","payment_method":"qris","completed_at":"2024-09-10T08:07:02.819+07:00","is_sandbox":false}`
+
+const testSandboxPayload = `{"amount":169950,"order_id":"topup-50-1775420177111-wDQscYsR","project":"oneapi-btz","status":"completed","payment_method":"qris","completed_at":"2026-04-05T20:17:03.889362797Z","is_sandbox":true}`
 
 func assertValidEvent(t *testing.T, event *Event) {
 	t.Helper()
@@ -36,6 +38,7 @@ func assertValidEvent(t *testing.T, event *Event) {
 	assert.Equal(t, "depodomain", event.Project)
 	assert.Equal(t, constants.StatusCompleted, event.Status)
 	assert.Equal(t, "qris", event.PaymentMethod)
+	assert.False(t, event.IsSandbox)
 }
 
 // --- Parse (io.Reader) ---
@@ -130,6 +133,19 @@ func TestParseBytesInvalidJSON(t *testing.T) {
 	_, err := ParseBytes([]byte(`not json`))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrDecodeBody)
+}
+
+// --- Sandbox payload ---
+
+func TestParseSandboxPayload(t *testing.T) {
+	event, err := ParseBytes([]byte(testSandboxPayload))
+	require.NoError(t, err)
+	assert.Equal(t, int64(169950), event.Amount)
+	assert.Equal(t, "topup-50-1775420177111-wDQscYsR", event.OrderID)
+	assert.Equal(t, "oneapi-btz", event.Project)
+	assert.Equal(t, constants.StatusCompleted, event.Status)
+	assert.Equal(t, "qris", event.PaymentMethod)
+	assert.True(t, event.IsSandbox)
 }
 
 // --- Event.ParseTime ---

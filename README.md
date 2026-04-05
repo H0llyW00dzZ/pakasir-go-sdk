@@ -222,6 +222,13 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // Sandbox events should not trigger real fulfillment
+    if event.IsSandbox {
+        log.Println("sandbox webhook received, skipping fulfillment")
+        w.WriteHeader(http.StatusOK)
+        return
+    }
+
     if event.Status == constants.StatusCompleted {
         // Process the completed payment...
     }
