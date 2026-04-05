@@ -42,6 +42,7 @@ pakasir-go-sdk/
 │   ├── webhook/         # Parsing webhook
 │   ├── helper/
 │   │   ├── gc/          # Pengelolaan buffer pool
+│   │   ├── qr/          # Pembuatan kode QR untuk pembayaran QRIS
 │   │   └── url/         # Pembangun URL pembayaran
 │   └── internal/
 │       ├── request/     # Body request internal bersama
