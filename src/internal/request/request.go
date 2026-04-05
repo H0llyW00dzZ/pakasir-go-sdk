@@ -16,7 +16,6 @@ package request
 
 import (
 	"encoding/json"
-	"fmt"
 
 	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/gc"
@@ -48,7 +47,7 @@ func ValidateOrderAndAmount(lang i18n.Language, orderID string, amount int64) er
 // EncodeJSON encodes v as JSON using a buffer from the provided pool,
 // copies the result into an independent []byte, and returns the buffer
 // to the pool. The caller does not need to manage the pool lifecycle.
-func EncodeJSON(pool gc.Pool, v any) ([]byte, error) {
+func EncodeJSON(pool gc.Pool, lang i18n.Language, v any) ([]byte, error) {
 	buf := pool.Get()
 	defer func() {
 		buf.Reset()
@@ -56,7 +55,7 @@ func EncodeJSON(pool gc.Pool, v any) ([]byte, error) {
 	}()
 
 	if err := json.NewEncoder(buf).Encode(v); err != nil {
-		return nil, fmt.Errorf("failed to encode request: %w", err)
+		return nil, sdkerrors.New(lang, sdkerrors.ErrEncodeJSON, i18n.MsgFailedToEncode)
 	}
 
 	data := make([]byte, buf.Len())

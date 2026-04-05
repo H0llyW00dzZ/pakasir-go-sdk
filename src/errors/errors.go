@@ -42,6 +42,9 @@ var (
 	// ErrNilRequest is returned when a nil request pointer is passed to a service method.
 	ErrNilRequest = errors.New("nil request")
 
+	// ErrEncodeJSON is returned when JSON marshaling of a request fails.
+	ErrEncodeJSON = errors.New("encode json")
+
 	// ErrRequestFailed is returned when the API returns a non-2xx status code.
 	ErrRequestFailed = errors.New("request failed")
 

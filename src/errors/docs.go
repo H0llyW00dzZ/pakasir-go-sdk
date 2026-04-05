@@ -37,6 +37,9 @@
 //
 // Use [New] to create errors with localized messages:
 //
+//	err := errors.New(lang, errors.ErrEncodeJSON, i18n.MsgFailedToEncode)
+//
+//
 //	err := errors.New(i18n.Indonesian, errors.ErrInvalidAmount, i18n.MsgInvalidAmount)
 //	// err.Error() => "jumlah harus lebih dari 0: invalid amount"
 //	// errors.Is(err, errors.ErrInvalidAmount) => true

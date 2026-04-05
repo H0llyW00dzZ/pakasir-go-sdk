@@ -121,5 +121,5 @@ func TestPayEncodeError(t *testing.T) {
 
 	err := svc.Pay(context.Background(), &PayRequest{OrderID: "INV123", Amount: 99000})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to encode request")
+	assert.ErrorIs(t, err, sdkerrors.ErrEncodeJSON)
 }

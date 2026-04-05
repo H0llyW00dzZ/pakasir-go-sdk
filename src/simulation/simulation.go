@@ -64,7 +64,7 @@ func (s *Service) Pay(ctx context.Context, req *PayRequest) error {
 		APIKey:  s.client.APIKey(),
 	}
 
-	data, err := request.EncodeJSON(s.client.GetBufferPool(), body)
+	data, err := request.EncodeJSON(s.client.GetBufferPool(), s.client.Lang(), body)
 	if err != nil {
 		return err
 	}

@@ -31,8 +31,9 @@
 //
 // [EncodeJSON] encodes a value as JSON using a pooled buffer, copies
 // the result into an independent []byte, and returns the buffer to the
-// pool. This centralizes the buffer acquire/encode/release lifecycle so
-// service packages do not manage it directly.
+// pool. It returns a localized error on failure. This centralizes the
+// buffer acquire/encode/release lifecycle so service packages do not
+// manage it directly.
 //
 // This package is internal and not part of the public SDK API.
 package request
