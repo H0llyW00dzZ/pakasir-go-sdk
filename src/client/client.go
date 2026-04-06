@@ -51,10 +51,10 @@ const (
 	// DefaultRetryWaitMax is the maximum wait time between retries.
 	DefaultRetryWaitMax = 30 * time.Second
 
-	// maxResponseSize is the maximum number of bytes the client will read
-	// from a response body. This guards against unbounded memory consumption
-	// from misbehaving servers.
-	maxResponseSize = 10 << 20 // 10 MB
+	// DefaultMaxResponseSize is the default maximum number of bytes the
+	// client will read from a response body. This guards against unbounded
+	// memory consumption from misbehaving servers.
+	DefaultMaxResponseSize int64 = 1 << 20 // 1 MB
 )
 
 // Client is the core Pakasir API client.
@@ -89,6 +89,8 @@ type Client struct {
 	retryWaitMax time.Duration
 	// bufferPool is the buffer pool used to allocate buffers for request and response bodies.
 	bufferPool gc.Pool
+	// maxResponseSize is the maximum bytes to read from a response body.
+	maxResponseSize int64
 	// qrGen is the pre-configured QR code generator.
 	qrGen *qr.QR
 }
@@ -100,16 +102,17 @@ type Client struct {
 // so callers do not need to handle an error at initialization time.
 func New(project, apiKey string, opts ...Option) *Client {
 	c := &Client{
-		project:      project,
-		apiKey:       apiKey,
-		baseURL:      DefaultBaseURL,
-		httpClient:   &http.Client{Timeout: DefaultTimeout},
-		language:     i18n.English,
-		retries:      DefaultRetries,
-		retryWaitMin: DefaultRetryWaitMin,
-		retryWaitMax: DefaultRetryWaitMax,
-		bufferPool:   gc.Default,
-		qrGen:        qr.New(),
+		project:         project,
+		apiKey:          apiKey,
+		baseURL:         DefaultBaseURL,
+		httpClient:      &http.Client{Timeout: DefaultTimeout},
+		language:        i18n.English,
+		retries:         DefaultRetries,
+		retryWaitMin:    DefaultRetryWaitMin,
+		retryWaitMax:    DefaultRetryWaitMax,
+		bufferPool:      gc.Default,
+		qrGen:           qr.New(),
+		maxResponseSize: DefaultMaxResponseSize,
 	}
 
 	for _, opt := range opts {
@@ -275,12 +278,12 @@ func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
 		c.bufferPool.Put(buf)
 	}()
 
-	if _, err := buf.ReadFrom(io.LimitReader(resp.Body, maxResponseSize)); err != nil {
+	if _, err := buf.ReadFrom(io.LimitReader(resp.Body, c.maxResponseSize)); err != nil {
 		return nil, fmt.Errorf("reading response body: %w", err)
 	}
 
-	if int64(buf.Len()) >= maxResponseSize {
-		return nil, fmt.Errorf("response body exceeds %d bytes", maxResponseSize)
+	if int64(buf.Len()) >= c.maxResponseSize {
+		return nil, fmt.Errorf("response body exceeds %d bytes", c.maxResponseSize)
 	}
 
 	data := make([]byte, buf.Len())

@@ -135,14 +135,15 @@ pakasir-go-sdk/
 
 ```go
 c := client.New("proyek", "api-key",
-    client.WithBaseURL("https://custom.api.com"),     // URL dasar kustom
-    client.WithTimeout(10 * time.Second),              // Timeout HTTP
-    client.WithHTTPClient(customHTTPClient),            // http.Client kustom
-    client.WithLanguage(i18n.Indonesian),               // Error dalam Bahasa Indonesia
-    client.WithRetries(5),                              // Jumlah percobaan ulang
-    client.WithRetryWait(500*time.Millisecond, 1*time.Minute), // Konfigurasi backoff
-    client.WithBufferPool(customPool),                  // Buffer pool kustom
-    client.WithQRCodeOptions(qr.WithSize(512)),         // Pengaturan kode QR
+    client.WithBaseURL("https://custom.api.com"),               // URL dasar kustom
+    client.WithTimeout(10 * time.Second),                       // Timeout HTTP
+    client.WithHTTPClient(customHTTPClient),                    // http.Client kustom (shallow-copied)
+    client.WithLanguage(i18n.Indonesian),                       // Error dalam Bahasa Indonesia
+    client.WithRetries(5),                                      // Jumlah percobaan ulang
+    client.WithRetryWait(500*time.Millisecond, 1*time.Minute),  // Konfigurasi backoff
+    client.WithBufferPool(customPool),                          // Buffer pool kustom
+    client.WithMaxResponseSize(5 << 20),                        // Batas body response (default 1 MB)
+    client.WithQRCodeOptions(qr.WithSize(512)),                 // Pengaturan kode QR
 )
 ```
 
@@ -196,6 +197,8 @@ Paket webhook dapat digunakan dengan **framework Go apapun** melalui tiga entry 
 | `webhook.Parse(r)` | `io.Reader` | Gin, Echo, framework apapun |
 | `webhook.ParseRequest(r)` | `*http.Request` | net/http, Chi |
 | `webhook.ParseBytes(b)` | `[]byte` | Fiber |
+
+`Parse` dan `ParseRequest` menerima opsional `webhook.WithMaxBodySize(n)` untuk mengubah batas ukuran body default 1 MB.
 
 Semua fungsi parse mengembalikan sentinel error untuk penanganan programatik melalui `errors.Is`:
 

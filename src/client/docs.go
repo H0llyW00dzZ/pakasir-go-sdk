@@ -38,6 +38,7 @@
 //   - [WithRetries]: Configure the number of retry attempts
 //   - [WithRetryWait]: Configure backoff min/max durations (auto-swapped if inverted; non-positive values clamped to 1ms)
 //   - [WithBufferPool]: Provide a custom buffer pool
+//   - [WithMaxResponseSize]: Set the maximum response body size (default 1 MB)
 //   - [WithQRCodeOptions]: Configure QR code generation settings
 //
 // # Encapsulation
@@ -58,8 +59,8 @@
 // failures (429 Too Many Requests, 5xx server errors, and network errors)
 // using exponential backoff with full jitter. Client errors (4xx other
 // than 429) and permanent TLS certificate errors are never retried.
-// Response body reads are limited to 10 MB to guard against unbounded
-// memory consumption.
+// Response body reads are limited to [DefaultMaxResponseSize] (1 MB) by
+// default; use [WithMaxResponseSize] to adjust.
 //
 // # QR Code Generation
 //

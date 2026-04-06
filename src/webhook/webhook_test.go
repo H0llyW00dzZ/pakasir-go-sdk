@@ -73,13 +73,47 @@ func TestParseReadError(t *testing.T) {
 }
 
 func TestParseBodyExceedsLimit(t *testing.T) {
-	// 1 MB is the limit inside Parse. Provide exactly that many bytes
-	// so the truncation check fires.
-	oversized := strings.NewReader(strings.Repeat("x", 1<<20))
+	// DefaultMaxBodySize (1 MB) is the limit. Provide exactly that many
+	// bytes so the truncation check fires.
+	oversized := strings.NewReader(strings.Repeat("x", int(DefaultMaxBodySize)))
 	_, err := Parse(oversized)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrReadBody)
 	assert.Contains(t, err.Error(), "body exceeds")
+}
+
+func TestParseCustomMaxBodySize(t *testing.T) {
+	// Set a tiny limit and verify it rejects a normal-sized payload.
+	_, err := Parse(strings.NewReader(testPayload), WithMaxBodySize(16))
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrReadBody)
+	assert.Contains(t, err.Error(), "body exceeds")
+}
+
+func TestParseCustomMaxBodySizeLargeEnough(t *testing.T) {
+	event, err := Parse(strings.NewReader(testPayload), WithMaxBodySize(4<<20))
+	require.NoError(t, err)
+	assertValidEvent(t, event)
+}
+
+func TestWithMaxBodySizeZeroIgnored(t *testing.T) {
+	// Zero is ignored; default applies. Payload fits within 1 MB.
+	event, err := Parse(strings.NewReader(testPayload), WithMaxBodySize(0))
+	require.NoError(t, err)
+	assertValidEvent(t, event)
+}
+
+func TestWithMaxBodySizeNegativeIgnored(t *testing.T) {
+	event, err := Parse(strings.NewReader(testPayload), WithMaxBodySize(-1))
+	require.NoError(t, err)
+	assertValidEvent(t, event)
+}
+
+func TestParseRequestCustomMaxBodySize(t *testing.T) {
+	r := &http.Request{Body: io.NopCloser(strings.NewReader(testPayload))}
+	_, err := ParseRequest(r, WithMaxBodySize(16))
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrReadBody)
 }
 
 // --- ParseRequest (*http.Request) ---

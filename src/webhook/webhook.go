@@ -92,24 +92,29 @@ func (e *Event) ParseTime() (time.Time, error) {
 //   - Echo:     webhook.Parse(c.Request().Body)
 //   - Chi:      webhook.Parse(r.Body)
 //
+// Use [WithMaxBodySize] to override the default 1 MB body size limit.
+//
 // The caller is responsible for closing the reader if required.
 //
 // Important: Callers must validate the returned Event's Amount and OrderID
 // against their own system records, as recommended by the Pakasir documentation.
-func Parse(r io.Reader) (*Event, error) {
+func Parse(r io.Reader, opts ...ParseOption) (*Event, error) {
 	if r == nil {
 		return nil, ErrNilReader
 	}
 
-	// Limit body reads to 1 MB to guard against oversized payloads.
-	const maxBodySize = 1 << 20 // 1 MB
-	data, err := io.ReadAll(io.LimitReader(r, maxBodySize))
+	cfg := &parseConfig{maxBodySize: DefaultMaxBodySize}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	data, err := io.ReadAll(io.LimitReader(r, cfg.maxBodySize))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrReadBody, err)
 	}
 
-	if int64(len(data)) >= maxBodySize {
-		return nil, fmt.Errorf("%w: body exceeds %d bytes", ErrReadBody, maxBodySize)
+	if int64(len(data)) >= cfg.maxBodySize {
+		return nil, fmt.Errorf("%w: body exceeds %d bytes", ErrReadBody, cfg.maxBodySize)
 	}
 
 	return ParseBytes(data)
@@ -119,14 +124,14 @@ func Parse(r io.Reader) (*Event, error) {
 // payload from a standard [http.Request].
 //
 // It reads the full request body, closes it, and unmarshals the JSON
-// into an [Event] struct.
-func ParseRequest(r *http.Request) (*Event, error) {
+// into an [Event] struct. Options are forwarded to [Parse].
+func ParseRequest(r *http.Request, opts ...ParseOption) (*Event, error) {
 	if r == nil || r.Body == nil {
 		return nil, ErrNilRequest
 	}
 	defer r.Body.Close()
 
-	return Parse(r.Body)
+	return Parse(r.Body, opts...)
 }
 
 // ParseBytes decodes a Pakasir webhook payload from raw bytes.

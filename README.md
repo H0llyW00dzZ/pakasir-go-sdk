@@ -135,14 +135,15 @@ pakasir-go-sdk/
 
 ```go
 c := client.New("project", "api-key",
-    client.WithBaseURL("https://custom.api.com"),     // Custom base URL
-    client.WithTimeout(10 * time.Second),              // HTTP timeout
-    client.WithHTTPClient(customHTTPClient),            // Custom http.Client
-    client.WithLanguage(i18n.Indonesian),               // Localized errors
-    client.WithRetries(5),                              // Retry attempts
-    client.WithRetryWait(500*time.Millisecond, 1*time.Minute), // Backoff config
-    client.WithBufferPool(customPool),                  // Custom buffer pool
-    client.WithQRCodeOptions(qr.WithSize(512)),         // QR code settings
+    client.WithBaseURL("https://custom.api.com"),               // Custom base URL
+    client.WithTimeout(10 * time.Second),                       // HTTP timeout
+    client.WithHTTPClient(customHTTPClient),                    // Custom http.Client (shallow-copied)
+    client.WithLanguage(i18n.Indonesian),                       // Localized errors
+    client.WithRetries(5),                                      // Retry attempts
+    client.WithRetryWait(500*time.Millisecond, 1*time.Minute),  // Backoff config
+    client.WithBufferPool(customPool),                          // Custom buffer pool
+    client.WithMaxResponseSize(5 << 20),                        // Max response body (default 1 MB)
+    client.WithQRCodeOptions(qr.WithSize(512)),                 // QR code settings
 )
 ```
 
@@ -196,6 +197,8 @@ The webhook package works with **any Go HTTP framework** via three entry points:
 | `webhook.Parse(r)` | `io.Reader` | Gin, Echo, any framework |
 | `webhook.ParseRequest(r)` | `*http.Request` | net/http, Chi |
 | `webhook.ParseBytes(b)` | `[]byte` | Fiber |
+
+Both `Parse` and `ParseRequest` accept optional `webhook.WithMaxBodySize(n)` to override the default 1 MB body size limit.
 
 All parse functions return sentinel errors for programmatic handling via `errors.Is`:
 
