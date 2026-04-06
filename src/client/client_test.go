@@ -182,6 +182,30 @@ func TestDoRetryOn5xxThenSuccess(t *testing.T) {
 	assert.Equal(t, int32(3), attempt.Load())
 }
 
+func TestDoRetryOn429ThenSuccess(t *testing.T) {
+	var attempt atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := attempt.Add(1)
+		if n <= 2 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`rate limited`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL,
+		WithRetries(3),
+		WithRetryWait(1*time.Millisecond, 5*time.Millisecond),
+	)
+	data, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"ok":true}`, string(data))
+	assert.Equal(t, int32(3), attempt.Load())
+}
+
 func TestDoPostRetryWithBody(t *testing.T) {
 	var attempt atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

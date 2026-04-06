@@ -83,6 +83,7 @@ type CancelRequest struct {
 }
 
 // DetailRequest contains the parameters for querying transaction details.
+// It is not JSON-encoded; its fields are sent as URL query parameters.
 type DetailRequest struct {
 	// OrderID is the transaction identifier to look up.
 	OrderID string
