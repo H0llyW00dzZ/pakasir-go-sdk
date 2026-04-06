@@ -208,6 +208,7 @@ Semua fungsi parse mengembalikan sentinel error untuk penanganan programatik mel
 | `webhook.ErrNilRequest` | `*http.Request` nil atau body nil diberikan ke `ParseRequest` |
 | `webhook.ErrEmptyBody` | Payload kosong diberikan ke `ParseBytes` |
 | `webhook.ErrReadBody` | Gagal membaca body (membungkus penyebab asli) |
+| `webhook.ErrBodyTooLarge` | Body melebihi batas ukuran yang dikonfigurasi |
 | `webhook.ErrDecodeBody` | Gagal decode JSON (membungkus penyebab asli) |
 
 ```go
@@ -255,6 +256,15 @@ SDK ini menyediakan sentinel error untuk penanganan programatik melalui `errors.
 | `errors.ErrEncodeJSON` | `errors` | Gagal marshaling JSON pada body request |
 | `errors.ErrRequestFailed` | `errors` | Kegagalan request permanen (tidak bisa di-retry) |
 | `errors.ErrRequestFailedAfterRetries` | `errors` | Semua percobaan retry habis |
+| `client.ErrResponseTooLarge` | `client` | Body response melebihi batas ukuran yang dikonfigurasi |
+| `webhook.ErrNilReader` | `webhook` | `io.Reader` nil diberikan ke `Parse` |
+| `webhook.ErrNilRequest` | `webhook` | `*http.Request` nil atau body nil diberikan ke `ParseRequest` |
+| `webhook.ErrEmptyBody` | `webhook` | Payload kosong |
+| `webhook.ErrReadBody` | `webhook` | Gagal membaca body (membungkus penyebab asli) |
+| `webhook.ErrBodyTooLarge` | `webhook` | Body melebihi batas ukuran yang dikonfigurasi |
+| `webhook.ErrDecodeBody` | `webhook` | Gagal decode JSON (membungkus penyebab asli) |
+| `qr.ErrEmptyContent` | `qr` | String kosong diberikan ke `Encode`, `Write`, atau `WriteFile` |
+| `qr.ErrEncodeFailed` | `qr` | Encoding QR gagal (membungkus penyebab asli) |
 | `url.ErrEmptyBaseURL` | `url` | Base URL kosong |
 | `url.ErrEmptyProject` | `url` | Slug proyek kosong |
 | `url.ErrEmptyOrderID` | `url` | ID pesanan kosong |
