@@ -263,21 +263,28 @@ func (c *Client) buildRequest(ctx context.Context, method, path string, body []b
 // readResponseBody drains the response into a pooled buffer, copies the
 // data out, and returns the buffer to the pool. The read is limited to
 // [maxResponseSize] bytes to guard against unbounded memory consumption.
+//
+// If the response body reaches [maxResponseSize], an error is returned
+// instead of silently truncating the payload.
 func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
-	buf := c.bufferPool.Get()
-	_, readErr := buf.ReadFrom(io.LimitReader(resp.Body, maxResponseSize))
-	resp.Body.Close()
+	defer resp.Body.Close()
 
-	if readErr != nil {
+	buf := c.bufferPool.Get()
+	defer func() {
 		buf.Reset()
 		c.bufferPool.Put(buf)
-		return nil, fmt.Errorf("reading response body: %w", readErr)
+	}()
+
+	if _, err := buf.ReadFrom(io.LimitReader(resp.Body, maxResponseSize)); err != nil {
+		return nil, fmt.Errorf("reading response body: %w", err)
+	}
+
+	if int64(buf.Len()) >= maxResponseSize {
+		return nil, fmt.Errorf("response body exceeds %d bytes", maxResponseSize)
 	}
 
 	data := make([]byte, buf.Len())
 	copy(data, buf.Bytes())
-	buf.Reset()
-	c.bufferPool.Put(buf)
 	return data, nil
 }
 
