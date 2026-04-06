@@ -32,21 +32,29 @@ func TestValidateOrderAndAmountSuccess(t *testing.T) {
 
 func TestValidateOrderAndAmountEmptyOrderID(t *testing.T) {
 	err := ValidateOrderAndAmount(i18n.English, "", 99000)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
 }
 
 func TestValidateOrderAndAmountZeroAmount(t *testing.T) {
 	err := ValidateOrderAndAmount(i18n.English, "INV123", 0)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAmount)
 }
 
 func TestValidateOrderAndAmountNegativeAmount(t *testing.T) {
 	err := ValidateOrderAndAmount(i18n.English, "INV123", -100)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAmount)
 }
 
 func TestValidateOrderAndAmountIndonesian(t *testing.T) {
 	err := ValidateOrderAndAmount(i18n.Indonesian, "", 99000)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
 	assert.Contains(t, err.Error(), "ID pesanan wajib diisi")
 }
@@ -83,5 +91,6 @@ func (unencodable) MarshalJSON() ([]byte, error) { return nil, assert.AnError }
 func TestEncodeJSONError(t *testing.T) {
 	_, err := EncodeJSON(gc.Default, i18n.English, unencodable{})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrEncodeJSON)
 }

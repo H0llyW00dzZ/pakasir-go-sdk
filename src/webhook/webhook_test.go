@@ -52,12 +52,14 @@ func TestParseSuccess(t *testing.T) {
 func TestParseNilReader(t *testing.T) {
 	_, err := Parse(nil)
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrNilReader)
 }
 
 func TestParseInvalidJSON(t *testing.T) {
 	_, err := Parse(strings.NewReader(`not json`))
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrDecodeBody)
 }
 
@@ -70,12 +72,14 @@ func TestParseEmptyReader(t *testing.T) {
 	// without delegating solely to ParseBytes.
 	_, err := Parse(strings.NewReader(""))
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrEmptyBody)
 }
 
 func TestParseReadError(t *testing.T) {
 	_, err := Parse(errorReader{})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrReadBody)
 	assert.True(t, errors.Is(err, io.ErrUnexpectedEOF), "should wrap the underlying cause")
 }
@@ -86,6 +90,7 @@ func TestParseBodyExceedsLimit(t *testing.T) {
 	oversized := strings.NewReader(strings.Repeat("x", int(DefaultMaxBodySize)+1))
 	_, err := Parse(oversized)
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrBodyTooLarge)
 	assert.Contains(t, err.Error(), "exceeds")
 }
@@ -96,6 +101,7 @@ func TestParseBodyExactlyAtLimit(t *testing.T) {
 	exact := strings.NewReader(strings.Repeat("x", int(DefaultMaxBodySize)))
 	_, err := Parse(exact)
 	require.Error(t, err)
+	t.Log(err)
 	// Accepted by the size check, rejected by JSON decoding.
 	assert.ErrorIs(t, err, ErrDecodeBody)
 	assert.NotErrorIs(t, err, ErrBodyTooLarge)
@@ -105,6 +111,7 @@ func TestParseCustomMaxBodySize(t *testing.T) {
 	// Set a tiny limit and verify it rejects a normal-sized payload.
 	_, err := Parse(strings.NewReader(testPayload), WithMaxBodySize(16))
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrBodyTooLarge)
 	assert.Contains(t, err.Error(), "exceeds")
 }
@@ -132,6 +139,7 @@ func TestParseRequestCustomMaxBodySize(t *testing.T) {
 	r := &http.Request{Body: io.NopCloser(strings.NewReader(testPayload))}
 	_, err := ParseRequest(r, WithMaxBodySize(16))
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrBodyTooLarge)
 }
 
@@ -147,12 +155,14 @@ func TestParseRequestSuccess(t *testing.T) {
 func TestParseRequestNilRequest(t *testing.T) {
 	_, err := ParseRequest(nil)
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrNilRequest)
 }
 
 func TestParseRequestNilBody(t *testing.T) {
 	_, err := ParseRequest(&http.Request{Body: nil})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrNilRequest)
 }
 
@@ -160,6 +170,7 @@ func TestParseRequestInvalidJSON(t *testing.T) {
 	r := &http.Request{Body: io.NopCloser(strings.NewReader(`not json`))}
 	_, err := ParseRequest(r)
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrDecodeBody)
 }
 
@@ -171,6 +182,7 @@ func (errorReadCloser) Close() error             { return nil }
 func TestParseRequestReadError(t *testing.T) {
 	_, err := ParseRequest(&http.Request{Body: errorReadCloser{}})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrReadBody)
 }
 
@@ -185,16 +197,19 @@ func TestParseBytesSuccess(t *testing.T) {
 func TestParseBytesEmpty(t *testing.T) {
 	_, err := ParseBytes(nil)
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrEmptyBody)
 
 	_, err = ParseBytes([]byte{})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrEmptyBody)
 }
 
 func TestParseBytesInvalidJSON(t *testing.T) {
 	_, err := ParseBytes([]byte(`not json`))
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrDecodeBody)
 }
 
@@ -230,4 +245,5 @@ func TestEventParseTimeNano(t *testing.T) {
 func TestEventParseTimeInvalid(t *testing.T) {
 	_, err := (&Event{CompletedAt: "bad"}).ParseTime()
 	require.Error(t, err)
+	t.Log(err)
 }

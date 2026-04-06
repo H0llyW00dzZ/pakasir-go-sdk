@@ -33,25 +33,32 @@ func TestAPIErrorError(t *testing.T) {
 func TestNewBasic(t *testing.T) {
 	err := New(i18n.English, ErrInvalidProject, i18n.MsgInvalidProject)
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrInvalidProject)
 	assert.Contains(t, err.Error(), "project slug is required")
 }
 
 func TestNewIndonesian(t *testing.T) {
 	err := New(i18n.Indonesian, ErrInvalidAmount, i18n.MsgInvalidAmount)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrInvalidAmount)
 	assert.Contains(t, err.Error(), "jumlah harus lebih dari 0")
 }
 
 func TestNewWithContextString(t *testing.T) {
 	err := New(i18n.English, ErrInvalidPaymentMethod, i18n.MsgInvalidPaymentMethod, "bitcoin")
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrInvalidPaymentMethod)
 	assert.Contains(t, err.Error(), "unsupported payment method: bitcoin")
 }
 
 func TestNewWithCauseError(t *testing.T) {
 	cause := fmt.Errorf("network timeout")
-	err := New(i18n.English, ErrRequestFailed, i18n.MsgRequestFailed, cause)
+	err := New(i18n.English, ErrRequestFailed, i18n.MsgRequestFailedPermanent, cause)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrRequestFailed)
 	assert.ErrorIs(t, err, cause)
 }
@@ -59,6 +66,8 @@ func TestNewWithCauseError(t *testing.T) {
 func TestNewWithCauseAndContext(t *testing.T) {
 	cause := fmt.Errorf("connection refused")
 	err := New(i18n.English, ErrInvalidPaymentMethod, i18n.MsgInvalidPaymentMethod, "dana", cause)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrInvalidPaymentMethod)
 	assert.ErrorIs(t, err, cause)
 	assert.Contains(t, err.Error(), "unsupported payment method: dana")
@@ -66,12 +75,16 @@ func TestNewWithCauseAndContext(t *testing.T) {
 
 func TestNewWithEmptyStringIgnored(t *testing.T) {
 	err := New(i18n.English, ErrInvalidProject, i18n.MsgInvalidProject, "")
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrInvalidProject)
 	assert.Contains(t, err.Error(), "project slug is required")
 }
 
 func TestNewWithUnsupportedArgType(t *testing.T) {
 	err := New(i18n.English, ErrInvalidProject, i18n.MsgInvalidProject, 42)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrInvalidProject)
 }
 
@@ -93,6 +106,8 @@ func TestNewContextStrOnNonFormatMessage(t *testing.T) {
 	// MsgInvalidProject = "project slug is required" (no %s verb).
 	// Passing a contextStr should append it as a suffix, not garble the message.
 	err := New(i18n.English, ErrInvalidProject, i18n.MsgInvalidProject, "extra-context")
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrInvalidProject)
 	assert.Contains(t, err.Error(), "project slug is required: extra-context")
 	assert.NotContains(t, err.Error(), "EXTRA")
@@ -102,7 +117,9 @@ func TestNewMultipleCauses(t *testing.T) {
 	cause1 := errors.New("first")
 	cause2 := errors.New("second")
 	// Only the first error cause should be wrapped.
-	err := New(i18n.English, ErrRequestFailed, i18n.MsgRequestFailed, cause1, cause2)
+	err := New(i18n.English, ErrRequestFailed, i18n.MsgRequestFailedPermanent, cause1, cause2)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrRequestFailed)
 	assert.ErrorIs(t, err, cause1)
 }
