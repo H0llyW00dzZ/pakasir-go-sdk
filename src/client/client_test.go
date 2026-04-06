@@ -413,10 +413,10 @@ func TestDoReadBodyNonRetryableError(t *testing.T) {
 }
 
 func TestDoResponseBodyExceedsLimit(t *testing.T) {
-	// Build a body that is exactly maxResponseSize (10 MB).
-	// LimitReader caps at maxResponseSize, so the buffer fills to that
-	// limit and the truncation check triggers.
-	oversized := bytes.Repeat([]byte("x"), maxResponseSize)
+	// Build a body that is exactly DefaultMaxResponseSize (1 MB).
+	// LimitReader caps at that limit, so the buffer fills completely
+	// and the truncation check triggers.
+	oversized := bytes.Repeat([]byte("x"), int(DefaultMaxResponseSize))
 
 	c := New("proj", "key",
 		WithRetries(0),
@@ -425,6 +425,28 @@ func TestDoResponseBodyExceedsLimit(t *testing.T) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewReader(oversized)),
+				}, nil
+			}),
+		}),
+	)
+
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "response body exceeds")
+}
+
+func TestDoResponseBodyCustomLimit(t *testing.T) {
+	const customLimit int64 = 512
+
+	c := New("proj", "key",
+		WithRetries(0),
+		WithMaxResponseSize(customLimit),
+		WithHTTPClient(&http.Client{
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				body := bytes.Repeat([]byte("x"), int(customLimit))
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewReader(body)),
 				}, nil
 			}),
 		}),
@@ -523,6 +545,21 @@ func TestWithRetryWaitNegativeClamped(t *testing.T) {
 	c := New("proj", "key", WithRetryWait(-5*time.Second, -1*time.Second))
 	assert.Equal(t, 1*time.Millisecond, c.retryWaitMin, "negative min must be clamped to 1ms")
 	assert.Equal(t, 1*time.Millisecond, c.retryWaitMax, "negative max must be clamped to 1ms")
+}
+
+func TestWithMaxResponseSize(t *testing.T) {
+	c := New("proj", "key", WithMaxResponseSize(5<<20))
+	assert.Equal(t, int64(5<<20), c.maxResponseSize)
+}
+
+func TestWithMaxResponseSizeZeroIgnored(t *testing.T) {
+	c := New("proj", "key", WithMaxResponseSize(0))
+	assert.Equal(t, DefaultMaxResponseSize, c.maxResponseSize, "zero must be ignored")
+}
+
+func TestWithMaxResponseSizeNegativeIgnored(t *testing.T) {
+	c := New("proj", "key", WithMaxResponseSize(-1))
+	assert.Equal(t, DefaultMaxResponseSize, c.maxResponseSize, "negative must be ignored")
 }
 
 // --- isRetryableStatus ---

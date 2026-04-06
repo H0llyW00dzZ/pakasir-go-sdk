@@ -37,7 +37,8 @@
 // # Body Size Limit
 //
 // The [Parse] and [ParseRequest] functions limit the maximum request body
-// to 1 MB to guard against oversized payloads.
+// to [DefaultMaxBodySize] (1 MB) by default. Use [WithMaxBodySize] to
+// adjust the limit.
 //
 // # Sandbox Mode
 //

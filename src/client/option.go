@@ -92,6 +92,18 @@ func WithBufferPool(pool gc.Pool) Option {
 	}
 }
 
+// WithMaxResponseSize sets the maximum number of bytes the client will
+// read from a single response body. Responses that reach this limit are
+// rejected with an error instead of being silently truncated.
+// Non-positive values are ignored and the default is retained.
+func WithMaxResponseSize(n int64) Option {
+	return func(c *Client) {
+		if n > 0 {
+			c.maxResponseSize = n
+		}
+	}
+}
+
 // WithRetryWait sets the minimum and maximum wait durations for
 // exponential backoff between retries. If min > max, the values are swapped.
 // Non-positive values are clamped to 1 millisecond.
