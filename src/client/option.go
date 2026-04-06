@@ -37,10 +37,14 @@ func WithBaseURL(baseURL string) Option {
 // WithHTTPClient sets a custom [http.Client] for the Pakasir client.
 // Use this to configure custom transports, proxies, or TLS settings.
 // A nil value is ignored and the default client is retained.
+//
+// The provided client is shallow-copied so that subsequent options
+// (e.g., [WithTimeout]) do not mutate the caller's original client.
 func WithHTTPClient(httpClient *http.Client) Option {
 	return func(c *Client) {
 		if httpClient != nil {
-			c.httpClient = httpClient
+			clone := *httpClient
+			c.httpClient = &clone
 		}
 	}
 }
