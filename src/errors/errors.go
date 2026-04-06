@@ -83,6 +83,20 @@ func (e *APIError) Error() string {
 //	}
 func AsType[T error](err error) (T, bool) { return errors.AsType[T](err) }
 
+// HasType reports whether err's chain contains an error of type T.
+// It is a shorthand for [AsType] when only the presence matters, not
+// the matched value.
+//
+// Example:
+//
+//	if sdkerrors.HasType[*x509.UnknownAuthorityError](err) {
+//	    // handle certificate error
+//	}
+func HasType[T error](err error) bool {
+	_, ok := AsType[T](err)
+	return ok
+}
+
 // New creates a localized error wrapping the provided sentinel error.
 // The localized message is resolved using the given language and message key.
 //

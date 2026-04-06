@@ -73,7 +73,7 @@
 // Permanent failures are never retried:
 //
 //   - Client errors (4xx other than 429)
-//   - TLS certificate errors ([tls.CertificateVerificationError], [x509.UnknownAuthorityError], etc.)
+//   - TLS certificate errors ([tls.CertificateVerificationError], [x509.UnknownAuthorityError], [x509.SystemRootsError], etc.)
 //   - Permanent DNS failures ([net.DNSError] with IsNotFound: true, i.e., NXDOMAIN)
 //   - Oversized responses ([ErrResponseTooLarge])
 //

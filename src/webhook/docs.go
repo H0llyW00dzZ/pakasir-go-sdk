@@ -33,6 +33,8 @@
 //   - [ErrEmptyBody]: empty payload passed to [ParseBytes]
 //   - [ErrReadBody]: body read failure (wraps underlying cause)
 //   - [ErrDecodeBody]: JSON decode failure (wraps underlying cause)
+//   - [ErrInvalidOrderID]: empty order ID from [Event.Validate]
+//   - [ErrInvalidAmount]: non-positive amount from [Event.Validate]
 //
 // # Body Size Limit
 //

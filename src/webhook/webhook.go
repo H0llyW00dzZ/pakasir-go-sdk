@@ -50,6 +50,12 @@ var (
 
 	// ErrDecodeBody is returned when JSON decoding of the webhook body fails.
 	ErrDecodeBody = errors.New("webhook: failed to decode body")
+
+	// ErrInvalidOrderID is returned by [Event.Validate] when the order ID is empty.
+	ErrInvalidOrderID = errors.New("webhook: order ID is required")
+
+	// ErrInvalidAmount is returned by [Event.Validate] when the amount is not positive.
+	ErrInvalidAmount = errors.New("webhook: amount must be greater than 0")
 )
 
 // Event represents a payment notification received from the Pakasir webhook.
@@ -87,6 +93,23 @@ type Event struct {
 // It attempts RFC3339Nano first, then falls back to RFC3339.
 func (e *Event) ParseTime() (time.Time, error) {
 	return timefmt.Parse(e.CompletedAt)
+}
+
+// Validate performs basic sanity checks on the event fields.
+// It returns [ErrInvalidOrderID] if the order ID is empty, and
+// [ErrInvalidAmount] if the amount is not positive.
+//
+// Callers should still verify that the OrderID and Amount match a
+// pending transaction in their own system, as recommended by the
+// Pakasir documentation.
+func (e *Event) Validate() error {
+	if e.OrderID == "" {
+		return ErrInvalidOrderID
+	}
+	if e.Amount <= 0 {
+		return ErrInvalidAmount
+	}
+	return nil
 }
 
 // Parse decodes a Pakasir webhook payload from an [io.Reader].
