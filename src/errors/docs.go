@@ -48,6 +48,16 @@
 // This is re-exported so that callers who import this package as sdkerrors
 // do not need an additional import of the standard errors package.
 //
+// [HasType] is a boolean shorthand for [AsType] when only type presence
+// matters and the matched value is not needed. It simplifies switch case
+// expressions that consolidate multiple error type checks:
+//
+//	switch {
+//	case sdkerrors.HasType[*x509.UnknownAuthorityError](err),
+//	    sdkerrors.HasType[*x509.HostnameError](err):
+//	    // permanent TLS failure
+//	}
+//
 // # Localized Error Creation
 //
 // Use [New] to create errors with localized messages:

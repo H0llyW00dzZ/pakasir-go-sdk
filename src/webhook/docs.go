@@ -32,7 +32,10 @@
 //   - [ErrNilRequest]: nil request or body passed to [ParseRequest] (wraps [errors.ErrNilRequest])
 //   - [ErrEmptyBody]: empty payload passed to [ParseBytes]
 //   - [ErrReadBody]: body read failure (wraps underlying cause)
+//   - [ErrBodyTooLarge]: body exceeds configured size limit
 //   - [ErrDecodeBody]: JSON decode failure (wraps underlying cause)
+//   - [ErrInvalidOrderID]: empty order ID from [Event.Validate]
+//   - [ErrInvalidAmount]: non-positive amount from [Event.Validate]
 //
 // # Body Size Limit
 //
@@ -51,8 +54,9 @@
 //
 // As stated in the Pakasir documentation, you must always verify that
 // the Amount and OrderID in the webhook event match a pending transaction
-// in your system. The SDK parses the webhook payload but does not perform
-// this validation — that is the caller's responsibility.
+// in your system. Use [Event.Validate] for basic sanity checks (non-empty
+// order ID, positive amount), then verify the values against your own
+// records.
 //
 // # net/http
 //

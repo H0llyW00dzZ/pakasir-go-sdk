@@ -395,7 +395,7 @@ func TestDoInvalidURL(t *testing.T) {
 	_, doErr := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, doErr)
 	t.Log(doErr)
-	assert.Contains(t, doErr.Error(), "failed to create request")
+	assert.Contains(t, doErr.Error(), "client: failed to create request")
 }
 
 func TestDoNetworkErrorRetryExhausted(t *testing.T) {
@@ -780,6 +780,11 @@ func TestIsRetryable(t *testing.T) {
 		{"dns not found", &net.DNSError{Err: "no such host", Name: "bad.example.com", IsNotFound: true}, false},
 		{"dns timeout", &net.DNSError{Err: "i/o timeout", Name: "slow.example.com", IsTimeout: true}, true},
 		{"url error wrapping dns not found", &neturl.Error{Op: "Get", Err: &net.DNSError{Err: "no such host", Name: "bad.example.com", IsNotFound: true}}, false},
+		{"system roots unavailable", &x509.SystemRootsError{}, false},
+		{"tls alert bad certificate", tls.AlertError(42), false},
+		{"tls alert handshake failure", tls.AlertError(40), false},
+		{"tls record header error", tls.RecordHeaderError{Msg: "not TLS"}, false},
+		{"url error wrapping tls alert", &neturl.Error{Op: "Get", Err: tls.AlertError(70)}, false},
 	}
 
 	for _, tt := range tests {

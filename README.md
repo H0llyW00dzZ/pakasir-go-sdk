@@ -210,6 +210,8 @@ All parse functions return sentinel errors for programmatic handling via `errors
 | `webhook.ErrReadBody` | body read failure (wraps underlying cause) |
 | `webhook.ErrBodyTooLarge` | body exceeds configured size limit |
 | `webhook.ErrDecodeBody` | JSON decode failure (wraps underlying cause) |
+| `webhook.ErrInvalidOrderID` | Empty order ID from `Event.Validate` |
+| `webhook.ErrInvalidAmount` | Non-positive amount from `Event.Validate` |
 
 ```go
 // net/http
@@ -264,6 +266,8 @@ The SDK provides sentinel errors for programmatic handling via `errors.Is`:
 | `webhook.ErrReadBody` | `webhook` | Body read failure (wraps underlying cause) |
 | `webhook.ErrBodyTooLarge` | `webhook` | Body exceeds configured size limit |
 | `webhook.ErrDecodeBody` | `webhook` | JSON decode failure (wraps underlying cause) |
+| `webhook.ErrInvalidOrderID` | `webhook` | Empty order ID from `Event.Validate` |
+| `webhook.ErrInvalidAmount` | `webhook` | Non-positive amount from `Event.Validate` |
 | `qr.ErrEmptyContent` | `qr` | Empty string passed to `Encode`, `Write`, or `WriteFile` |
 | `qr.ErrEncodeFailed` | `qr` | QR encoding failed (wraps underlying cause) |
 | `url.ErrEmptyBaseURL` | `url` | Empty base URL |

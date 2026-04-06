@@ -334,7 +334,7 @@ func (c *Client) buildRequest(ctx context.Context, method, path string, body []b
 
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bodyReader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("client: failed to create request: %w", err)
 	}
 
 	req.Header.Set("User-Agent", constants.UserAgent())
@@ -413,9 +413,9 @@ func isRetryableStatus(statusCode int) bool {
 }
 
 // isRetryable determines whether a network-level error is transient
-// and worth retrying. TLS certificate errors, permanent DNS failures,
-// oversized responses, and other permanent failures return false to
-// avoid wasting retry attempts.
+// and worth retrying. TLS certificate/handshake errors, system root pool
+// errors, permanent DNS failures, oversized responses, and other permanent
+// failures return false to avoid wasting retry attempts.
 //
 // The [errors.AsType] checks traverse the entire error chain, including
 // errors nested inside [net/url.Error] via its Unwrap method, so no
@@ -425,35 +425,32 @@ func isRetryable(err error) bool {
 		return false
 	}
 
-	// Oversized responses are deterministic — do not retry.
-	if errors.Is(err, ErrResponseTooLarge) {
-		return false
-	}
-
 	// Permanent DNS failures (NXDOMAIN) are not transient — do not retry.
 	// DNS timeouts remain retryable because IsTimeout is true and
-	// IsNotFound is false.
-	if dnsErr, ok := errors.AsType[*net.DNSError](err); ok {
+	// IsNotFound is false. Checked before the switch because we need
+	// the extracted value to inspect IsNotFound.
+	if dnsErr, ok := sdkerrors.AsType[*net.DNSError](err); ok {
 		return !dnsErr.IsNotFound
 	}
 
-	// TLS certificate errors are permanent — do not retry.
-	if _, ok := errors.AsType[*tls.CertificateVerificationError](err); ok {
+	switch {
+	// Oversized responses are deterministic — do not retry.
+	case errors.Is(err, ErrResponseTooLarge):
 		return false
-	}
-	if _, ok := errors.AsType[*x509.UnknownAuthorityError](err); ok {
+	// TLS/x509 certificate and handshake errors are permanent — do not retry.
+	case sdkerrors.HasType[*tls.CertificateVerificationError](err),
+		sdkerrors.HasType[*x509.UnknownAuthorityError](err),
+		sdkerrors.HasType[*x509.HostnameError](err),
+		sdkerrors.HasType[*x509.CertificateInvalidError](err),
+		sdkerrors.HasType[*x509.SystemRootsError](err),
+		sdkerrors.HasType[tls.AlertError](err),
+		sdkerrors.HasType[tls.RecordHeaderError](err):
 		return false
-	}
-	if _, ok := errors.AsType[*x509.HostnameError](err); ok {
-		return false
-	}
-	if _, ok := errors.AsType[*x509.CertificateInvalidError](err); ok {
-		return false
-	}
-
 	// All other network errors (timeouts, connection refused, etc.)
 	// are considered transient.
-	return true
+	default:
+		return true
+	}
 }
 
 // parseRetryAfter parses the value of a Retry-After HTTP header.

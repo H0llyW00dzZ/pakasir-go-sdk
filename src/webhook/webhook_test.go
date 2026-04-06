@@ -247,3 +247,40 @@ func TestEventParseTimeInvalid(t *testing.T) {
 	require.Error(t, err)
 	t.Log(err)
 }
+
+// --- Event.Validate ---
+
+func TestEventValidateSuccess(t *testing.T) {
+	e := &Event{OrderID: "order-123", Amount: 10000}
+	assert.NoError(t, e.Validate())
+}
+
+func TestEventValidateEmptyOrderID(t *testing.T) {
+	e := &Event{OrderID: "", Amount: 10000}
+	err := e.Validate()
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, ErrInvalidOrderID)
+}
+
+func TestEventValidateZeroAmount(t *testing.T) {
+	e := &Event{OrderID: "order-123", Amount: 0}
+	err := e.Validate()
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, ErrInvalidAmount)
+}
+
+func TestEventValidateNegativeAmount(t *testing.T) {
+	e := &Event{OrderID: "order-123", Amount: -500}
+	err := e.Validate()
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, ErrInvalidAmount)
+}
+
+func TestEventValidateFromParsedPayload(t *testing.T) {
+	event, err := ParseBytes([]byte(testPayload))
+	require.NoError(t, err)
+	assert.NoError(t, event.Validate())
+}

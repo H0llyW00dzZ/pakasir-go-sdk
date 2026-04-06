@@ -163,3 +163,24 @@ func TestAsTypeDeeplyNested(t *testing.T) {
 	assert.Equal(t, 502, apiErr.StatusCode)
 	assert.Equal(t, "bad gateway", apiErr.Body)
 }
+
+// --- HasType ---
+
+func TestHasTypeMatch(t *testing.T) {
+	err := fmt.Errorf("wrapped: %w", &APIError{StatusCode: 403, Body: "forbidden"})
+	assert.True(t, HasType[*APIError](err))
+}
+
+func TestHasTypeNoMatch(t *testing.T) {
+	err := errors.New("plain error")
+	assert.False(t, HasType[*APIError](err))
+}
+
+func TestHasTypeNilError(t *testing.T) {
+	assert.False(t, HasType[*APIError](nil))
+}
+
+func TestHasTypeDeeplyNested(t *testing.T) {
+	err := fmt.Errorf("a: %w", fmt.Errorf("b: %w", &APIError{StatusCode: 500, Body: "internal"}))
+	assert.True(t, HasType[*APIError](err))
+}

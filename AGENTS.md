@@ -122,12 +122,13 @@ type PaymentInfo struct {
 ### Error Handling
 
 - **Sentinel errors** defined with `errors.New()` in `src/errors/`, prefixed `Err*`.
-- **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc. Standalone sentinels that overlap with `sdkerrors` sentinels wrap them via `fmt.Errorf("webhook: %w", sdkerrors.ErrNilRequest)` so callers can match either sentinel with `errors.Is`.
+- **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `webhook.ErrInvalidOrderID`, `webhook.ErrInvalidAmount`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc. Standalone sentinels that overlap with `sdkerrors` sentinels wrap them via `fmt.Errorf("webhook: %w", sdkerrors.ErrNilRequest)` so callers can match either sentinel with `errors.Is`.
 - **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey, args...)` — always wraps with `%w` so `errors.Is()` works. The variadic `args` accept an error cause (wrapped with `%w`) and/or a string context (substituted into `%s` or appended as suffix). Used for both encoding errors (`ErrEncodeJSON`) and decoding errors (`ErrDecodeJSON`).
 - **`fmt.Errorf` wrapping** for non-sentinel errors: `fmt.Errorf("context: %w", err)` with lowercase prefix.
 - **`APIError`** struct for HTTP error responses; checked with `errors.As()` or the re-exported `sdkerrors.AsType[*sdkerrors.APIError](err)`.
 - **`errors.AsType[T]`** (Go 1.26 generics) for type-asserting errors without a separate variable — used in `isRetryable` to unwrap `*url.Error` and detect TLS certificate errors and permanent DNS failures. Re-exported as `sdkerrors.AsType` so consumers don't need a separate stdlib `errors` import.
-- **Package-prefixed messages** in standalone packages: `"webhook: ..."`, `"url: ..."`.
+- **`errors.HasType[T]`** — boolean shorthand for `AsType` when only presence matters. Re-exported as `sdkerrors.HasType`. Used internally in `isRetryable` to consolidate TLS/x509 checks into a single `switch` case.
+- **Package-prefixed messages** in standalone packages: `"webhook: ..."`, `"url: ..."`, `"client: ..."`.
 - **Validate early, return immediately** at the top of functions. `client.New` is an exception: it defers project/API-key validation to `Do()` so initialization is infallible.
 - **Nil-guard request pointers** in service methods using `sdkerrors.ErrNilRequest` — distinct from `ErrInvalidOrderID`.
 
@@ -191,7 +192,7 @@ Three direct dependencies — keep the footprint minimal:
 - Shared validation via `request.ValidateOrderAndAmount` (avoid duplicating order/amount checks).
 - Shared JSON encoding via `request.EncodeJSON` (centralizes buffer pool acquire/encode/release). Internally uses `json.NewEncoder.Encode`, which appends a trailing `\n` to the payload — this is intentional and correct behavior; HTTP servers accept it and RFC 7159 permits trailing whitespace.
 - Response body limiting: `client.Do` caps reads at `DefaultMaxResponseSize` (1 MB) configurable via `WithMaxResponseSize`; `webhook.Parse`/`ParseRequest` cap at `DefaultMaxBodySize` (1 MB) configurable via `WithMaxBodySize`.
-- Retry on 429 Too Many Requests in addition to 5xx and network errors; 4xx (other than 429) and TLS certificate errors are never retried.
+- Retry on 429 Too Many Requests in addition to 5xx and network errors; 4xx (other than 429), TLS certificate/handshake errors (`tls.AlertError`, `tls.RecordHeaderError`), and x509 verification errors are never retried.
 - Retry-After header support: when a 429 response includes a `Retry-After` header (seconds or HTTP-date), the client uses the indicated delay (clamped to `retryWaitMax`) instead of calculated backoff. Parsed by `parseRetryAfter`, which caps delay-seconds at 24 hours to prevent `time.Duration` overflow before the clamp is applied.
 - Permanent DNS failures (`*net.DNSError` with `IsNotFound: true`) are classified as non-retryable; DNS timeouts remain retryable.
 - `WithBaseURL` strips trailing slashes to prevent double-slash paths in constructed URLs.
