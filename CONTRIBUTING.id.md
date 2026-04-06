@@ -112,7 +112,7 @@ Saat menambahkan pesan baru yang ditampilkan ke pengguna:
    gofmt -s -d .
    ```
 
-4. Push dan buat Pull Request ke branch `main`.
+4. Push dan buat Pull Request ke branch `master`.
 
 ## Lisensi
 
