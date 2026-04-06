@@ -29,7 +29,7 @@
 // via [errors.Is]:
 //
 //   - [ErrNilReader]: nil reader passed to [Parse]
-//   - [ErrNilRequest]: nil request or body passed to [ParseRequest]
+//   - [ErrNilRequest]: nil request or body passed to [ParseRequest] (wraps [errors.ErrNilRequest])
 //   - [ErrEmptyBody]: empty payload passed to [ParseBytes]
 //   - [ErrReadBody]: body read failure (wraps underlying cause)
 //   - [ErrDecodeBody]: JSON decode failure (wraps underlying cause)

@@ -122,7 +122,7 @@ type PaymentInfo struct {
 ### Error Handling
 
 - **Sentinel errors** defined with `errors.New()` in `src/errors/`, prefixed `Err*`.
-- **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc.
+- **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc. Standalone sentinels that overlap with `sdkerrors` sentinels wrap them via `fmt.Errorf("webhook: %w", sdkerrors.ErrNilRequest)` so callers can match either sentinel with `errors.Is`.
 - **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey, args...)` — always wraps with `%w` so `errors.Is()` works. The variadic `args` accept an error cause (wrapped with `%w`) and/or a string context (substituted into `%s` or appended as suffix). Used for both encoding errors (`ErrEncodeJSON`) and decoding errors (`ErrDecodeJSON`).
 - **`fmt.Errorf` wrapping** for non-sentinel errors: `fmt.Errorf("context: %w", err)` with lowercase prefix.
 - **`APIError`** struct for HTTP error responses; checked with `errors.As()` or the re-exported `sdkerrors.AsType[*sdkerrors.APIError](err)`.
@@ -160,6 +160,8 @@ defer func() {
 }()
 ```
 
+In `readResponseBody`, manual pool management (explicit `Reset`+`Put` on each return path) is used instead of `defer` to allow early buffer release on oversize rejection before allocating a copy.
+
 ## Testing Conventions
 
 - **White-box tests** — test files use the same package (e.g., `package client`).
@@ -190,7 +192,7 @@ Three direct dependencies — keep the footprint minimal:
 - Shared JSON encoding via `request.EncodeJSON` (centralizes buffer pool acquire/encode/release).
 - Response body limiting: `client.Do` caps reads at `DefaultMaxResponseSize` (1 MB) configurable via `WithMaxResponseSize`; `webhook.Parse`/`ParseRequest` cap at `DefaultMaxBodySize` (1 MB) configurable via `WithMaxBodySize`.
 - Retry on 429 Too Many Requests in addition to 5xx and network errors; 4xx (other than 429) and TLS certificate errors are never retried.
-- Retry-After header support: when a 429 response includes a `Retry-After` header (seconds or HTTP-date), the client uses the indicated delay (clamped to `retryWaitMax`) instead of calculated backoff. Parsed by `parseRetryAfter`.
+- Retry-After header support: when a 429 response includes a `Retry-After` header (seconds or HTTP-date), the client uses the indicated delay (clamped to `retryWaitMax`) instead of calculated backoff. Parsed by `parseRetryAfter`, which caps delay-seconds at 24 hours to prevent `time.Duration` overflow before the clamp is applied.
 - Permanent DNS failures (`*net.DNSError` with `IsNotFound: true`) are classified as non-retryable; DNS timeouts remain retryable.
 - `WithBaseURL` strips trailing slashes to prevent double-slash paths in constructed URLs.
 - `Accept: application/json` header is set on all requests by `buildRequest`.
