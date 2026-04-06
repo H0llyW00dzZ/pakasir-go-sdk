@@ -270,9 +270,15 @@ The SDK provides sentinel errors for programmatic handling via `errors.Is`:
 | `url.ErrEmptyOrderID` | `url` | Empty order ID |
 | `url.ErrInvalidAmount` | `url` | Non-positive amount |
 
-API error responses are returned as `*errors.APIError` and can be inspected via `errors.As`:
+API error responses are returned as `*errors.APIError` and can be inspected via `errors.As` or the generic `errors.AsType` helper:
 
 ```go
+// Using AsType (recommended — no variable declaration needed)
+if apiErr, ok := sdkerrors.AsType[*sdkerrors.APIError](err); ok {
+    fmt.Printf("Status: %d, Body: %s\n", apiErr.StatusCode, apiErr.Body)
+}
+
+// Using errors.As (standard library)
 var apiErr *sdkerrors.APIError
 if errors.As(err, &apiErr) {
     fmt.Printf("Status: %d, Body: %s\n", apiErr.StatusCode, apiErr.Body)

@@ -125,8 +125,8 @@ type PaymentInfo struct {
 - **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc.
 - **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey, args...)` — always wraps with `%w` so `errors.Is()` works. The variadic `args` accept an error cause (wrapped with `%w`) and/or a string context (substituted into `%s` or appended as suffix).
 - **`fmt.Errorf` wrapping** for non-sentinel errors: `fmt.Errorf("context: %w", err)` with lowercase prefix.
-- **`APIError`** struct for HTTP error responses; checked with `errors.As()`.
-- **`errors.AsType[T]`** (Go 1.26 generics) for type-asserting errors without a separate variable — used in `isRetryable` to unwrap `*url.Error` and detect TLS certificate errors and permanent DNS failures.
+- **`APIError`** struct for HTTP error responses; checked with `errors.As()` or the re-exported `sdkerrors.AsType[*sdkerrors.APIError](err)`.
+- **`errors.AsType[T]`** (Go 1.26 generics) for type-asserting errors without a separate variable — used in `isRetryable` to unwrap `*url.Error` and detect TLS certificate errors and permanent DNS failures. Re-exported as `sdkerrors.AsType` so consumers don't need a separate stdlib `errors` import.
 - **Package-prefixed messages** in standalone packages: `"webhook: ..."`, `"url: ..."`.
 - **Validate early, return immediately** at the top of functions. `client.New` is an exception: it defers project/API-key validation to `Do()` so initialization is infallible.
 - **Nil-guard request pointers** in service methods using `sdkerrors.ErrNilRequest` — distinct from `ErrInvalidOrderID`.

@@ -270,9 +270,15 @@ SDK ini menyediakan sentinel error untuk penanganan programatik melalui `errors.
 | `url.ErrEmptyOrderID` | `url` | ID pesanan kosong |
 | `url.ErrInvalidAmount` | `url` | Jumlah tidak positif |
 
-Response error API dikembalikan sebagai `*errors.APIError` dan dapat diperiksa melalui `errors.As`:
+Response error API dikembalikan sebagai `*errors.APIError` dan dapat diperiksa melalui `errors.As` atau helper generik `errors.AsType`:
 
 ```go
+// Menggunakan AsType (direkomendasikan — tidak perlu deklarasi variabel)
+if apiErr, ok := sdkerrors.AsType[*sdkerrors.APIError](err); ok {
+    fmt.Printf("Status: %d, Body: %s\n", apiErr.StatusCode, apiErr.Body)
+}
+
+// Menggunakan errors.As (library standar)
 var apiErr *sdkerrors.APIError
 if errors.As(err, &apiErr) {
     fmt.Printf("Status: %d, Body: %s\n", apiErr.StatusCode, apiErr.Body)
