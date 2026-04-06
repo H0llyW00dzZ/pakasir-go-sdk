@@ -112,7 +112,7 @@ When adding new user-facing messages:
    gofmt -s -d .
    ```
 
-4. Push and open a Pull Request against `main`.
+4. Push and open a Pull Request against `master`.
 
 ## License
 
