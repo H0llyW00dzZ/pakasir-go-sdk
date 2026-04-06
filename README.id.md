@@ -63,7 +63,7 @@ func main() {
 - **Context-First** — Semua operasi I/O menerima `context.Context`
 - **Request/Response Bertipe** — Tanpa raw map; struct bertipe penuh dengan tag JSON
 - **Buffer Pooling** — Serialisasi request yang hemat memori menggunakan [`bytebufferpool`](https://github.com/valyala/bytebufferpool)
-- **Exponential Backoff dengan Jitter** — Retry otomatis untuk kegagalan sementara (5xx, error jaringan)
+- **Exponential Backoff dengan Jitter** — Retry otomatis untuk kegagalan sementara (429, 5xx, error jaringan)
 - **i18n** — Pesan error dalam Bahasa Inggris dan Indonesia
 - **Sentinel Errors** — Penanganan error secara programatik melalui `errors.Is` dan `errors.As`
 - **Helper Parsing Waktu** — Method `ParseTime()` pada tipe response
@@ -252,6 +252,10 @@ SDK ini menyediakan sentinel error untuk penanganan programatik melalui `errors.
 | `errors.ErrEncodeJSON` | `errors` | Gagal marshaling JSON pada body request |
 | `errors.ErrRequestFailed` | `errors` | Kegagalan request permanen (tidak bisa di-retry) |
 | `errors.ErrRequestFailedAfterRetries` | `errors` | Semua percobaan retry habis |
+| `url.ErrEmptyBaseURL` | `url` | Base URL kosong |
+| `url.ErrEmptyProject` | `url` | Slug proyek kosong |
+| `url.ErrEmptyOrderID` | `url` | ID pesanan kosong |
+| `url.ErrInvalidAmount` | `url` | Jumlah tidak positif |
 
 Response error API dikembalikan sebagai `*errors.APIError` dan dapat diperiksa melalui `errors.As`:
 

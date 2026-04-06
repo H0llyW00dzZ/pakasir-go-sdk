@@ -66,7 +66,7 @@ type Event struct {
 	Status constants.TransactionStatus `json:"status"`
 
 	// PaymentMethod is the payment channel used (e.g., "qris", "bni_va").
-	PaymentMethod string `json:"payment_method"`
+	PaymentMethod constants.PaymentMethod `json:"payment_method"`
 
 	// CompletedAt is the payment completion timestamp as returned by Pakasir.
 	CompletedAt string `json:"completed_at"`

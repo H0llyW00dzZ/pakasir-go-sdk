@@ -55,7 +55,7 @@ func EncodeJSON(pool gc.Pool, lang i18n.Language, v any) ([]byte, error) {
 	}()
 
 	if err := json.NewEncoder(buf).Encode(v); err != nil {
-		return nil, sdkerrors.New(lang, sdkerrors.ErrEncodeJSON, i18n.MsgFailedToEncode)
+		return nil, sdkerrors.New(lang, sdkerrors.ErrEncodeJSON, i18n.MsgFailedToEncode, err)
 	}
 
 	data := make([]byte, buf.Len())

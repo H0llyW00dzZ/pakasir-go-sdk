@@ -464,6 +464,18 @@ func TestWithRetryWaitSwapped(t *testing.T) {
 	assert.Equal(t, 5*time.Second, c.retryWaitMax, "min > max must be swapped")
 }
 
+func TestWithRetryWaitZeroClamped(t *testing.T) {
+	c := New("proj", "key", WithRetryWait(0, 0))
+	assert.Equal(t, 1*time.Millisecond, c.retryWaitMin, "zero min must be clamped to 1ms")
+	assert.Equal(t, 1*time.Millisecond, c.retryWaitMax, "zero max must be clamped to 1ms")
+}
+
+func TestWithRetryWaitNegativeClamped(t *testing.T) {
+	c := New("proj", "key", WithRetryWait(-5*time.Second, -1*time.Second))
+	assert.Equal(t, 1*time.Millisecond, c.retryWaitMin, "negative min must be clamped to 1ms")
+	assert.Equal(t, 1*time.Millisecond, c.retryWaitMax, "negative max must be clamped to 1ms")
+}
+
 // --- isRetryableStatus ---
 
 func TestIsRetryableStatus(t *testing.T) {
@@ -472,6 +484,7 @@ func TestIsRetryableStatus(t *testing.T) {
 		status int
 		want   bool
 	}{
+		{"429", http.StatusTooManyRequests, true},
 		{"500", http.StatusInternalServerError, true},
 		{"502", http.StatusBadGateway, true},
 		{"503", http.StatusServiceUnavailable, true},

@@ -36,7 +36,7 @@
 //   - [WithTimeout]: Set the HTTP request timeout (zero/negative ignored)
 //   - [WithLanguage]: Set the locale for SDK error messages
 //   - [WithRetries]: Configure the number of retry attempts
-//   - [WithRetryWait]: Configure backoff min/max durations (auto-swapped if inverted)
+//   - [WithRetryWait]: Configure backoff min/max durations (auto-swapped if inverted; non-positive values clamped to 1ms)
 //   - [WithBufferPool]: Provide a custom buffer pool
 //   - [WithQRCodeOptions]: Configure QR code generation settings
 //
@@ -55,9 +55,11 @@
 // # Retry Logic
 //
 // The client automatically retries requests that encounter transient
-// failures (5xx server errors and network errors) using exponential
-// backoff with full jitter. Client errors (4xx) and permanent TLS
-// certificate errors are never retried.
+// failures (429 Too Many Requests, 5xx server errors, and network errors)
+// using exponential backoff with full jitter. Client errors (4xx other
+// than 429) and permanent TLS certificate errors are never retried.
+// Response body reads are limited to 10 MB to guard against unbounded
+// memory consumption.
 //
 // # QR Code Generation
 //

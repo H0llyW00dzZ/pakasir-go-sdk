@@ -113,10 +113,3 @@ func formatMessage(msg, contextStr string) string {
 	}
 	return msg + ": " + contextStr
 }
-
-// NewWithFormat creates a localized error wrapping the provided sentinel error,
-// formatting the message with the given format arguments (e.g., status codes, retry counts).
-func NewWithFormat(lang i18n.Language, sentinel error, key i18n.MessageKey, formatArgs ...any) error {
-	msg := fmt.Sprintf(i18n.Get(lang, key), formatArgs...)
-	return fmt.Errorf("%s: %w", msg, sentinel)
-}

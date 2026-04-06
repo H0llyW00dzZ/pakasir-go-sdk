@@ -75,18 +75,6 @@ func TestNewWithUnsupportedArgType(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidProject)
 }
 
-func TestNewWithFormat(t *testing.T) {
-	err := NewWithFormat(i18n.English, ErrRequestFailedAfterRetries, i18n.MsgRequestFailedAfterRetries, 3)
-	assert.ErrorIs(t, err, ErrRequestFailedAfterRetries)
-	assert.Contains(t, err.Error(), "request failed after 3 retries")
-}
-
-func TestNewWithFormatIndonesian(t *testing.T) {
-	err := NewWithFormat(i18n.Indonesian, ErrRequestFailed, i18n.MsgRequestFailed, 500)
-	assert.ErrorIs(t, err, ErrRequestFailed)
-	assert.Contains(t, err.Error(), "permintaan gagal dengan status 500")
-}
-
 func TestSentinelErrors(t *testing.T) {
 	sentinels := []error{
 		ErrInvalidProject, ErrInvalidAPIKey, ErrInvalidAmount,

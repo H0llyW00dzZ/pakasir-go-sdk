@@ -29,4 +29,13 @@
 //   - Redirect: Set a custom redirect URL after payment completion
 //   - QRISOnly: Force QRIS-only mode (customer sees QR code immediately)
 //   - UsePaypal: Use the /paypal/ endpoint instead of /pay/
+//
+// # Sentinel Errors
+//
+// [Build] returns sentinel errors for programmatic handling via [errors.Is]:
+//
+//   - [ErrEmptyBaseURL]: base URL is empty
+//   - [ErrEmptyProject]: project slug is empty
+//   - [ErrEmptyOrderID]: order ID is empty
+//   - [ErrInvalidAmount]: amount is not positive
 package url

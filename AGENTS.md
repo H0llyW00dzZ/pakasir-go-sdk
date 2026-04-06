@@ -122,7 +122,7 @@ type PaymentInfo struct {
 ### Error Handling
 
 - **Sentinel errors** defined with `errors.New()` in `src/errors/`, prefixed `Err*`.
-- **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, etc.
+- **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc.
 - **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey)` — always wraps with `%w` so `errors.Is()` works.
 - **`fmt.Errorf` wrapping** for non-sentinel errors: `fmt.Errorf("context: %w", err)` with lowercase prefix.
 - **`APIError`** struct for HTTP error responses; checked with `errors.As()`.

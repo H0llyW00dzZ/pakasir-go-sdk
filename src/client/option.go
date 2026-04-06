@@ -90,8 +90,16 @@ func WithBufferPool(pool gc.Pool) Option {
 
 // WithRetryWait sets the minimum and maximum wait durations for
 // exponential backoff between retries. If min > max, the values are swapped.
+// Non-positive values are clamped to 1 millisecond.
 func WithRetryWait(min, max time.Duration) Option {
 	return func(c *Client) {
+		const floor = 1 * time.Millisecond
+		if min <= 0 {
+			min = floor
+		}
+		if max <= 0 {
+			max = floor
+		}
 		if min > max {
 			min, max = max, min
 		}

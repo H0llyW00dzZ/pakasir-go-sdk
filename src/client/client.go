@@ -50,6 +50,11 @@ const (
 
 	// DefaultRetryWaitMax is the maximum wait time between retries.
 	DefaultRetryWaitMax = 30 * time.Second
+
+	// maxResponseSize is the maximum number of bytes the client will read
+	// from a response body. This guards against unbounded memory consumption
+	// from misbehaving servers.
+	maxResponseSize = 10 << 20 // 10 MB
 )
 
 // Client is the core Pakasir API client.
@@ -256,10 +261,11 @@ func (c *Client) buildRequest(ctx context.Context, method, path string, body []b
 }
 
 // readResponseBody drains the response into a pooled buffer, copies the
-// data out, and returns the buffer to the pool.
+// data out, and returns the buffer to the pool. The read is limited to
+// [maxResponseSize] bytes to guard against unbounded memory consumption.
 func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
 	buf := c.bufferPool.Get()
-	_, readErr := buf.ReadFrom(resp.Body)
+	_, readErr := buf.ReadFrom(io.LimitReader(resp.Body, maxResponseSize))
 	resp.Body.Close()
 
 	if readErr != nil {
@@ -292,7 +298,8 @@ func (c *Client) calculateBackoff(attempt int) time.Duration {
 // based on the HTTP status code.
 func isRetryableStatus(statusCode int) bool {
 	switch statusCode {
-	case http.StatusInternalServerError,
+	case http.StatusTooManyRequests,
+		http.StatusInternalServerError,
 		http.StatusBadGateway,
 		http.StatusServiceUnavailable,
 		http.StatusGatewayTimeout:
