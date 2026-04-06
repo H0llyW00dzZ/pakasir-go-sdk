@@ -66,7 +66,8 @@ func TestNewWithAllOptions(t *testing.T) {
 		WithRetryWait(100*time.Millisecond, 2*time.Second),
 	)
 	assert.Equal(t, "https://custom.api.com", c.baseURL)
-	assert.Same(t, customHTTP, c.httpClient)
+	assert.NotSame(t, customHTTP, c.httpClient)
+	assert.Equal(t, customHTTP.Timeout, c.httpClient.Timeout)
 	assert.Equal(t, i18n.Indonesian, c.language)
 	assert.Equal(t, 5, c.retries)
 	assert.Equal(t, 100*time.Millisecond, c.retryWaitMin)
