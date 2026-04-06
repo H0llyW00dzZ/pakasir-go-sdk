@@ -16,6 +16,7 @@ package client
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/gc"
@@ -28,9 +29,10 @@ type Option func(*Client)
 
 // WithBaseURL sets a custom base URL for the Pakasir API.
 // This is useful for testing or pointing to a staging environment.
+// Trailing slashes are stripped to prevent double-slash paths.
 func WithBaseURL(baseURL string) Option {
 	return func(c *Client) {
-		c.baseURL = baseURL
+		c.baseURL = strings.TrimRight(baseURL, "/")
 	}
 }
 

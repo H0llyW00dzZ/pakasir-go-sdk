@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	neturl "net/url"
@@ -124,6 +125,7 @@ func TestDoSetsUserAgent(t *testing.T) {
 		ua := r.Header.Get("User-Agent")
 		assert.Contains(t, ua, constants.SDKName)
 		assert.Contains(t, ua, constants.SDKVersion)
+		assert.Equal(t, "application/json", r.Header.Get("Accept"))
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{}`))
 	}))
@@ -211,6 +213,94 @@ func TestDoRetryOn429ThenSuccess(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"ok":true}`, string(data))
 	assert.Equal(t, int32(3), attempt.Load())
+}
+
+func TestDoRetryAfterHeaderRespected(t *testing.T) {
+	var attempt atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := attempt.Add(1)
+		if n == 1 {
+			w.Header().Set("Retry-After", "1")
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`rate limited`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+
+	start := time.Now()
+	c := newTestClient(t, srv.URL,
+		WithRetries(2),
+		// Set a very small backoff min but a high max so the Retry-After
+		// of 1s is not clamped but clearly overrides the tiny min backoff.
+		WithRetryWait(1*time.Millisecond, 5*time.Second),
+	)
+	data, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	elapsed := time.Since(start)
+
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"ok":true}`, string(data))
+	assert.Equal(t, int32(2), attempt.Load())
+	// The Retry-After of 1s should have caused a delay of ~1s,
+	// far exceeding the 1-2ms backoff.
+	assert.GreaterOrEqual(t, elapsed, 900*time.Millisecond, "Retry-After delay must be respected")
+}
+
+func TestDoRetryAfterHeaderClampedToMax(t *testing.T) {
+	var attempt atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := attempt.Add(1)
+		if n == 1 {
+			// Server requests a 60s wait, but retryWaitMax is 50ms.
+			w.Header().Set("Retry-After", "60")
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`rate limited`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+
+	start := time.Now()
+	c := newTestClient(t, srv.URL,
+		WithRetries(2),
+		WithRetryWait(1*time.Millisecond, 50*time.Millisecond),
+	)
+	data, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	elapsed := time.Since(start)
+
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"ok":true}`, string(data))
+	// Should complete quickly because 60s was clamped to 50ms.
+	assert.Less(t, elapsed, 1*time.Second, "Retry-After must be clamped to retryWaitMax")
+}
+
+func TestDoRetryAfterInvalidHeaderIgnored(t *testing.T) {
+	var attempt atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := attempt.Add(1)
+		if n == 1 {
+			w.Header().Set("Retry-After", "not-a-number")
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`rate limited`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL,
+		WithRetries(2),
+		WithRetryWait(1*time.Millisecond, 5*time.Millisecond),
+	)
+	data, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"ok":true}`, string(data))
+	assert.Equal(t, int32(2), attempt.Load())
 }
 
 func TestDoPostRetryWithBody(t *testing.T) {
@@ -626,6 +716,21 @@ func TestWithMaxResponseSizeNegativeIgnored(t *testing.T) {
 	assert.Equal(t, DefaultMaxResponseSize, c.maxResponseSize, "negative must be ignored")
 }
 
+func TestWithBaseURLTrailingSlashStripped(t *testing.T) {
+	c := New("proj", "key", WithBaseURL("https://app.pakasir.com/"))
+	assert.Equal(t, "https://app.pakasir.com", c.baseURL, "trailing slash must be stripped")
+}
+
+func TestWithBaseURLMultipleTrailingSlashesStripped(t *testing.T) {
+	c := New("proj", "key", WithBaseURL("https://app.pakasir.com///"))
+	assert.Equal(t, "https://app.pakasir.com", c.baseURL, "all trailing slashes must be stripped")
+}
+
+func TestWithBaseURLNoTrailingSlashUnchanged(t *testing.T) {
+	c := New("proj", "key", WithBaseURL("https://app.pakasir.com"))
+	assert.Equal(t, "https://app.pakasir.com", c.baseURL, "URL without trailing slash must be unchanged")
+}
+
 // --- isRetryableStatus ---
 
 func TestIsRetryableStatus(t *testing.T) {
@@ -672,6 +777,9 @@ func TestIsRetryable(t *testing.T) {
 		{"tls cert verification", &tls.CertificateVerificationError{}, false},
 		{"url error wrapping transient", &neturl.Error{Op: "Get", Err: errors.New("timeout")}, true},
 		{"url error wrapping tls", &neturl.Error{Op: "Get", Err: &x509.UnknownAuthorityError{}}, false},
+		{"dns not found", &net.DNSError{Err: "no such host", Name: "bad.example.com", IsNotFound: true}, false},
+		{"dns timeout", &net.DNSError{Err: "i/o timeout", Name: "slow.example.com", IsTimeout: true}, true},
+		{"url error wrapping dns not found", &neturl.Error{Op: "Get", Err: &net.DNSError{Err: "no such host", Name: "bad.example.com", IsNotFound: true}}, false},
 	}
 
 	for _, tt := range tests {
@@ -727,4 +835,42 @@ func TestWithQRCodeOptionsCustom(t *testing.T) {
 	png, err := c.QR().Encode("test")
 	require.NoError(t, err)
 	assert.NotEmpty(t, png)
+}
+
+// --- parseRetryAfter ---
+
+func TestParseRetryAfter(t *testing.T) {
+	tests := []struct {
+		name   string
+		header string
+		want   time.Duration
+	}{
+		{"empty", "", 0},
+		{"seconds", "2", 2 * time.Second},
+		{"seconds with spaces", "  5  ", 5 * time.Second},
+		{"zero seconds", "0", 0},
+		{"negative seconds", "-1", 0},
+		{"invalid string", "not-a-number", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, parseRetryAfter(tt.header))
+		})
+	}
+}
+
+func TestParseRetryAfterHTTPDate(t *testing.T) {
+	// Use a future date so the result is positive.
+	future := time.Now().Add(10 * time.Second).UTC().Format(http.TimeFormat)
+	d := parseRetryAfter(future)
+	// Should be roughly 10s (allow some slack for test execution).
+	assert.Greater(t, d, 5*time.Second, "HTTP-date in the future should produce a positive duration")
+	assert.Less(t, d, 15*time.Second, "HTTP-date duration should be reasonable")
+}
+
+func TestParseRetryAfterHTTPDatePast(t *testing.T) {
+	// A past date should return 0 (negative durations are not useful).
+	past := time.Now().Add(-10 * time.Second).UTC().Format(http.TimeFormat)
+	assert.Equal(t, time.Duration(0), parseRetryAfter(past))
 }
