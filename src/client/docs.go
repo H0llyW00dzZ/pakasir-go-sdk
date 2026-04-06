@@ -62,6 +62,12 @@
 // indicated delay is used instead of the calculated backoff, clamped to the
 // configured maximum wait ([WithRetryWait]).
 //
+// The [Client.Do] method delegates each attempt to unexported helpers
+// (validateCredentials, executeAttempt, handleResponse) to keep cyclomatic
+// complexity low. Non-retryable errors are signalled internally via an
+// unexported stopRetry wrapper so the retry loop breaks immediately
+// without wrapping the error in a retries-exhausted message.
+//
 // Permanent failures are never retried:
 //
 //   - Client errors (4xx other than 429)

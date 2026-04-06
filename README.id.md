@@ -254,6 +254,7 @@ SDK ini menyediakan sentinel error untuk penanganan programatik melalui `errors.
 | `errors.ErrInvalidPaymentMethod` | `errors` | Metode pembayaran tidak didukung |
 | `errors.ErrNilRequest` | `errors` | Pointer request nil diberikan ke method layanan |
 | `errors.ErrEncodeJSON` | `errors` | Gagal marshaling JSON pada body request |
+| `errors.ErrDecodeJSON` | `errors` | Gagal unmarshaling JSON pada body response |
 | `errors.ErrRequestFailed` | `errors` | Kegagalan request permanen (tidak bisa di-retry) |
 | `errors.ErrRequestFailedAfterRetries` | `errors` | Semua percobaan retry habis |
 | `client.ErrResponseTooLarge` | `client` | Body response melebihi batas ukuran yang dikonfigurasi |
