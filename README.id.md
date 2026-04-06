@@ -63,7 +63,7 @@ func main() {
 - **Context-First** — Semua operasi I/O menerima `context.Context`
 - **Request/Response Bertipe** — Tanpa raw map; struct bertipe penuh dengan tag JSON
 - **Buffer Pooling** — Serialisasi request yang hemat memori menggunakan [`bytebufferpool`](https://github.com/valyala/bytebufferpool)
-- **Exponential Backoff dengan Jitter** — Retry otomatis untuk kegagalan sementara (429, 5xx, error jaringan)
+- **Exponential Backoff dengan Jitter** — Retry otomatis untuk kegagalan sementara (429, 5xx, error jaringan) dengan dukungan header Retry-After
 - **i18n** — Pesan error dalam Bahasa Inggris dan Indonesia
 - **Sentinel Errors** — Penanganan error secara programatik melalui `errors.Is` dan `errors.As`
 - **Helper Parsing Waktu** — Method `ParseTime()` pada tipe response
@@ -135,7 +135,7 @@ pakasir-go-sdk/
 
 ```go
 c := client.New("proyek", "api-key",
-    client.WithBaseURL("https://custom.api.com"),               // URL dasar kustom
+    client.WithBaseURL("https://custom.api.com"),               // URL dasar kustom (garis miring di akhir dihilangkan)
     client.WithTimeout(10 * time.Second),                       // Timeout HTTP
     client.WithHTTPClient(customHTTPClient),                    // http.Client kustom (shallow-copied)
     client.WithLanguage(i18n.Indonesian),                       // Error dalam Bahasa Indonesia

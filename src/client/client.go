@@ -24,7 +24,10 @@ import (
 	"io"
 	"math"
 	"math/rand/v2"
+	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
@@ -133,6 +136,10 @@ func New(project, apiKey string, opts ...Option) *Client {
 // The body parameter is the pre-encoded request payload. A fresh
 // [bytes.Reader] is created for each attempt, so retries always send the
 // complete body. For GET requests, body may be nil.
+//
+// When the server responds with 429 Too Many Requests and includes a
+// Retry-After header, the client respects the indicated delay (clamped
+// to [Client.retryWaitMax]) instead of using the calculated backoff.
 func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]byte, error) {
 	if c.project == "" {
 		return nil, sdkerrors.New(c.language, sdkerrors.ErrInvalidProject, i18n.MsgInvalidProject)
@@ -142,11 +149,13 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 	}
 
 	var lastErr error
+	var retryAfterHint time.Duration
 
 	for attempt := 0; attempt <= c.retries; attempt++ {
-		if err := c.waitForRetry(ctx, attempt); err != nil {
+		if err := c.waitForRetry(ctx, attempt, retryAfterHint); err != nil {
 			return nil, err
 		}
+		retryAfterHint = 0
 
 		req, err := c.buildRequest(ctx, method, path, body)
 		if err != nil {
@@ -183,15 +192,16 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 		if !isRetryableStatus(resp.StatusCode) {
 			return nil, apiErr
 		}
+
+		if resp.StatusCode == http.StatusTooManyRequests {
+			retryAfterHint = parseRetryAfter(resp.Header.Get("Retry-After"))
+		}
 		lastErr = apiErr
 	}
 
 	// All retries exhausted.
-	return nil, fmt.Errorf("%s: %w: %w",
-		fmt.Sprintf(i18n.Get(c.language, i18n.MsgRequestFailedAfterRetries), c.retries),
-		sdkerrors.ErrRequestFailedAfterRetries,
-		lastErr,
-	)
+	msg := fmt.Sprintf(i18n.Get(c.language, i18n.MsgRequestFailedAfterRetries), c.retries)
+	return nil, fmt.Errorf("%s: %w: %w", msg, sdkerrors.ErrRequestFailedAfterRetries, lastErr)
 }
 
 // GetBufferPool returns the client's buffer pool for use by services.
@@ -232,12 +242,21 @@ func (c *Client) permanentError(err error) error {
 
 // waitForRetry blocks until the backoff timer fires or the context is
 // cancelled. On the first attempt (0) it returns immediately.
-func (c *Client) waitForRetry(ctx context.Context, attempt int) error {
+//
+// If retryAfterHint is positive (parsed from a Retry-After header), it
+// is used instead of the calculated exponential backoff, clamped to
+// [Client.retryWaitMax].
+func (c *Client) waitForRetry(ctx context.Context, attempt int, retryAfterHint time.Duration) error {
 	if attempt == 0 {
 		return nil
 	}
 
-	timer := time.NewTimer(c.calculateBackoff(attempt))
+	wait := c.calculateBackoff(attempt)
+	if retryAfterHint > 0 {
+		wait = min(retryAfterHint, c.retryWaitMax)
+	}
+
+	timer := time.NewTimer(wait)
 	select {
 	case <-ctx.Done():
 		// Stop may return false if the timer has already fired and
@@ -265,6 +284,7 @@ func (c *Client) buildRequest(ctx context.Context, method, path string, body []b
 	}
 
 	req.Header.Set("User-Agent", constants.UserAgent())
+	req.Header.Set("Accept", "application/json")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -329,12 +349,12 @@ func isRetryableStatus(statusCode int) bool {
 }
 
 // isRetryable determines whether a network-level error is transient
-// and worth retrying. TLS certificate errors, oversized responses,
-// and other permanent failures return false to avoid wasting retry
-// attempts.
+// and worth retrying. TLS certificate errors, permanent DNS failures,
+// oversized responses, and other permanent failures return false to
+// avoid wasting retry attempts.
 //
 // The [errors.AsType] checks traverse the entire error chain, including
-// errors nested inside [*net/url.Error] via its Unwrap method, so no
+// errors nested inside [net/url.Error] via its Unwrap method, so no
 // manual unwrapping is required.
 func isRetryable(err error) bool {
 	if err == nil {
@@ -344,6 +364,13 @@ func isRetryable(err error) bool {
 	// Oversized responses are deterministic — do not retry.
 	if errors.Is(err, ErrResponseTooLarge) {
 		return false
+	}
+
+	// Permanent DNS failures (NXDOMAIN) are not transient — do not retry.
+	// DNS timeouts remain retryable because IsTimeout is true and
+	// IsNotFound is false.
+	if dnsErr, ok := errors.AsType[*net.DNSError](err); ok {
+		return !dnsErr.IsNotFound
 	}
 
 	// TLS certificate errors are permanent — do not retry.
@@ -363,4 +390,29 @@ func isRetryable(err error) bool {
 	// All other network errors (timeouts, connection refused, etc.)
 	// are considered transient.
 	return true
+}
+
+// parseRetryAfter parses the value of a Retry-After HTTP header.
+// It supports both delay-seconds ("120") and HTTP-date
+// ("Mon, 07 Apr 2026 02:30:00 GMT") formats per RFC 9110 Section 10.2.3.
+// If the header is empty or unparseable, zero is returned, causing the
+// caller to fall back to exponential backoff.
+func parseRetryAfter(header string) time.Duration {
+	if header == "" {
+		return 0
+	}
+
+	// Try delay-seconds first (most common for 429 responses).
+	if seconds, err := strconv.ParseInt(strings.TrimSpace(header), 10, 64); err == nil && seconds > 0 {
+		return time.Duration(seconds) * time.Second
+	}
+
+	// Try HTTP-date format.
+	if t, err := http.ParseTime(header); err == nil {
+		if d := time.Until(t); d > 0 {
+			return d
+		}
+	}
+
+	return 0
 }

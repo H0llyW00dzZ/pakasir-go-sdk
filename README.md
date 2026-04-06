@@ -63,7 +63,7 @@ func main() {
 - **Context-First** — All I/O operations accept `context.Context`
 - **Typed Requests/Responses** — No raw maps; fully typed structs with JSON tags
 - **Buffer Pooling** — Memory-efficient request serialization via [`bytebufferpool`](https://github.com/valyala/bytebufferpool)
-- **Exponential Backoff with Jitter** — Automatic retry for transient failures (429, 5xx, network errors)
+- **Exponential Backoff with Jitter** — Automatic retry for transient failures (429, 5xx, network errors) with Retry-After header support
 - **i18n** — Localized error messages in English and Indonesian
 - **Sentinel Errors** — Programmatic error handling via `errors.Is` and `errors.As`
 - **Time Parsing Helpers** — Unified `ParseTime()` on response types
@@ -135,7 +135,7 @@ pakasir-go-sdk/
 
 ```go
 c := client.New("project", "api-key",
-    client.WithBaseURL("https://custom.api.com"),               // Custom base URL
+    client.WithBaseURL("https://custom.api.com"),               // Custom base URL (trailing slashes stripped)
     client.WithTimeout(10 * time.Second),                       // HTTP timeout
     client.WithHTTPClient(customHTTPClient),                    // Custom http.Client (shallow-copied)
     client.WithLanguage(i18n.Indonesian),                       // Localized errors
