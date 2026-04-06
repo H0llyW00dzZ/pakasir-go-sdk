@@ -8,10 +8,6 @@
 
 > **Note:** This is an **unofficial** Go SDK for [Pakasir](https://pakasir.com). It is not affiliated with, endorsed by, or officially supported by Pakasir. This SDK is unofficial because the official API only provides documentation and support for their REST API and Node.js SDK. This library was created to add proper Go support, and it is actively used by the owner of this repository.
 
-> [!WARNING]
-> This SDK is still under active development and is **not recommended for production use**.
-> APIs may change without notice. Please wait for an official release from the repository owner before depending on this package.
-
 An idiomatic Go SDK for the [Pakasir](https://pakasir.com) payment gateway. Built with Functional Options, Service-Oriented Architecture, and full i18n support (English & Indonesian).
 
 ## Installation

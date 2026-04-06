@@ -8,10 +8,6 @@
 
 > **Catatan:** Ini adalah SDK Go **tidak resmi** untuk [Pakasir](https://pakasir.com). SDK ini tidak berafiliasi, didukung, atau dikelola secara resmi oleh Pakasir. SDK ini tidak resmi karena API resmi hanya menyediakan dokumentasi dan dukungan untuk REST API dan SDK Node.js mereka. Library ini dibuat untuk menambahkan dukungan Go yang layak, dan digunakan secara aktif oleh pemilik repositori ini.
 
-> [!WARNING]
-> SDK ini masih dalam tahap pengembangan aktif dan **belum disarankan untuk digunakan di lingkungan produksi**.
-> API dapat berubah sewaktu-waktu tanpa pemberitahuan. Harap tunggu rilis resmi dari pemilik repositori sebelum menggunakan paket ini.
-
 SDK Go idiomatik untuk payment gateway [Pakasir](https://pakasir.com). Dibangun dengan Functional Options, Arsitektur Berbasis Layanan (Service-Oriented), dan dukungan i18n penuh (Inggris & Indonesia).
 
 ## Instalasi
