@@ -192,7 +192,7 @@ Three direct dependencies — keep the footprint minimal:
 - Shared validation via `request.ValidateOrderAndAmount` (avoid duplicating order/amount checks).
 - Shared JSON encoding via `request.EncodeJSON` (centralizes buffer pool acquire/encode/release). Internally uses `json.NewEncoder.Encode`, which appends a trailing `\n` to the payload — this is intentional and correct behavior; HTTP servers accept it and RFC 7159 permits trailing whitespace.
 - Response body limiting: `client.Do` caps reads at `DefaultMaxResponseSize` (1 MB) configurable via `WithMaxResponseSize`; `webhook.Parse`/`ParseRequest` cap at `DefaultMaxBodySize` (1 MB) configurable via `WithMaxBodySize`.
-- Retry on 429 Too Many Requests in addition to 5xx and network errors; 4xx (other than 429) and TLS certificate errors are never retried.
+- Retry on 429 Too Many Requests in addition to 5xx and network errors; 4xx (other than 429), TLS certificate/handshake errors (`tls.AlertError`, `tls.RecordHeaderError`), and x509 verification errors are never retried.
 - Retry-After header support: when a 429 response includes a `Retry-After` header (seconds or HTTP-date), the client uses the indicated delay (clamped to `retryWaitMax`) instead of calculated backoff. Parsed by `parseRetryAfter`, which caps delay-seconds at 24 hours to prevent `time.Duration` overflow before the clamp is applied.
 - Permanent DNS failures (`*net.DNSError` with `IsNotFound: true`) are classified as non-retryable; DNS timeouts remain retryable.
 - `WithBaseURL` strips trailing slashes to prevent double-slash paths in constructed URLs.
