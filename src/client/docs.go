@@ -31,7 +31,7 @@
 //
 // The client supports functional options for customization:
 //
-//   - [WithBaseURL]: Override the API base URL (e.g., for staging)
+//   - [WithBaseURL]: Override the API base URL (e.g., for staging); trailing slashes are stripped
 //   - [WithHTTPClient]: Provide a custom [http.Client]
 //   - [WithTimeout]: Set the HTTP request timeout (zero/negative ignored)
 //   - [WithLanguage]: Set the locale for SDK error messages
@@ -57,10 +57,23 @@
 //
 // The client automatically retries requests that encounter transient
 // failures (429 Too Many Requests, 5xx server errors, and network errors)
-// using exponential backoff with full jitter. Client errors (4xx other
-// than 429) and permanent TLS certificate errors are never retried.
-// Response body reads are limited to [DefaultMaxResponseSize] (1 MB) by
-// default; use [WithMaxResponseSize] to adjust.
+// using exponential backoff with full jitter. When a 429 response includes
+// a Retry-After header (delay-seconds or HTTP-date per RFC 9110), the
+// indicated delay is used instead of the calculated backoff, clamped to the
+// configured maximum wait ([WithRetryWait]).
+//
+// Permanent failures are never retried:
+//
+//   - Client errors (4xx other than 429)
+//   - TLS certificate errors ([*tls.CertificateVerificationError], [*x509.UnknownAuthorityError], etc.)
+//   - Permanent DNS failures ([*net.DNSError] with IsNotFound: true, i.e., NXDOMAIN)
+//   - Oversized responses ([ErrResponseTooLarge])
+//
+// DNS timeouts remain retryable. Response body reads are limited to
+// [DefaultMaxResponseSize] (1 MB) by default; use [WithMaxResponseSize]
+// to adjust.
+//
+// All requests include an Accept: application/json header.
 //
 // # QR Code Generation
 //
