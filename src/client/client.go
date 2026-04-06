@@ -57,6 +57,12 @@ const (
 	DefaultMaxResponseSize int64 = 1 << 20 // 1 MB
 )
 
+// ErrResponseTooLarge is returned when a response body exceeds the
+// configured [DefaultMaxResponseSize] (or the value set via
+// [WithMaxResponseSize]). This error is non-retryable because an
+// oversized response is a deterministic server behavior.
+var ErrResponseTooLarge = errors.New("response body too large")
+
 // Client is the core Pakasir API client.
 // It manages HTTP communication, authentication, retry logic,
 // and buffer pooling for efficient request processing.
@@ -234,6 +240,9 @@ func (c *Client) waitForRetry(ctx context.Context, attempt int) error {
 	timer := time.NewTimer(c.calculateBackoff(attempt))
 	select {
 	case <-ctx.Done():
+		// Stop may return false if the timer has already fired and
+		// its channel has a pending value. This is safe here because
+		// we return immediately without draining timer.C.
 		timer.Stop()
 		return ctx.Err()
 	case <-timer.C:
@@ -265,10 +274,8 @@ func (c *Client) buildRequest(ctx context.Context, method, path string, body []b
 
 // readResponseBody drains the response into a pooled buffer, copies the
 // data out, and returns the buffer to the pool. The read is limited to
-// [maxResponseSize] bytes to guard against unbounded memory consumption.
-//
-// If the response body reaches [maxResponseSize], an error is returned
-// instead of silently truncating the payload.
+// [maxResponseSize]+1 bytes so that a body of exactly [maxResponseSize]
+// is accepted while anything larger is rejected with [ErrResponseTooLarge].
 func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
 	defer resp.Body.Close()
 
@@ -278,12 +285,14 @@ func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
 		c.bufferPool.Put(buf)
 	}()
 
-	if _, err := buf.ReadFrom(io.LimitReader(resp.Body, c.maxResponseSize)); err != nil {
+	// Read one extra byte beyond the limit so we can distinguish
+	// "exactly at limit" (valid) from "over limit" (rejected).
+	if _, err := buf.ReadFrom(io.LimitReader(resp.Body, c.maxResponseSize+1)); err != nil {
 		return nil, fmt.Errorf("reading response body: %w", err)
 	}
 
-	if int64(buf.Len()) >= c.maxResponseSize {
-		return nil, fmt.Errorf("response body exceeds %d bytes", c.maxResponseSize)
+	if int64(buf.Len()) > c.maxResponseSize {
+		return nil, fmt.Errorf("%w: exceeds %d bytes", ErrResponseTooLarge, c.maxResponseSize)
 	}
 
 	data := make([]byte, buf.Len())
@@ -320,10 +329,16 @@ func isRetryableStatus(statusCode int) bool {
 }
 
 // isRetryable determines whether a network-level error is transient
-// and worth retrying. TLS certificate errors and other permanent
-// failures return false to avoid wasting retry attempts.
+// and worth retrying. TLS certificate errors, oversized responses,
+// and other permanent failures return false to avoid wasting retry
+// attempts.
 func isRetryable(err error) bool {
 	if err == nil {
+		return false
+	}
+
+	// Oversized responses are deterministic — do not retry.
+	if errors.Is(err, ErrResponseTooLarge) {
 		return false
 	}
 
