@@ -30,7 +30,10 @@ tmp/
 
 # Project build
 bin
-changelog.md
+
+# Ignore local changelog files.
+# Official changelog is available via GitHub Releases and git tags.
+changelog.*
 
 # Example log files
 logging.example
