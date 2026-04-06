@@ -37,7 +37,7 @@ func assertValidEvent(t *testing.T, event *Event) {
 	assert.Equal(t, "240910HDE7C9", event.OrderID)
 	assert.Equal(t, "depodomain", event.Project)
 	assert.Equal(t, constants.StatusCompleted, event.Status)
-	assert.Equal(t, "qris", event.PaymentMethod)
+	assert.Equal(t, constants.MethodQRIS, event.PaymentMethod)
 	assert.False(t, event.IsSandbox)
 }
 
@@ -144,7 +144,7 @@ func TestParseSandboxPayload(t *testing.T) {
 	assert.Equal(t, "topup-50-1775420177111-wDQscYsR", event.OrderID)
 	assert.Equal(t, "oneapi-btz", event.Project)
 	assert.Equal(t, constants.StatusCompleted, event.Status)
-	assert.Equal(t, "qris", event.PaymentMethod)
+	assert.Equal(t, constants.MethodQRIS, event.PaymentMethod)
 	assert.True(t, event.IsSandbox)
 }
 

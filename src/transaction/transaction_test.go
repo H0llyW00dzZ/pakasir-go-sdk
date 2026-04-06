@@ -47,7 +47,7 @@ func TestCreateSuccess(t *testing.T) {
 	mockResp := CreateResponse{
 		Payment: PaymentInfo{
 			Project: "test-project", OrderID: "INV123", Amount: 99000,
-			Fee: 1003, TotalPayment: 100003, PaymentMethod: "qris",
+			Fee: 1003, TotalPayment: 100003, PaymentMethod: constants.MethodQRIS,
 			PaymentNumber: "00020101021226...",
 			ExpiredAt:     "2025-09-19T01:18:49.678622564Z",
 		},
@@ -174,7 +174,7 @@ func TestDetailSuccess(t *testing.T) {
 	mockResp := DetailResponse{
 		Transaction: TransactionInfo{
 			Amount: 22000, OrderID: "240910HDE7C9", Project: "test-project",
-			Status: constants.StatusCompleted, PaymentMethod: "qris",
+			Status: constants.StatusCompleted, PaymentMethod: constants.MethodQRIS,
 			CompletedAt: "2024-09-10T08:07:02.819+07:00",
 		},
 	}

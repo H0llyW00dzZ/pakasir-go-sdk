@@ -15,9 +15,25 @@
 package url
 
 import (
+	"errors"
 	"fmt"
 	neturl "net/url"
 	"strings"
+)
+
+// Sentinel errors for programmatic handling via [errors.Is].
+var (
+	// ErrEmptyBaseURL is returned when the base URL is empty.
+	ErrEmptyBaseURL = errors.New("url: base URL is required")
+
+	// ErrEmptyProject is returned when the project slug is empty.
+	ErrEmptyProject = errors.New("url: project is required")
+
+	// ErrEmptyOrderID is returned when the order ID is empty.
+	ErrEmptyOrderID = errors.New("url: order ID is required")
+
+	// ErrInvalidAmount is returned when the amount is not positive.
+	ErrInvalidAmount = errors.New("url: amount must be greater than 0")
 )
 
 // Options configures the payment redirect URL.
@@ -47,16 +63,16 @@ type Options struct {
 // the orderID is empty, or the amount is not positive.
 func Build(baseURL, project string, amount int64, opts Options) (string, error) {
 	if baseURL == "" {
-		return "", fmt.Errorf("url: base URL is required")
+		return "", ErrEmptyBaseURL
 	}
 	if project == "" {
-		return "", fmt.Errorf("url: project is required")
+		return "", ErrEmptyProject
 	}
 	if opts.OrderID == "" {
-		return "", fmt.Errorf("url: order ID is required")
+		return "", ErrEmptyOrderID
 	}
 	if amount <= 0 {
-		return "", fmt.Errorf("url: amount must be greater than 0")
+		return "", ErrInvalidAmount
 	}
 
 	pathPrefix := "pay"

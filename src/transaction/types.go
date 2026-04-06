@@ -56,7 +56,7 @@ type PaymentInfo struct {
 	TotalPayment int64 `json:"total_payment"`
 
 	// PaymentMethod is the selected payment channel (e.g., "qris", "bni_va").
-	PaymentMethod string `json:"payment_method"`
+	PaymentMethod constants.PaymentMethod `json:"payment_method"`
 
 	// PaymentNumber is the QR string or Virtual Account number
 	// that the customer uses to complete payment.
@@ -111,7 +111,7 @@ type TransactionInfo struct {
 	Status constants.TransactionStatus `json:"status"`
 
 	// PaymentMethod is the payment channel used.
-	PaymentMethod string `json:"payment_method"`
+	PaymentMethod constants.PaymentMethod `json:"payment_method"`
 
 	// CompletedAt is the completion timestamp as returned by the API.
 	// The format may vary (RFC3339 with timezone offset).
