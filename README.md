@@ -200,18 +200,19 @@ The webhook package works with **any Go HTTP framework** via three entry points:
 
 Both `Parse` and `ParseRequest` accept optional `webhook.WithMaxBodySize(n)` to override the default 1 MB body size limit.
 
-All parse functions return sentinel errors for programmatic handling via `errors.Is`:
+All parse functions return sentinel errors for programmatic handling via `errors.Is`.
+Each webhook sentinel wraps the corresponding central error from `errors`, so callers can match either:
 
 | Sentinel | Condition |
 |---|---|
-| `webhook.ErrNilReader` | nil `io.Reader` passed to `Parse` |
+| `webhook.ErrNilReader` | nil `io.Reader` passed to `Parse` (wraps `errors.ErrNilReader`) |
 | `webhook.ErrNilRequest` | nil `*http.Request` or nil body passed to `ParseRequest` (wraps `errors.ErrNilRequest`) |
-| `webhook.ErrEmptyBody` | empty payload passed to `ParseBytes` |
-| `webhook.ErrReadBody` | body read failure (wraps underlying cause) |
-| `webhook.ErrBodyTooLarge` | body exceeds configured size limit |
-| `webhook.ErrDecodeBody` | JSON decode failure (wraps underlying cause) |
-| `webhook.ErrInvalidOrderID` | Empty order ID from `Event.Validate` |
-| `webhook.ErrInvalidAmount` | Non-positive amount from `Event.Validate` |
+| `webhook.ErrEmptyBody` | empty payload passed to `ParseBytes` (wraps `errors.ErrEmptyBody`) |
+| `webhook.ErrReadBody` | body read failure (wraps `errors.ErrReadBody`) |
+| `webhook.ErrBodyTooLarge` | body exceeds configured size limit (wraps `errors.ErrBodyTooLarge`) |
+| `webhook.ErrDecodeBody` | JSON decode failure (wraps `errors.ErrDecodeBody`) |
+| `webhook.ErrInvalidOrderID` | Empty order ID from `Event.Validate` (wraps `errors.ErrInvalidOrderID`) |
+| `webhook.ErrInvalidAmount` | Non-positive amount from `Event.Validate` (wraps `errors.ErrInvalidAmount`) |
 
 ```go
 // net/http
@@ -259,15 +260,20 @@ The SDK provides sentinel errors for programmatic handling via `errors.Is`:
 | `errors.ErrDecodeJSON` | `errors` | JSON unmarshaling of a response body failed |
 | `errors.ErrRequestFailed` | `errors` | Permanent request failure (non-retryable) |
 | `errors.ErrRequestFailedAfterRetries` | `errors` | All retry attempts exhausted |
-| `client.ErrResponseTooLarge` | `client` | Response body exceeds configured size limit |
-| `webhook.ErrNilReader` | `webhook` | nil `io.Reader` passed to `Parse` |
+| `errors.ErrResponseTooLarge` | `errors` | Response body exceeds configured size limit |
+| `errors.ErrBodyTooLarge` | `errors` | Request or webhook body exceeds configured size limit |
+| `errors.ErrNilReader` | `errors` | Nil reader passed to a parse function |
+| `errors.ErrEmptyBody` | `errors` | Empty payload |
+| `errors.ErrReadBody` | `errors` | Body read failure |
+| `errors.ErrDecodeBody` | `errors` | JSON decode failure of a webhook body |
+| `webhook.ErrNilReader` | `webhook` | nil `io.Reader` passed to `Parse` (wraps `errors.ErrNilReader`) |
 | `webhook.ErrNilRequest` | `webhook` | nil `*http.Request` or nil body passed to `ParseRequest` (wraps `errors.ErrNilRequest`) |
-| `webhook.ErrEmptyBody` | `webhook` | Empty payload |
-| `webhook.ErrReadBody` | `webhook` | Body read failure (wraps underlying cause) |
-| `webhook.ErrBodyTooLarge` | `webhook` | Body exceeds configured size limit |
-| `webhook.ErrDecodeBody` | `webhook` | JSON decode failure (wraps underlying cause) |
-| `webhook.ErrInvalidOrderID` | `webhook` | Empty order ID from `Event.Validate` |
-| `webhook.ErrInvalidAmount` | `webhook` | Non-positive amount from `Event.Validate` |
+| `webhook.ErrEmptyBody` | `webhook` | Empty payload (wraps `errors.ErrEmptyBody`) |
+| `webhook.ErrReadBody` | `webhook` | Body read failure (wraps `errors.ErrReadBody`) |
+| `webhook.ErrBodyTooLarge` | `webhook` | Body exceeds configured size limit (wraps `errors.ErrBodyTooLarge`) |
+| `webhook.ErrDecodeBody` | `webhook` | JSON decode failure (wraps `errors.ErrDecodeBody`) |
+| `webhook.ErrInvalidOrderID` | `webhook` | Empty order ID from `Event.Validate` (wraps `errors.ErrInvalidOrderID`) |
+| `webhook.ErrInvalidAmount` | `webhook` | Non-positive amount from `Event.Validate` (wraps `errors.ErrInvalidAmount`) |
 | `qr.ErrEmptyContent` | `qr` | Empty string passed to `Encode`, `Write`, or `WriteFile` |
 | `qr.ErrEncodeFailed` | `qr` | QR encoding failed (wraps underlying cause) |
 | `url.ErrEmptyBaseURL` | `url` | Empty base URL |

@@ -29,6 +29,17 @@
 //   - [ErrDecodeJSON]: JSON unmarshaling of a response body failed
 //   - [ErrRequestFailed]: HTTP non-2xx response
 //   - [ErrRequestFailedAfterRetries]: all retry attempts exhausted
+//   - [ErrResponseTooLarge]: response body exceeds configured maximum size
+//   - [ErrBodyTooLarge]: request or webhook body exceeds configured maximum size
+//   - [ErrNilReader]: nil reader passed to a parse function
+//   - [ErrEmptyBody]: empty payload
+//   - [ErrReadBody]: body read failure
+//   - [ErrDecodeBody]: JSON decode failure of a webhook body
+//
+// Standalone packages (e.g., webhook, client) define local sentinel
+// variables that wrap these central errors via [fmt.Errorf] with %w,
+// so callers can match either the package-local sentinel or the
+// central one with [errors.Is].
 //
 // # API Errors
 //

@@ -200,18 +200,19 @@ Paket webhook dapat digunakan dengan **framework Go apapun** melalui tiga entry 
 
 `Parse` dan `ParseRequest` menerima opsional `webhook.WithMaxBodySize(n)` untuk mengubah batas ukuran body default 1 MB.
 
-Semua fungsi parse mengembalikan sentinel error untuk penanganan programatik melalui `errors.Is`:
+Semua fungsi parse mengembalikan sentinel error untuk penanganan programatik melalui `errors.Is`.
+Setiap sentinel webhook membungkus error pusat yang sesuai dari `errors`, sehingga pemanggil dapat mencocokkan keduanya:
 
 | Sentinel | Kondisi |
 |---|---|
-| `webhook.ErrNilReader` | `io.Reader` nil diberikan ke `Parse` |
+| `webhook.ErrNilReader` | `io.Reader` nil diberikan ke `Parse` (membungkus `errors.ErrNilReader`) |
 | `webhook.ErrNilRequest` | `*http.Request` nil atau body nil diberikan ke `ParseRequest` (membungkus `errors.ErrNilRequest`) |
-| `webhook.ErrEmptyBody` | Payload kosong diberikan ke `ParseBytes` |
-| `webhook.ErrReadBody` | Gagal membaca body (membungkus penyebab asli) |
-| `webhook.ErrBodyTooLarge` | Body melebihi batas ukuran yang dikonfigurasi |
-| `webhook.ErrDecodeBody` | Gagal decode JSON (membungkus penyebab asli) |
-| `webhook.ErrInvalidOrderID` | Order ID kosong dari `Event.Validate` |
-| `webhook.ErrInvalidAmount` | Amount tidak positif dari `Event.Validate` |
+| `webhook.ErrEmptyBody` | Payload kosong diberikan ke `ParseBytes` (membungkus `errors.ErrEmptyBody`) |
+| `webhook.ErrReadBody` | Gagal membaca body (membungkus `errors.ErrReadBody`) |
+| `webhook.ErrBodyTooLarge` | Body melebihi batas ukuran yang dikonfigurasi (membungkus `errors.ErrBodyTooLarge`) |
+| `webhook.ErrDecodeBody` | Gagal decode JSON (membungkus `errors.ErrDecodeBody`) |
+| `webhook.ErrInvalidOrderID` | Order ID kosong dari `Event.Validate` (membungkus `errors.ErrInvalidOrderID`) |
+| `webhook.ErrInvalidAmount` | Amount tidak positif dari `Event.Validate` (membungkus `errors.ErrInvalidAmount`) |
 
 ```go
 // net/http
@@ -259,15 +260,20 @@ SDK ini menyediakan sentinel error untuk penanganan programatik melalui `errors.
 | `errors.ErrDecodeJSON` | `errors` | Gagal unmarshaling JSON pada body response |
 | `errors.ErrRequestFailed` | `errors` | Kegagalan request permanen (tidak bisa di-retry) |
 | `errors.ErrRequestFailedAfterRetries` | `errors` | Semua percobaan retry habis |
-| `client.ErrResponseTooLarge` | `client` | Body response melebihi batas ukuran yang dikonfigurasi |
-| `webhook.ErrNilReader` | `webhook` | `io.Reader` nil diberikan ke `Parse` |
+| `errors.ErrResponseTooLarge` | `errors` | Body response melebihi batas ukuran yang dikonfigurasi |
+| `errors.ErrBodyTooLarge` | `errors` | Body request atau webhook melebihi batas ukuran yang dikonfigurasi |
+| `errors.ErrNilReader` | `errors` | Reader nil diberikan ke fungsi parse |
+| `errors.ErrEmptyBody` | `errors` | Payload kosong |
+| `errors.ErrReadBody` | `errors` | Gagal membaca body |
+| `errors.ErrDecodeBody` | `errors` | Gagal decode JSON pada body webhook |
+| `webhook.ErrNilReader` | `webhook` | `io.Reader` nil diberikan ke `Parse` (membungkus `errors.ErrNilReader`) |
 | `webhook.ErrNilRequest` | `webhook` | `*http.Request` nil atau body nil diberikan ke `ParseRequest` (membungkus `errors.ErrNilRequest`) |
-| `webhook.ErrEmptyBody` | `webhook` | Payload kosong |
-| `webhook.ErrReadBody` | `webhook` | Gagal membaca body (membungkus penyebab asli) |
-| `webhook.ErrBodyTooLarge` | `webhook` | Body melebihi batas ukuran yang dikonfigurasi |
-| `webhook.ErrDecodeBody` | `webhook` | Gagal decode JSON (membungkus penyebab asli) |
-| `webhook.ErrInvalidOrderID` | `webhook` | Order ID kosong dari `Event.Validate` |
-| `webhook.ErrInvalidAmount` | `webhook` | Amount tidak positif dari `Event.Validate` |
+| `webhook.ErrEmptyBody` | `webhook` | Payload kosong (membungkus `errors.ErrEmptyBody`) |
+| `webhook.ErrReadBody` | `webhook` | Gagal membaca body (membungkus `errors.ErrReadBody`) |
+| `webhook.ErrBodyTooLarge` | `webhook` | Body melebihi batas ukuran yang dikonfigurasi (membungkus `errors.ErrBodyTooLarge`) |
+| `webhook.ErrDecodeBody` | `webhook` | Gagal decode JSON (membungkus `errors.ErrDecodeBody`) |
+| `webhook.ErrInvalidOrderID` | `webhook` | Order ID kosong dari `Event.Validate` (membungkus `errors.ErrInvalidOrderID`) |
+| `webhook.ErrInvalidAmount` | `webhook` | Amount tidak positif dari `Event.Validate` (membungkus `errors.ErrInvalidAmount`) |
 | `qr.ErrEmptyContent` | `qr` | String kosong diberikan ke `Encode`, `Write`, atau `WriteFile` |
 | `qr.ErrEncodeFailed` | `qr` | Encoding QR gagal (membungkus penyebab asli) |
 | `url.ErrEmptyBaseURL` | `url` | Base URL kosong |

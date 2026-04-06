@@ -38,8 +38,8 @@ Race detector is skipped on `windows-11-arm`. Coverage is uploaded to Codecov fr
 ```
 src/
   client/           — Core HTTP client, functional options, retry/backoff
-  constants/        — PaymentMethod/TransactionStatus enums, SDK version
-  errors/           — Sentinel errors (ErrInvalid*), APIError type, i18n wrapping
+  constants/        — PaymentMethod/TransactionStatus enums, SDK version, API paths
+  errors/           — Sentinel errors (ErrInvalid*, ErrResponseTooLarge, ErrBodyTooLarge, etc.), APIError type, i18n wrapping
   i18n/             — Language type (en/id), message keys, translation map
   transaction/      — Service: Create, Cancel, Detail
   simulation/       — Service: Pay (sandbox)
@@ -99,7 +99,7 @@ Alias `net/url` as `neturl` when inside the `url` package.
 
 - **Packages**: lowercase single-word (`client`, `constants`, `gc`, `i18n`).
 - **Types**: PascalCase (`Client`, `Service`, `APIError`, `PaymentInfo`).
-- **Constants**: grouped in `const ()` blocks with consistent prefix — `Method*`, `Status*`, `Default*`, `Msg*`, `Err*`, `SDK*`.
+- **Constants**: grouped in `const ()` blocks with consistent prefix — `Method*`, `Status*`, `Default*`, `Msg*`, `Err*`, `SDK*`, `Path*`.
 - **Enums**: typed strings (`PaymentMethod string`, `TransactionStatus string`, `Language string`, `MessageKey string`) with a `Valid()` method and unexported validation map.
 - **Constructors**: `New(...)` returns `*Client` (no error); `NewService(c)` for service types. Credential validation is deferred to `Do()`.
 - **Functional options**: `type Option func(*Client)` with `With*` functions. Webhook parsing uses `type ParseOption func(*parseConfig)` with `WithMaxBodySize`.
@@ -121,8 +121,8 @@ type PaymentInfo struct {
 
 ### Error Handling
 
-- **Sentinel errors** defined with `errors.New()` in `src/errors/`, prefixed `Err*`.
-- **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `webhook.ErrInvalidOrderID`, `webhook.ErrInvalidAmount`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc. Standalone sentinels that overlap with `sdkerrors` sentinels wrap them via `fmt.Errorf("webhook: %w", sdkerrors.ErrNilRequest)` so callers can match either sentinel with `errors.Is`.
+- **Sentinel errors** defined with `errors.New()` in `src/errors/`, prefixed `Err*`. This includes transport/size sentinels (`ErrResponseTooLarge`, `ErrBodyTooLarge`, `ErrNilReader`, `ErrEmptyBody`, `ErrReadBody`, `ErrDecodeBody`) that serve as central definitions for the entire SDK.
+- **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `webhook.ErrInvalidOrderID`, `webhook.ErrInvalidAmount`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc. All webhook sentinels wrap their central `sdkerrors` counterpart via `fmt.Errorf("webhook: %w", sdkerrors.ErrNilReader)` so callers can match either sentinel with `errors.Is`.
 - **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey, args...)` — always wraps with `%w` so `errors.Is()` works. The variadic `args` accept an error cause (wrapped with `%w`) and/or a string context (substituted into `%s` or appended as suffix). Used for both encoding errors (`ErrEncodeJSON`) and decoding errors (`ErrDecodeJSON`).
 - **`fmt.Errorf` wrapping** for non-sentinel errors: `fmt.Errorf("context: %w", err)` with lowercase prefix.
 - **`APIError`** struct for HTTP error responses; checked with `errors.As()` or the re-exported `sdkerrors.AsType[*sdkerrors.APIError](err)`.
@@ -192,6 +192,8 @@ Three direct dependencies — keep the footprint minimal:
 - Shared validation via `request.ValidateOrderAndAmount` (avoid duplicating order/amount checks).
 - Shared JSON encoding via `request.EncodeJSON` (centralizes buffer pool acquire/encode/release). Internally uses `json.NewEncoder.Encode`, which appends a trailing `\n` to the payload — this is intentional and correct behavior; HTTP servers accept it and RFC 7159 permits trailing whitespace.
 - Response body limiting: `client.Do` caps reads at `DefaultMaxResponseSize` (1 MB) configurable via `WithMaxResponseSize`; `webhook.Parse`/`ParseRequest` cap at `DefaultMaxBodySize` (1 MB) configurable via `WithMaxBodySize`.
+- Centralized sentinel errors: all SDK-wide sentinels live in `src/errors/`. Standalone packages (client, webhook) do not define their own `errors.New()` sentinels; they reference or wrap the central ones via `fmt.Errorf("webhook: %w", sdkerrors.Err*)`.
+- API path constants: all endpoint paths live in `src/constants/paths.go` (`PathTransactionCreate`, `PathTransactionCancel`, `PathTransactionDetail`, `PathPaymentSimulation`). Service packages reference these instead of hardcoding path strings.
 - Retry on 429 Too Many Requests in addition to 5xx and network errors; 4xx (other than 429), TLS certificate/handshake errors (`tls.AlertError`, `tls.RecordHeaderError`), and x509 verification errors are never retried.
 - Retry-After header support: when a 429 response includes a `Retry-After` header (seconds or HTTP-date), the client uses the indicated delay (clamped to `retryWaitMax`) instead of calculated backoff. Parsed by `parseRetryAfter`, which caps delay-seconds at 24 hours to prevent `time.Duration` overflow before the clamp is applied.
 - Permanent DNS failures (`*net.DNSError` with `IsNotFound: true`) are classified as non-retryable; DNS timeouts remain retryable.

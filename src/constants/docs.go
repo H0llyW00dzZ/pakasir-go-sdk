@@ -35,4 +35,11 @@
 // The package also provides SDK version metadata ([SDKName], [SDKVersion],
 // [SDKRepository]) and a pre-computed [UserAgent] function used by the
 // HTTP client for all outgoing requests.
+//
+// # API Paths
+//
+// Centralized path constants ([PathTransactionCreate], [PathTransactionCancel],
+// [PathTransactionDetail], [PathPaymentSimulation]) are used by the service
+// packages to construct request URLs, avoiding hardcoded strings across
+// multiple packages.
 package constants
