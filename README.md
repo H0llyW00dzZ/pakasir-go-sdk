@@ -298,6 +298,26 @@ if err != nil {
 fmt.Printf("Expires at: %s\n", expiry)
 ```
 
+## Security Considerations
+
+> [!CAUTION]
+> The `transaction.Service.Detail()` method passes the API key as a **URL query parameter**. This is required by the [Pakasir API specification](https://pakasir.com/p/docs) — the Transaction Detail endpoint is a `GET` request where all parameters (including `api_key`) are in the query string.
+
+This means the API key may be visible in:
+
+- **Server access logs** (nginx, Apache, etc.)
+- **Reverse proxy / CDN logs** (Cloudflare, HAProxy, etc.)
+- **Browser history** (if called from a frontend context)
+- **Network monitoring tools**
+
+All other endpoints (`Create`, `Cancel`, `Pay`) use `POST` with the API key in the JSON request body, which is not logged by default.
+
+**Recommendations:**
+
+- Ensure your server and proxy configurations **redact or exclude query strings** from access logs when using the Detail endpoint.
+- Rotate API keys periodically through the Pakasir dashboard.
+- Never call the Detail endpoint from client-side / browser code.
+
 ## Disclaimer
 
 This is an **unofficial** SDK. It is not affiliated with, endorsed by, or officially supported by Pakasir. This SDK is unofficial because the official API only provides documentation and support for their REST API and Node.js SDK. This library was created to add proper Go support, and it is actively used by the owner of this repository. Use at your own risk.

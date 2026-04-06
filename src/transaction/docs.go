@@ -52,4 +52,22 @@
 // Response types include a unified [PaymentInfo.ParseTime] and
 // [TransactionInfo.ParseTime] method for parsing API timestamp fields.
 // Both attempt RFC3339Nano first, then fall back to RFC3339.
+//
+// # Security: API Key Exposure in Detail Requests
+//
+// The [Service.Detail] method transmits the API key as a URL query
+// parameter because the upstream [Pakasir API] defines this endpoint as a
+// GET request. This is an upstream API design constraint, not an SDK
+// choice. The key may therefore appear in server access logs, reverse
+// proxy / CDN logs, and network monitoring tools.
+//
+// All other endpoints ([Service.Create], [Service.Cancel]) use POST with
+// the API key in the JSON request body, which is not logged by default.
+//
+// Recommendations:
+//   - Redact or exclude query strings from access logs
+//   - Rotate API keys periodically via the Pakasir dashboard
+//   - Never call Detail from client-side / browser code
+//
+// [Pakasir API]: https://pakasir.com/p/docs
 package transaction

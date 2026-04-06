@@ -111,8 +111,17 @@ func (s *Service) Cancel(ctx context.Context, req *CancelRequest) error {
 // Detail retrieves the details and status of a transaction.
 //
 // It sends a GET request to /api/transactiondetail with query parameters.
-// Per the Pakasir API specification, all parameters including the API key
-// are passed as query string values for this endpoint.
+// Per the [Pakasir API specification], all parameters including the API key
+// are passed as query string values for this endpoint. This means the API
+// key will appear in server access logs, reverse proxy logs, and any
+// network-level monitoring. All other SDK endpoints transmit the key in
+// the POST request body, which is not logged by default.
+//
+// Callers should ensure their infrastructure redacts or excludes query
+// strings from access logs, and should never invoke this method from
+// client-side or browser code.
+//
+// [Pakasir API specification]: https://pakasir.com/p/docs
 func (s *Service) Detail(ctx context.Context, req *DetailRequest) (*DetailResponse, error) {
 	if req == nil {
 		return nil, sdkerrors.New(s.client.Lang(), sdkerrors.ErrNilRequest, i18n.MsgNilRequest)

@@ -298,6 +298,26 @@ if err != nil {
 fmt.Printf("Kedaluwarsa pada: %s\n", expiry)
 ```
 
+## Pertimbangan Keamanan
+
+> [!CAUTION]
+> Method `transaction.Service.Detail()` mengirimkan API key sebagai **parameter query URL**. Ini diperlukan oleh [spesifikasi API Pakasir](https://pakasir.com/p/docs) — endpoint Transaction Detail menggunakan request `GET` di mana semua parameter (termasuk `api_key`) berada di query string.
+
+Ini berarti API key dapat terlihat di:
+
+- **Log akses server** (nginx, Apache, dll.)
+- **Log reverse proxy / CDN** (Cloudflare, HAProxy, dll.)
+- **Riwayat browser** (jika dipanggil dari konteks frontend)
+- **Tool pemantauan jaringan**
+
+Semua endpoint lainnya (`Create`, `Cancel`, `Pay`) menggunakan `POST` dengan API key di body request JSON, yang secara default tidak tercatat di log.
+
+**Rekomendasi:**
+
+- Pastikan konfigurasi server dan proxy Anda **menyunting atau mengecualikan query string** dari log akses saat menggunakan endpoint Detail.
+- Rotasi API key secara berkala melalui dashboard Pakasir.
+- Jangan pernah memanggil endpoint Detail dari kode sisi klien / browser.
+
 ## Penyangkalan
 
 Ini adalah SDK **tidak resmi**. SDK ini tidak berafiliasi, didukung, atau dikelola secara resmi oleh Pakasir. SDK ini tidak resmi karena API resmi hanya menyediakan dokumentasi dan dukungan untuk REST API dan SDK Node.js mereka. Library ini dibuat untuk menambahkan dukungan Go yang layak, dan digunakan secara aktif oleh pemilik repositori ini. Gunakan dengan risiko Anda sendiri.
