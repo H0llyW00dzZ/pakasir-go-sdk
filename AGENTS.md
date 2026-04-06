@@ -30,8 +30,8 @@ gofmt -s -w .
 gofmt -s -d .
 ```
 
-CI runs on 8 OS targets (ubuntu, macos, windows, including ARM) with Go 1.26.0.
-Coverage is uploaded to Codecov from ubuntu-latest only.
+CI runs on 8 OS matrix combinations (ubuntu x86/ARM, macOS, Windows x86/ARM) testing Go 1.26.0 and 1.26.1.
+Race detector is skipped on `windows-11-arm`. Coverage is uploaded to Codecov from `ubuntu-latest` only.
 
 ## Project Layout
 
