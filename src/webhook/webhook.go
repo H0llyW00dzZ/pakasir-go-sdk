@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
+	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/internal/timefmt"
 )
 
@@ -32,8 +33,9 @@ var (
 	ErrNilReader = errors.New("webhook: reader is nil")
 
 	// ErrNilRequest is returned when a nil [http.Request] or nil body
-	// is passed to [ParseRequest].
-	ErrNilRequest = errors.New("webhook: request body is nil")
+	// is passed to [ParseRequest]. It wraps [errors.ErrNilRequest] so
+	// callers can match either sentinel via [errors.Is].
+	ErrNilRequest = fmt.Errorf("webhook: %w", sdkerrors.ErrNilRequest)
 
 	// ErrEmptyBody is returned when the webhook payload is empty.
 	ErrEmptyBody = errors.New("webhook: body is empty")
