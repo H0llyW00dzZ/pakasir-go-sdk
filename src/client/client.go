@@ -59,12 +59,6 @@ const (
 	DefaultMaxResponseSize int64 = 1 << 20 // 1 MB
 )
 
-// ErrResponseTooLarge is returned when a response body exceeds the
-// configured [DefaultMaxResponseSize] (or the value set via
-// [WithMaxResponseSize]). This error is non-retryable because an
-// oversized response is a deterministic server behavior.
-var ErrResponseTooLarge = errors.New("response body too large")
-
 // stopRetry wraps an error that must not be retried. The [Client.Do]
 // loop checks for this type to break immediately and return the inner
 // error to the caller without wrapping it in a retries-exhausted message.
@@ -349,7 +343,7 @@ func (c *Client) buildRequest(ctx context.Context, method, path string, body []b
 // readResponseBody drains the response into a pooled buffer, copies the
 // data out, and returns the buffer to the pool. The read is limited to
 // [maxResponseSize]+1 bytes so that a body of exactly [maxResponseSize]
-// is accepted while anything larger is rejected with [ErrResponseTooLarge].
+// is accepted while anything larger is rejected with [sdkerrors.ErrResponseTooLarge].
 //
 // To avoid holding a full buffer when the body exceeds the limit, the
 // size check is performed before copying the data out.
@@ -368,7 +362,7 @@ func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
 	if int64(buf.Len()) > c.maxResponseSize {
 		buf.Reset()
 		c.bufferPool.Put(buf)
-		return nil, fmt.Errorf("%w: exceeds %d bytes", ErrResponseTooLarge, c.maxResponseSize)
+		return nil, fmt.Errorf("%w: exceeds %d bytes", sdkerrors.ErrResponseTooLarge, c.maxResponseSize)
 	}
 
 	if readErr != nil {
@@ -435,7 +429,7 @@ func isRetryable(err error) bool {
 
 	switch {
 	// Oversized responses are deterministic — do not retry.
-	case errors.Is(err, ErrResponseTooLarge):
+	case errors.Is(err, sdkerrors.ErrResponseTooLarge):
 		return false
 	// TLS/x509 certificate and handshake errors are permanent — do not retry.
 	case sdkerrors.HasType[*tls.CertificateVerificationError](err),

@@ -26,16 +26,19 @@
 // # Sentinel Errors
 //
 // All parse functions return sentinel errors for programmatic handling
-// via [errors.Is]:
+// via [errors.Is]. Each webhook sentinel wraps the corresponding error
+// from the central [errors] package, so callers can match either the
+// package-local sentinel (e.g., [ErrNilReader]) or the central one
+// (e.g., [errors.ErrNilReader]):
 //
-//   - [ErrNilReader]: nil reader passed to [Parse]
+//   - [ErrNilReader]: nil reader passed to [Parse] (wraps [errors.ErrNilReader])
 //   - [ErrNilRequest]: nil request or body passed to [ParseRequest] (wraps [errors.ErrNilRequest])
-//   - [ErrEmptyBody]: empty payload passed to [ParseBytes]
-//   - [ErrReadBody]: body read failure (wraps underlying cause)
-//   - [ErrBodyTooLarge]: body exceeds configured size limit
-//   - [ErrDecodeBody]: JSON decode failure (wraps underlying cause)
-//   - [ErrInvalidOrderID]: empty order ID from [Event.Validate]
-//   - [ErrInvalidAmount]: non-positive amount from [Event.Validate]
+//   - [ErrEmptyBody]: empty payload passed to [ParseBytes] (wraps [errors.ErrEmptyBody])
+//   - [ErrReadBody]: body read failure (wraps [errors.ErrReadBody])
+//   - [ErrBodyTooLarge]: body exceeds configured size limit (wraps [errors.ErrBodyTooLarge])
+//   - [ErrDecodeBody]: JSON decode failure (wraps [errors.ErrDecodeBody])
+//   - [ErrInvalidOrderID]: empty order ID from [Event.Validate] (wraps [errors.ErrInvalidOrderID])
+//   - [ErrInvalidAmount]: non-positive amount from [Event.Validate] (wraps [errors.ErrInvalidAmount])
 //
 // # Body Size Limit
 //

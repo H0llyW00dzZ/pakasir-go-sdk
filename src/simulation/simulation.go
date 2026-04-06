@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/client"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
 	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/i18n"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/internal/request"
@@ -69,6 +70,6 @@ func (s *Service) Pay(ctx context.Context, req *PayRequest) error {
 		return err
 	}
 
-	_, err = s.client.Do(ctx, http.MethodPost, "/api/paymentsimulation", data)
+	_, err = s.client.Do(ctx, http.MethodPost, constants.PathPaymentSimulation, data)
 	return err
 }

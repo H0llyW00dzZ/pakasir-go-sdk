@@ -75,7 +75,7 @@
 //   - Client errors (4xx other than 429)
 //   - TLS certificate/handshake errors ([tls.CertificateVerificationError], [x509.UnknownAuthorityError], [x509.SystemRootsError], [tls.AlertError], [tls.RecordHeaderError], etc.)
 //   - Permanent DNS failures ([net.DNSError] with IsNotFound: true, i.e., NXDOMAIN)
-//   - Oversized responses ([ErrResponseTooLarge])
+//   - Oversized responses ([errors.ErrResponseTooLarge])
 //
 // DNS timeouts remain retryable. Response body reads are limited to
 // [DefaultMaxResponseSize] (1 MB) by default; use [WithMaxResponseSize]

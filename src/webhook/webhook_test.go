@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
+	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
 )
 
 const testPayload = `{"amount":22000,"order_id":"240910HDE7C9","project":"depodomain","status":"completed","payment_method":"qris","completed_at":"2024-09-10T08:07:02.819+07:00","is_sandbox":false}`
@@ -283,4 +284,32 @@ func TestEventValidateFromParsedPayload(t *testing.T) {
 	event, err := ParseBytes([]byte(testPayload))
 	require.NoError(t, err)
 	assert.NoError(t, event.Validate())
+}
+
+// --- Central sentinel matching ---
+//
+// Verify that webhook sentinel errors can be matched against
+// the central sdkerrors sentinels via errors.Is.
+
+func TestSentinelWrappingCentralErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		local   error
+		central error
+	}{
+		{"ErrNilReader", ErrNilReader, sdkerrors.ErrNilReader},
+		{"ErrNilRequest", ErrNilRequest, sdkerrors.ErrNilRequest},
+		{"ErrEmptyBody", ErrEmptyBody, sdkerrors.ErrEmptyBody},
+		{"ErrReadBody", ErrReadBody, sdkerrors.ErrReadBody},
+		{"ErrBodyTooLarge", ErrBodyTooLarge, sdkerrors.ErrBodyTooLarge},
+		{"ErrDecodeBody", ErrDecodeBody, sdkerrors.ErrDecodeBody},
+		{"ErrInvalidOrderID", ErrInvalidOrderID, sdkerrors.ErrInvalidOrderID},
+		{"ErrInvalidAmount", ErrInvalidAmount, sdkerrors.ErrInvalidAmount},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.ErrorIs(t, tt.local, tt.central,
+				"webhook.%s should wrap sdkerrors.%s", tt.name, tt.name)
+		})
+	}
 }

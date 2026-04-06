@@ -16,7 +16,6 @@ package webhook
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,34 +27,44 @@ import (
 )
 
 // Sentinel errors for programmatic handling via [errors.Is].
+//
+// Each sentinel wraps the corresponding error from [sdkerrors] so that
+// callers can match either the package-local sentinel (e.g.,
+// webhook.ErrNilReader) or the central one (e.g., sdkerrors.ErrNilReader).
 var (
 	// ErrNilReader is returned when a nil [io.Reader] is passed to [Parse].
-	ErrNilReader = errors.New("webhook: reader is nil")
+	// It wraps [sdkerrors.ErrNilReader].
+	ErrNilReader = fmt.Errorf("webhook: %w", sdkerrors.ErrNilReader)
 
 	// ErrNilRequest is returned when a nil [http.Request] or nil body
-	// is passed to [ParseRequest]. It wraps [errors.ErrNilRequest] so
+	// is passed to [ParseRequest]. It wraps [sdkerrors.ErrNilRequest] so
 	// callers can match either sentinel via [errors.Is].
 	ErrNilRequest = fmt.Errorf("webhook: %w", sdkerrors.ErrNilRequest)
 
 	// ErrEmptyBody is returned when the webhook payload is empty.
-	ErrEmptyBody = errors.New("webhook: body is empty")
+	// It wraps [sdkerrors.ErrEmptyBody].
+	ErrEmptyBody = fmt.Errorf("webhook: %w", sdkerrors.ErrEmptyBody)
 
 	// ErrReadBody is returned when reading the webhook body fails.
-	ErrReadBody = errors.New("webhook: failed to read body")
+	// It wraps [sdkerrors.ErrReadBody].
+	ErrReadBody = fmt.Errorf("webhook: %w", sdkerrors.ErrReadBody)
 
 	// ErrBodyTooLarge is returned when the webhook body exceeds the
 	// configured [DefaultMaxBodySize] (or the value set via
-	// [WithMaxBodySize]).
-	ErrBodyTooLarge = errors.New("webhook: body too large")
+	// [WithMaxBodySize]). It wraps [sdkerrors.ErrBodyTooLarge].
+	ErrBodyTooLarge = fmt.Errorf("webhook: %w", sdkerrors.ErrBodyTooLarge)
 
 	// ErrDecodeBody is returned when JSON decoding of the webhook body fails.
-	ErrDecodeBody = errors.New("webhook: failed to decode body")
+	// It wraps [sdkerrors.ErrDecodeBody].
+	ErrDecodeBody = fmt.Errorf("webhook: %w", sdkerrors.ErrDecodeBody)
 
 	// ErrInvalidOrderID is returned by [Event.Validate] when the order ID is empty.
-	ErrInvalidOrderID = errors.New("webhook: order ID is required")
+	// It wraps [sdkerrors.ErrInvalidOrderID].
+	ErrInvalidOrderID = fmt.Errorf("webhook: %w", sdkerrors.ErrInvalidOrderID)
 
 	// ErrInvalidAmount is returned by [Event.Validate] when the amount is not positive.
-	ErrInvalidAmount = errors.New("webhook: amount must be greater than 0")
+	// It wraps [sdkerrors.ErrInvalidAmount].
+	ErrInvalidAmount = fmt.Errorf("webhook: %w", sdkerrors.ErrInvalidAmount)
 )
 
 // Event represents a payment notification received from the Pakasir webhook.
