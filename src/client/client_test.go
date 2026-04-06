@@ -874,3 +874,80 @@ func TestParseRetryAfterHTTPDatePast(t *testing.T) {
 	past := time.Now().Add(-10 * time.Second).UTC().Format(http.TimeFormat)
 	assert.Equal(t, time.Duration(0), parseRetryAfter(past))
 }
+
+// --- AsType end-to-end ---
+
+func TestAsTypeAPIErrorOn4xx(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte(`{"error":"forbidden"}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	t.Log(err)
+
+	apiErr, ok := sdkerrors.AsType[*sdkerrors.APIError](err)
+	require.True(t, ok, "4xx error must be extractable via AsType")
+	assert.Equal(t, 403, apiErr.StatusCode)
+	assert.Contains(t, apiErr.Body, "forbidden")
+}
+
+func TestAsTypeAPIErrorOnRetriesExhausted(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte(`{"error":"unavailable"}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL,
+		WithRetries(1),
+		WithRetryWait(1*time.Millisecond, 2*time.Millisecond),
+	)
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	t.Log(err)
+
+	// The last error in the chain is an APIError wrapped inside the
+	// retries-exhausted error. AsType must traverse the chain to find it.
+	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
+	apiErr, ok := sdkerrors.AsType[*sdkerrors.APIError](err)
+	require.True(t, ok, "APIError must be reachable inside retries-exhausted chain")
+	assert.Equal(t, 503, apiErr.StatusCode)
+	assert.Contains(t, apiErr.Body, "unavailable")
+}
+
+func TestAsTypeNoMatchOnValidationError(t *testing.T) {
+	c := New("", "my-key")
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	t.Log(err)
+
+	// Validation errors are not APIErrors — AsType must return false.
+	apiErr, ok := sdkerrors.AsType[*sdkerrors.APIError](err)
+	assert.False(t, ok, "validation error must not match APIError")
+	assert.Nil(t, apiErr)
+}
+
+func TestAsTypeAPIErrorOnPermanentFailure(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := New("proj", "key",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(&http.Client{}),
+		WithRetries(0),
+	)
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	t.Log(err)
+
+	// Permanent TLS errors are not APIErrors — AsType must return false.
+	apiErr, ok := sdkerrors.AsType[*sdkerrors.APIError](err)
+	assert.False(t, ok, "TLS permanent error must not match APIError")
+	assert.Nil(t, apiErr)
+}
