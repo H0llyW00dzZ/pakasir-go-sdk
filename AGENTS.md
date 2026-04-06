@@ -105,7 +105,7 @@ Alias `net/url` as `neturl` when inside the `url` package.
 - **Functional options**: `type Option func(*Client)` with `With*` functions. Webhook parsing uses `type ParseOption func(*parseConfig)` with `WithMaxBodySize`.
 - **Getters**: exported read-only accessors for encapsulated fields — `Project()`, `APIKey()`, `Lang()`, `GetBufferPool()`, `QR()`. Service packages use these to read client state.
 - **Receivers**: single-letter matching the type (`c *Client`, `s *Service`, `e *Event`, `m PaymentMethod`, `s TransactionStatus`).
-- **Unexported helpers**: camelCase (`isRetryable`, `calculateBackoff`, `parseRetryAfter`, `validateRequest`).
+- **Unexported helpers**: camelCase (`isRetryable`, `calculateBackoff`, `parseRetryAfter`, `validateCredentials`, `executeAttempt`, `handleResponse`, `validateRequest`).
 
 ### Struct Tags
 
@@ -123,7 +123,7 @@ type PaymentInfo struct {
 
 - **Sentinel errors** defined with `errors.New()` in `src/errors/`, prefixed `Err*`.
 - **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc.
-- **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey, args...)` — always wraps with `%w` so `errors.Is()` works. The variadic `args` accept an error cause (wrapped with `%w`) and/or a string context (substituted into `%s` or appended as suffix).
+- **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey, args...)` — always wraps with `%w` so `errors.Is()` works. The variadic `args` accept an error cause (wrapped with `%w`) and/or a string context (substituted into `%s` or appended as suffix). Used for both encoding errors (`ErrEncodeJSON`) and decoding errors (`ErrDecodeJSON`).
 - **`fmt.Errorf` wrapping** for non-sentinel errors: `fmt.Errorf("context: %w", err)` with lowercase prefix.
 - **`APIError`** struct for HTTP error responses; checked with `errors.As()` or the re-exported `sdkerrors.AsType[*sdkerrors.APIError](err)`.
 - **`errors.AsType[T]`** (Go 1.26 generics) for type-asserting errors without a separate variable — used in `isRetryable` to unwrap `*url.Error` and detect TLS certificate errors and permanent DNS failures. Re-exported as `sdkerrors.AsType` so consumers don't need a separate stdlib `errors` import.
@@ -194,6 +194,8 @@ Three direct dependencies — keep the footprint minimal:
 - Permanent DNS failures (`*net.DNSError` with `IsNotFound: true`) are classified as non-retryable; DNS timeouts remain retryable.
 - `WithBaseURL` strips trailing slashes to prevent double-slash paths in constructed URLs.
 - `Accept: application/json` header is set on all requests by `buildRequest`.
+- `Client.Do` is decomposed into small helpers (`validateCredentials`, `executeAttempt`, `handleResponse`, `retriesExhaustedError`) to keep cyclomatic complexity low. Non-retryable errors are propagated via the unexported `stopRetry` wrapper, which `Do` unwraps before returning to the caller.
+- Response JSON decode errors are localized via `sdkerrors.New(lang, sdkerrors.ErrDecodeJSON, i18n.MsgFailedToDecode, err)` in transaction service methods.
 
 ### Security
 

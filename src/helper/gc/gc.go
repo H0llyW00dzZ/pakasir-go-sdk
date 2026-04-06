@@ -119,6 +119,8 @@ type pool struct{ p *bytebufferpool.Pool }
 func (p *pool) Get() Buffer { return p.p.Get() }
 
 // Put returns a buffer to the pool.
+// Buffers that are not [bytebufferpool.ByteBuffer] are silently
+// discarded because the underlying pool cannot reuse foreign types.
 func (p *pool) Put(b Buffer) {
 	if buf, ok := b.(*bytebufferpool.ByteBuffer); ok {
 		p.p.Put(buf)

@@ -45,6 +45,9 @@ var (
 	// ErrEncodeJSON is returned when JSON marshaling of a request fails.
 	ErrEncodeJSON = errors.New("encode json")
 
+	// ErrDecodeJSON is returned when JSON unmarshaling of a response fails.
+	ErrDecodeJSON = errors.New("decode json")
+
 	// ErrRequestFailed is returned when the API returns a non-2xx status code.
 	ErrRequestFailed = errors.New("request failed")
 

@@ -22,14 +22,18 @@ type MessageKey string
 // Keys whose translations contain format verbs (e.g., %d) are intended
 // for use with [fmt.Sprintf] directly, not through [errors.New].
 const (
-	MsgInvalidProject            MessageKey = "invalid_project"
-	MsgInvalidAPIKey             MessageKey = "invalid_api_key"
-	MsgInvalidAmount             MessageKey = "invalid_amount"
-	MsgInvalidOrderID            MessageKey = "invalid_order_id"
-	MsgInvalidPaymentMethod      MessageKey = "invalid_payment_method"
-	MsgNilRequest                MessageKey = "nil_request"
-	MsgFailedToEncode            MessageKey = "failed_to_encode"
-	MsgRequestFailedPermanent    MessageKey = "request_failed_permanent"
+	MsgInvalidProject         MessageKey = "invalid_project"
+	MsgInvalidAPIKey          MessageKey = "invalid_api_key"
+	MsgInvalidAmount          MessageKey = "invalid_amount"
+	MsgInvalidOrderID         MessageKey = "invalid_order_id"
+	MsgInvalidPaymentMethod   MessageKey = "invalid_payment_method"
+	MsgNilRequest             MessageKey = "nil_request"
+	MsgFailedToEncode         MessageKey = "failed_to_encode"
+	MsgFailedToDecode         MessageKey = "failed_to_decode"
+	MsgRequestFailedPermanent MessageKey = "request_failed_permanent"
+
+	// MsgRequestFailedAfterRetries contains a %d verb and is intended
+	// for use with [fmt.Sprintf] directly, not through [errors.New].
 	MsgRequestFailedAfterRetries MessageKey = "request_failed_after_retries"
 )
 
@@ -43,6 +47,7 @@ var translations = map[Language]map[MessageKey]string{
 		MsgInvalidPaymentMethod:      "unsupported payment method: %s",
 		MsgNilRequest:                "request must not be nil",
 		MsgFailedToEncode:            "failed to encode request as JSON",
+		MsgFailedToDecode:            "failed to decode response",
 		MsgRequestFailedPermanent:    "request failed due to permanent error",
 		MsgRequestFailedAfterRetries: "request failed after %d retries",
 	},
@@ -54,6 +59,7 @@ var translations = map[Language]map[MessageKey]string{
 		MsgInvalidPaymentMethod:      "metode pembayaran tidak didukung: %s",
 		MsgNilRequest:                "permintaan tidak boleh nil",
 		MsgFailedToEncode:            "gagal mengenkode permintaan sebagai JSON",
+		MsgFailedToDecode:            "gagal mendekode respons",
 		MsgRequestFailedPermanent:    "permintaan gagal karena kesalahan permanen",
 		MsgRequestFailedAfterRetries: "permintaan gagal setelah %d percobaan ulang",
 	},
