@@ -103,13 +103,15 @@ func parseContextStr(args []any) string {
 }
 
 // formatMessage applies contextStr to msg. If msg contains a %s verb the
-// context is substituted in; otherwise it is appended as a suffix.
+// context is substituted into the first occurrence; otherwise it is
+// appended as a suffix. Only the first %s is replaced, so messages with
+// multiple format verbs do not panic.
 func formatMessage(msg, contextStr string) string {
 	if contextStr == "" {
 		return msg
 	}
 	if strings.Contains(msg, "%s") {
-		return fmt.Sprintf(msg, contextStr)
+		return strings.Replace(msg, "%s", contextStr, 1)
 	}
 	return msg + ": " + contextStr
 }
