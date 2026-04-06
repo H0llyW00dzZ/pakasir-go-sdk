@@ -190,3 +190,7 @@ Three direct dependencies — keep the footprint minimal:
 - Shared JSON encoding via `request.EncodeJSON` (centralizes buffer pool acquire/encode/release).
 - Response body limiting: `client.Do` caps reads at `DefaultMaxResponseSize` (1 MB) configurable via `WithMaxResponseSize`; `webhook.Parse`/`ParseRequest` cap at `DefaultMaxBodySize` (1 MB) configurable via `WithMaxBodySize`.
 - Retry on 429 Too Many Requests in addition to 5xx and network errors; 4xx (other than 429) and TLS certificate errors are never retried.
+
+### Security
+
+- **API key in Detail query string**: The `transaction.Service.Detail` method passes `api_key` as a URL query parameter because the upstream [Pakasir API](https://pakasir.com/p/docs) requires it as a `GET` endpoint. All other endpoints use `POST` with the key in the JSON body. This is an upstream API design constraint, not an SDK choice. The `Detail` godoc and both READMEs document this exposure risk.
