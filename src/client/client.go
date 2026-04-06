@@ -314,12 +314,9 @@ func (c *Client) waitForRetry(ctx context.Context, attempt int, retryAfterHint t
 	}
 
 	timer := time.NewTimer(wait)
+	defer timer.Stop()
 	select {
 	case <-ctx.Done():
-		// Stop may return false if the timer has already fired and
-		// its channel has a pending value. This is safe here because
-		// we return immediately without draining timer.C.
-		timer.Stop()
 		return ctx.Err()
 	case <-timer.C:
 		return nil
@@ -353,27 +350,37 @@ func (c *Client) buildRequest(ctx context.Context, method, path string, body []b
 // data out, and returns the buffer to the pool. The read is limited to
 // [maxResponseSize]+1 bytes so that a body of exactly [maxResponseSize]
 // is accepted while anything larger is rejected with [ErrResponseTooLarge].
+//
+// To avoid holding a full buffer when the body exceeds the limit, the
+// size check is performed before copying the data out.
 func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
 	defer resp.Body.Close()
 
 	buf := c.bufferPool.Get()
-	defer func() {
-		buf.Reset()
-		c.bufferPool.Put(buf)
-	}()
 
 	// Read one extra byte beyond the limit so we can distinguish
 	// "exactly at limit" (valid) from "over limit" (rejected).
-	if _, err := buf.ReadFrom(io.LimitReader(resp.Body, c.maxResponseSize+1)); err != nil {
-		return nil, fmt.Errorf("reading response body: %w", err)
+	_, readErr := buf.ReadFrom(io.LimitReader(resp.Body, c.maxResponseSize+1))
+
+	// Check the size before anything else so that on oversize
+	// rejection the buffer is returned to the pool immediately
+	// without allocating a copy.
+	if int64(buf.Len()) > c.maxResponseSize {
+		buf.Reset()
+		c.bufferPool.Put(buf)
+		return nil, fmt.Errorf("%w: exceeds %d bytes", ErrResponseTooLarge, c.maxResponseSize)
 	}
 
-	if int64(buf.Len()) > c.maxResponseSize {
-		return nil, fmt.Errorf("%w: exceeds %d bytes", ErrResponseTooLarge, c.maxResponseSize)
+	if readErr != nil {
+		buf.Reset()
+		c.bufferPool.Put(buf)
+		return nil, fmt.Errorf("reading response body: %w", readErr)
 	}
 
 	data := make([]byte, buf.Len())
 	copy(data, buf.Bytes())
+	buf.Reset()
+	c.bufferPool.Put(buf)
 	return data, nil
 }
 
@@ -460,8 +467,10 @@ func parseRetryAfter(header string) time.Duration {
 	}
 
 	// Try delay-seconds first (most common for 429 responses).
+	// Cap at 24 hours to prevent overflow when converting to time.Duration.
 	if seconds, err := strconv.ParseInt(strings.TrimSpace(header), 10, 64); err == nil && seconds > 0 {
-		return time.Duration(seconds) * time.Second
+		const maxSeconds int64 = 86400 // 24 hours
+		return time.Duration(min(seconds, maxSeconds)) * time.Second
 	}
 
 	// Try HTTP-date format.

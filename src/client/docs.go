@@ -60,7 +60,9 @@
 // using exponential backoff with full jitter. When a 429 response includes
 // a Retry-After header (delay-seconds or HTTP-date per RFC 9110), the
 // indicated delay is used instead of the calculated backoff, clamped to the
-// configured maximum wait ([WithRetryWait]).
+// configured maximum wait ([WithRetryWait]). Delay-seconds values are
+// capped at 24 hours before conversion to [time.Duration] to prevent
+// integer overflow from malicious headers.
 //
 // The [Client.Do] method delegates each attempt to unexported helpers
 // (validateCredentials, executeAttempt, handleResponse) to keep cyclomatic
@@ -77,7 +79,8 @@
 //
 // DNS timeouts remain retryable. Response body reads are limited to
 // [DefaultMaxResponseSize] (1 MB) by default; use [WithMaxResponseSize]
-// to adjust.
+// to adjust. Oversized responses are rejected early and the pooled buffer
+// is returned immediately without allocating a copy.
 //
 // All requests include an Accept: application/json header.
 //

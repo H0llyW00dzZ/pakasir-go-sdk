@@ -24,8 +24,10 @@ Invoke after changes involving:
 
 ### 1. Primary Documentation
 - `README.md` (source of truth for features, usage, project structure, API coverage)
+- `README.id.md` (Indonesian translation of README.md — must stay in sync)
 - `AGENTS.md` (build/lint/test commands, code style for agents)
 - `CONTRIBUTING.md` (contributor guide, development guidelines)
+- `CONTRIBUTING.id.md` (Indonesian translation of CONTRIBUTING.md — must stay in sync)
 
 ### 2. Package-Level GoDoc
 - `src/client/docs.go`
@@ -59,7 +61,7 @@ When adding new services or packages, create a `docs.go`, update README "Project
 Use tools (grep, glob, git via bash if needed) to examine recent changes, git diff, impacted functions/options/types.
 
 ### Step 1: Update Primary Docs
-Revise `README.md` (features, structure, API coverage table, payment methods table), `AGENTS.md` (commands, style guidelines, new patterns), and `CONTRIBUTING.md` (if development guidelines changed).
+Revise `README.md` and `README.id.md` (features, structure, API coverage table, payment methods table), `AGENTS.md` (commands, style guidelines, new patterns), and `CONTRIBUTING.md`/`CONTRIBUTING.id.md` (if development guidelines changed). Always update both English and Indonesian versions together to keep translations in sync.
 
 ### Step 2: Update GoDoc
 Update all `docs.go` files with accurate godoc, examples, option lists matching current code. Follow existing style: `# Heading` sections, `[TypeName]` bracket references, indented code blocks.
@@ -89,7 +91,7 @@ Output diffs/changes for review. Ensure no outdated references.
 ```
 docs: sync documentation after [brief change desc]
 
-- Update README.md and AGENTS.md
+- Update README.md, README.id.md, and AGENTS.md
 - Revise package docs in docs.go files
 - Verify with go vet, go test, gofmt
 ```
@@ -99,8 +101,10 @@ docs: sync documentation after [brief change desc]
 
 ## Verification Checklist
 - [ ] README.md updated (features, structure, API tables)
+- [ ] README.id.md updated (Indonesian translation kept in sync)
 - [ ] AGENTS.md updated (commands, layout, style)
 - [ ] CONTRIBUTING.md updated (if guidelines changed)
+- [ ] CONTRIBUTING.id.md updated (if guidelines changed)
 - [ ] `docs.go` files updated with accurate godoc
 - [ ] i18n translations complete (EN + ID)
 - [ ] `go vet ./src/...` passes

@@ -205,7 +205,7 @@ All parse functions return sentinel errors for programmatic handling via `errors
 | Sentinel | Condition |
 |---|---|
 | `webhook.ErrNilReader` | nil `io.Reader` passed to `Parse` |
-| `webhook.ErrNilRequest` | nil `*http.Request` or nil body passed to `ParseRequest` |
+| `webhook.ErrNilRequest` | nil `*http.Request` or nil body passed to `ParseRequest` (wraps `errors.ErrNilRequest`) |
 | `webhook.ErrEmptyBody` | empty payload passed to `ParseBytes` |
 | `webhook.ErrReadBody` | body read failure (wraps underlying cause) |
 | `webhook.ErrBodyTooLarge` | body exceeds configured size limit |
@@ -259,7 +259,7 @@ The SDK provides sentinel errors for programmatic handling via `errors.Is`:
 | `errors.ErrRequestFailedAfterRetries` | `errors` | All retry attempts exhausted |
 | `client.ErrResponseTooLarge` | `client` | Response body exceeds configured size limit |
 | `webhook.ErrNilReader` | `webhook` | nil `io.Reader` passed to `Parse` |
-| `webhook.ErrNilRequest` | `webhook` | nil `*http.Request` or nil body passed to `ParseRequest` |
+| `webhook.ErrNilRequest` | `webhook` | nil `*http.Request` or nil body passed to `ParseRequest` (wraps `errors.ErrNilRequest`) |
 | `webhook.ErrEmptyBody` | `webhook` | Empty payload |
 | `webhook.ErrReadBody` | `webhook` | Body read failure (wraps underlying cause) |
 | `webhook.ErrBodyTooLarge` | `webhook` | Body exceeds configured size limit |

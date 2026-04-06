@@ -205,7 +205,7 @@ Semua fungsi parse mengembalikan sentinel error untuk penanganan programatik mel
 | Sentinel | Kondisi |
 |---|---|
 | `webhook.ErrNilReader` | `io.Reader` nil diberikan ke `Parse` |
-| `webhook.ErrNilRequest` | `*http.Request` nil atau body nil diberikan ke `ParseRequest` |
+| `webhook.ErrNilRequest` | `*http.Request` nil atau body nil diberikan ke `ParseRequest` (membungkus `errors.ErrNilRequest`) |
 | `webhook.ErrEmptyBody` | Payload kosong diberikan ke `ParseBytes` |
 | `webhook.ErrReadBody` | Gagal membaca body (membungkus penyebab asli) |
 | `webhook.ErrBodyTooLarge` | Body melebihi batas ukuran yang dikonfigurasi |
@@ -259,7 +259,7 @@ SDK ini menyediakan sentinel error untuk penanganan programatik melalui `errors.
 | `errors.ErrRequestFailedAfterRetries` | `errors` | Semua percobaan retry habis |
 | `client.ErrResponseTooLarge` | `client` | Body response melebihi batas ukuran yang dikonfigurasi |
 | `webhook.ErrNilReader` | `webhook` | `io.Reader` nil diberikan ke `Parse` |
-| `webhook.ErrNilRequest` | `webhook` | `*http.Request` nil atau body nil diberikan ke `ParseRequest` |
+| `webhook.ErrNilRequest` | `webhook` | `*http.Request` nil atau body nil diberikan ke `ParseRequest` (membungkus `errors.ErrNilRequest`) |
 | `webhook.ErrEmptyBody` | `webhook` | Payload kosong |
 | `webhook.ErrReadBody` | `webhook` | Gagal membaca body (membungkus penyebab asli) |
 | `webhook.ErrBodyTooLarge` | `webhook` | Body melebihi batas ukuran yang dikonfigurasi |
