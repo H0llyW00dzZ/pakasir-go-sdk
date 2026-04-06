@@ -160,7 +160,6 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 		if err := c.waitForRetry(ctx, attempt, retryAfterHint); err != nil {
 			return nil, err
 		}
-		retryAfterHint = 0
 
 		data, hint, err := c.executeAttempt(ctx, method, path, body)
 		if err == nil {
