@@ -92,7 +92,7 @@ func TestSentinelErrors(t *testing.T) {
 	sentinels := []error{
 		ErrInvalidProject, ErrInvalidAPIKey, ErrInvalidAmount,
 		ErrInvalidOrderID, ErrInvalidPaymentMethod,
-		ErrNilRequest, ErrEncodeJSON,
+		ErrNilRequest, ErrEncodeJSON, ErrDecodeJSON,
 		ErrRequestFailed, ErrRequestFailedAfterRetries,
 	}
 	for _, s := range sentinels {
@@ -154,4 +154,12 @@ func TestAsTypeDirect(t *testing.T) {
 	apiErr, ok := AsType[*APIError](err)
 	require.True(t, ok)
 	assert.Equal(t, 500, apiErr.StatusCode)
+}
+
+func TestAsTypeDeeplyNested(t *testing.T) {
+	err := fmt.Errorf("a: %w", fmt.Errorf("b: %w", &APIError{StatusCode: 502, Body: "bad gateway"}))
+	apiErr, ok := AsType[*APIError](err)
+	require.True(t, ok)
+	assert.Equal(t, 502, apiErr.StatusCode)
+	assert.Equal(t, "bad gateway", apiErr.Body)
 }

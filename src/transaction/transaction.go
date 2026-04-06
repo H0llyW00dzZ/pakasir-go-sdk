@@ -75,7 +75,7 @@ func (s *Service) Create(ctx context.Context, method constants.PaymentMethod, re
 
 	var resp CreateResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, sdkerrors.New(s.client.Lang(), sdkerrors.ErrDecodeJSON, i18n.MsgFailedToDecode, err)
 	}
 
 	return &resp, nil
@@ -145,7 +145,7 @@ func (s *Service) Detail(ctx context.Context, req *DetailRequest) (*DetailRespon
 
 	var resp DetailResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, sdkerrors.New(s.client.Lang(), sdkerrors.ErrDecodeJSON, i18n.MsgFailedToDecode, err)
 	}
 
 	return &resp, nil

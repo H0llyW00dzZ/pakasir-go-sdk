@@ -128,6 +128,7 @@ func TestCreateInvalidJSONResponse(t *testing.T) {
 	_, err := svc.Create(context.Background(), constants.MethodQRIS, &CreateRequest{OrderID: "INV123", Amount: 99000})
 	require.Error(t, err)
 	t.Log(err)
+	assert.ErrorIs(t, err, sdkerrors.ErrDecodeJSON)
 	assert.Contains(t, err.Error(), "failed to decode response")
 }
 
@@ -241,6 +242,7 @@ func TestDetailInvalidJSONResponse(t *testing.T) {
 	_, err := svc.Detail(context.Background(), &DetailRequest{OrderID: "INV123", Amount: 22000})
 	require.Error(t, err)
 	t.Log(err)
+	assert.ErrorIs(t, err, sdkerrors.ErrDecodeJSON)
 	assert.Contains(t, err.Error(), "failed to decode response")
 }
 

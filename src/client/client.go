@@ -65,6 +65,14 @@ const (
 // oversized response is a deterministic server behavior.
 var ErrResponseTooLarge = errors.New("response body too large")
 
+// stopRetry wraps an error that must not be retried. The [Client.Do]
+// loop checks for this type to break immediately and return the inner
+// error to the caller without wrapping it in a retries-exhausted message.
+type stopRetry struct{ err error }
+
+func (s *stopRetry) Error() string { return s.err.Error() }
+func (s *stopRetry) Unwrap() error { return s.err }
+
 // Client is the core Pakasir API client.
 // It manages HTTP communication, authentication, retry logic,
 // and buffer pooling for efficient request processing.
@@ -106,6 +114,12 @@ type Client struct {
 // New creates a new Pakasir API [Client] with the given project slug, API key,
 // and optional configuration via functional options.
 //
+// Options are applied in order. When combining [WithHTTPClient] and
+// [WithTimeout], pass [WithHTTPClient] first so that [WithTimeout]
+// overrides the custom client's timeout. If [WithHTTPClient] is applied
+// last, it replaces the entire HTTP client and discards earlier timeout
+// changes.
+//
 // Credential validation (project and API key) is deferred to [Client.Do],
 // so callers do not need to handle an error at initialization time.
 func New(project, apiKey string, opts ...Option) *Client {
@@ -141,11 +155,8 @@ func New(project, apiKey string, opts ...Option) *Client {
 // Retry-After header, the client respects the indicated delay (clamped
 // to [Client.retryWaitMax]) instead of using the calculated backoff.
 func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]byte, error) {
-	if c.project == "" {
-		return nil, sdkerrors.New(c.language, sdkerrors.ErrInvalidProject, i18n.MsgInvalidProject)
-	}
-	if c.apiKey == "" {
-		return nil, sdkerrors.New(c.language, sdkerrors.ErrInvalidAPIKey, i18n.MsgInvalidAPIKey)
+	if err := c.validateCredentials(); err != nil {
+		return nil, err
 	}
 
 	var lastErr error
@@ -157,51 +168,97 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 		}
 		retryAfterHint = 0
 
-		req, err := c.buildRequest(ctx, method, path, body)
-		if err != nil {
-			return nil, err
-		}
-
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			lastErr = err
-			if !isRetryable(err) {
-				return nil, c.permanentError(lastErr)
-			}
-			continue
-		}
-
-		data, readErr := c.readResponseBody(resp)
-		if readErr != nil {
-			lastErr = readErr
-			if !isRetryable(readErr) {
-				return nil, c.permanentError(lastErr)
-			}
-			continue
-		}
-
-		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		data, hint, err := c.executeAttempt(ctx, method, path, body)
+		if err == nil {
 			return data, nil
 		}
-
-		apiErr := &sdkerrors.APIError{
-			StatusCode: resp.StatusCode,
-			Body:       string(data),
+		if stop := (*stopRetry)(nil); errors.As(err, &stop) {
+			return nil, stop.err
 		}
-
-		if !isRetryableStatus(resp.StatusCode) {
-			return nil, apiErr
-		}
-
-		if resp.StatusCode == http.StatusTooManyRequests {
-			retryAfterHint = parseRetryAfter(resp.Header.Get("Retry-After"))
-		}
-		lastErr = apiErr
+		lastErr = err
+		retryAfterHint = hint
 	}
 
-	// All retries exhausted.
+	return nil, c.retriesExhaustedError(lastErr)
+}
+
+// validateCredentials returns an error if the project slug or API key is empty.
+func (c *Client) validateCredentials() error {
+	if c.project == "" {
+		return sdkerrors.New(c.language, sdkerrors.ErrInvalidProject, i18n.MsgInvalidProject)
+	}
+	if c.apiKey == "" {
+		return sdkerrors.New(c.language, sdkerrors.ErrInvalidAPIKey, i18n.MsgInvalidAPIKey)
+	}
+	return nil
+}
+
+// executeAttempt performs a single HTTP round-trip and interprets the result.
+// It returns the response data on success, or an error to be retried.
+// A non-zero retryAfterHint is set when the server responds with 429 and
+// includes a Retry-After header.
+//
+// Returning a non-nil error does not necessarily mean the caller should
+// retry; [permanentError] results are returned directly to the caller
+// of [Client.Do] via a wrapped panic-free sentinel.
+func (c *Client) executeAttempt(ctx context.Context, method, path string, body []byte) ([]byte, time.Duration, error) {
+	req, err := c.buildRequest(ctx, method, path, body)
+	if err != nil {
+		return nil, 0, &stopRetry{err}
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		if !isRetryable(err) {
+			return nil, 0, &stopRetry{c.permanentError(err)}
+		}
+		if ctx.Err() != nil {
+			return nil, 0, &stopRetry{ctx.Err()}
+		}
+		return nil, 0, err
+	}
+
+	return c.handleResponse(resp)
+}
+
+// handleResponse reads the response body and classifies the HTTP status.
+// It returns the body bytes on 2xx, a non-retryable [sdkerrors.APIError]
+// on 4xx (except 429), or a retryable error for 5xx/429 statuses.
+// A non-zero duration is returned when a 429 response includes a
+// Retry-After header.
+func (c *Client) handleResponse(resp *http.Response) ([]byte, time.Duration, error) {
+	data, readErr := c.readResponseBody(resp)
+	if readErr != nil {
+		if !isRetryable(readErr) {
+			return nil, 0, &stopRetry{c.permanentError(readErr)}
+		}
+		return nil, 0, readErr
+	}
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return data, 0, nil
+	}
+
+	apiErr := &sdkerrors.APIError{
+		StatusCode: resp.StatusCode,
+		Body:       string(data),
+	}
+
+	if !isRetryableStatus(resp.StatusCode) {
+		return nil, 0, &stopRetry{apiErr}
+	}
+
+	var hint time.Duration
+	if resp.StatusCode == http.StatusTooManyRequests {
+		hint = parseRetryAfter(resp.Header.Get("Retry-After"))
+	}
+	return nil, hint, apiErr
+}
+
+// retriesExhaustedError wraps lastErr with a localized retries-exhausted message.
+func (c *Client) retriesExhaustedError(lastErr error) error {
 	msg := fmt.Sprintf(i18n.Get(c.language, i18n.MsgRequestFailedAfterRetries), c.retries)
-	return nil, fmt.Errorf("%s: %w: %w", msg, sdkerrors.ErrRequestFailedAfterRetries, lastErr)
+	return fmt.Errorf("%s: %w: %w", msg, sdkerrors.ErrRequestFailedAfterRetries, lastErr)
 }
 
 // GetBufferPool returns the client's buffer pool for use by services.

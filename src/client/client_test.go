@@ -951,3 +951,12 @@ func TestAsTypeAPIErrorOnPermanentFailure(t *testing.T) {
 	assert.False(t, ok, "TLS permanent error must not match APIError")
 	assert.Nil(t, apiErr)
 }
+
+// --- stopRetry ---
+
+func TestStopRetryErrorAndUnwrap(t *testing.T) {
+	inner := errors.New("permanent failure")
+	sr := &stopRetry{err: inner}
+	assert.Equal(t, "permanent failure", sr.Error())
+	assert.Equal(t, inner, sr.Unwrap())
+}
