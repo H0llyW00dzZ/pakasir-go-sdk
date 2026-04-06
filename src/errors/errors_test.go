@@ -92,6 +92,7 @@ func TestSentinelErrors(t *testing.T) {
 	sentinels := []error{
 		ErrInvalidProject, ErrInvalidAPIKey, ErrInvalidAmount,
 		ErrInvalidOrderID, ErrInvalidPaymentMethod,
+		ErrNilRequest, ErrEncodeJSON,
 		ErrRequestFailed, ErrRequestFailedAfterRetries,
 	}
 	for _, s := range sentinels {
@@ -122,4 +123,5 @@ func TestNewMultipleCauses(t *testing.T) {
 	t.Log(err)
 	assert.ErrorIs(t, err, ErrRequestFailed)
 	assert.ErrorIs(t, err, cause1)
+	assert.NotErrorIs(t, err, cause2)
 }

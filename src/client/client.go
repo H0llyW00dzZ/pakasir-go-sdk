@@ -25,7 +25,6 @@ import (
 	"math"
 	"math/rand/v2"
 	"net/http"
-	neturl "net/url"
 	"time"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
@@ -158,11 +157,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 		if err != nil {
 			lastErr = err
 			if !isRetryable(err) {
-				return nil, fmt.Errorf("%s: %w: %w",
-					i18n.Get(c.language, i18n.MsgRequestFailedPermanent),
-					sdkerrors.ErrRequestFailed,
-					lastErr,
-				)
+				return nil, c.permanentError(lastErr)
 			}
 			continue
 		}
@@ -171,11 +166,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 		if readErr != nil {
 			lastErr = readErr
 			if !isRetryable(readErr) {
-				return nil, fmt.Errorf("%s: %w: %w",
-					i18n.Get(c.language, i18n.MsgRequestFailedPermanent),
-					sdkerrors.ErrRequestFailed,
-					lastErr,
-				)
+				return nil, c.permanentError(lastErr)
 			}
 			continue
 		}
@@ -229,6 +220,15 @@ func (c *Client) Lang() i18n.Language { return c.language }
 //	w.Header().Set("Content-Type", "image/png")
 //	err := c.QR().Write(w, paymentInfo.PaymentNumber)
 func (c *Client) QR() *qr.QR { return c.qrGen }
+
+// permanentError wraps err as a non-retryable failure with a localized message.
+func (c *Client) permanentError(err error) error {
+	return fmt.Errorf("%s: %w: %w",
+		i18n.Get(c.language, i18n.MsgRequestFailedPermanent),
+		sdkerrors.ErrRequestFailed,
+		err,
+	)
+}
 
 // waitForRetry blocks until the backoff timer fires or the context is
 // cancelled. On the first attempt (0) it returns immediately.
@@ -332,6 +332,10 @@ func isRetryableStatus(statusCode int) bool {
 // and worth retrying. TLS certificate errors, oversized responses,
 // and other permanent failures return false to avoid wasting retry
 // attempts.
+//
+// The [errors.AsType] checks traverse the entire error chain, including
+// errors nested inside [*net/url.Error] via its Unwrap method, so no
+// manual unwrapping is required.
 func isRetryable(err error) bool {
 	if err == nil {
 		return false
@@ -340,11 +344,6 @@ func isRetryable(err error) bool {
 	// Oversized responses are deterministic — do not retry.
 	if errors.Is(err, ErrResponseTooLarge) {
 		return false
-	}
-
-	// Unwrap *url.Error to inspect the underlying cause.
-	if urlErr, ok := errors.AsType[*neturl.Error](err); ok {
-		err = urlErr.Err
 	}
 
 	// TLS certificate errors are permanent — do not retry.

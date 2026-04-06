@@ -208,6 +208,7 @@ All parse functions return sentinel errors for programmatic handling via `errors
 | `webhook.ErrNilRequest` | nil `*http.Request` or nil body passed to `ParseRequest` |
 | `webhook.ErrEmptyBody` | empty payload passed to `ParseBytes` |
 | `webhook.ErrReadBody` | body read failure (wraps underlying cause) |
+| `webhook.ErrBodyTooLarge` | body exceeds configured size limit |
 | `webhook.ErrDecodeBody` | JSON decode failure (wraps underlying cause) |
 
 ```go
@@ -255,6 +256,15 @@ The SDK provides sentinel errors for programmatic handling via `errors.Is`:
 | `errors.ErrEncodeJSON` | `errors` | JSON marshaling of a request body failed |
 | `errors.ErrRequestFailed` | `errors` | Permanent request failure (non-retryable) |
 | `errors.ErrRequestFailedAfterRetries` | `errors` | All retry attempts exhausted |
+| `client.ErrResponseTooLarge` | `client` | Response body exceeds configured size limit |
+| `webhook.ErrNilReader` | `webhook` | nil `io.Reader` passed to `Parse` |
+| `webhook.ErrNilRequest` | `webhook` | nil `*http.Request` or nil body passed to `ParseRequest` |
+| `webhook.ErrEmptyBody` | `webhook` | Empty payload |
+| `webhook.ErrReadBody` | `webhook` | Body read failure (wraps underlying cause) |
+| `webhook.ErrBodyTooLarge` | `webhook` | Body exceeds configured size limit |
+| `webhook.ErrDecodeBody` | `webhook` | JSON decode failure (wraps underlying cause) |
+| `qr.ErrEmptyContent` | `qr` | Empty string passed to `Encode`, `Write`, or `WriteFile` |
+| `qr.ErrEncodeFailed` | `qr` | QR encoding failed (wraps underlying cause) |
 | `url.ErrEmptyBaseURL` | `url` | Empty base URL |
 | `url.ErrEmptyProject` | `url` | Empty project slug |
 | `url.ErrEmptyOrderID` | `url` | Empty order ID |
