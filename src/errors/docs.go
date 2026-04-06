@@ -34,6 +34,19 @@
 // The [APIError] type captures non-2xx HTTP responses from the Pakasir API,
 // including the status code and raw response body for diagnostics.
 //
+// # Type-Safe Error Extraction
+//
+// [AsType] is a generic convenience wrapper around the standard library's
+// [errors.AsType]. It extracts the first error in the chain matching a
+// concrete type, eliminating the need for a separate variable declaration:
+//
+//	if apiErr, ok := sdkerrors.AsType[*sdkerrors.APIError](err); ok {
+//	    fmt.Printf("status %d: %s\n", apiErr.StatusCode, apiErr.Body)
+//	}
+//
+// This is re-exported so that callers who import this package as sdkerrors
+// do not need an additional import of the standard errors package.
+//
 // # Localized Error Creation
 //
 // Use [New] to create errors with localized messages:

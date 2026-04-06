@@ -125,3 +125,33 @@ func TestNewMultipleCauses(t *testing.T) {
 	assert.ErrorIs(t, err, cause1)
 	assert.NotErrorIs(t, err, cause2)
 }
+
+// --- AsType ---
+
+func TestAsTypeMatch(t *testing.T) {
+	err := fmt.Errorf("wrapped: %w", &APIError{StatusCode: 404, Body: "not found"})
+	apiErr, ok := AsType[*APIError](err)
+	require.True(t, ok)
+	assert.Equal(t, 404, apiErr.StatusCode)
+	assert.Equal(t, "not found", apiErr.Body)
+}
+
+func TestAsTypeNoMatch(t *testing.T) {
+	err := errors.New("plain error")
+	apiErr, ok := AsType[*APIError](err)
+	assert.False(t, ok)
+	assert.Nil(t, apiErr)
+}
+
+func TestAsTypeNilError(t *testing.T) {
+	apiErr, ok := AsType[*APIError](nil)
+	assert.False(t, ok)
+	assert.Nil(t, apiErr)
+}
+
+func TestAsTypeDirect(t *testing.T) {
+	err := &APIError{StatusCode: 500, Body: "internal"}
+	apiErr, ok := AsType[*APIError](err)
+	require.True(t, ok)
+	assert.Equal(t, 500, apiErr.StatusCode)
+}

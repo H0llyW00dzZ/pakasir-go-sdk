@@ -65,6 +65,21 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("pakasir api error: status %d: %s", e.StatusCode, e.Body)
 }
 
+// AsType extracts the first error in err's chain that matches the type T.
+// It returns the matched value and true on success, or the zero value of T
+// and false if no match is found.
+//
+// This is a convenience re-export of the standard library's
+// [errors.AsType] so that callers who import this package as sdkerrors
+// do not need a separate import of the standard errors package.
+//
+// Example:
+//
+//	if apiErr, ok := sdkerrors.AsType[*sdkerrors.APIError](err); ok {
+//	    fmt.Printf("status %d: %s\n", apiErr.StatusCode, apiErr.Body)
+//	}
+func AsType[T error](err error) (T, bool) { return errors.AsType[T](err) }
+
 // New creates a localized error wrapping the provided sentinel error.
 // The localized message is resolved using the given language and message key.
 //
