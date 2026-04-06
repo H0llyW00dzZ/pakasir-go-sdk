@@ -78,6 +78,7 @@ func TestQREncode(t *testing.T) {
 	t.Run("returns ErrEmptyContent for empty string", func(t *testing.T) {
 		_, err := q.Encode("")
 		require.Error(t, err)
+		t.Log(err)
 		assert.ErrorIs(t, err, ErrEmptyContent)
 	})
 
@@ -87,9 +88,9 @@ func TestQREncode(t *testing.T) {
 		longContent := string(make([]byte, 5000))
 		_, err := q.Encode(longContent)
 		require.Error(t, err)
+		t.Log(err)
 		assert.ErrorIs(t, err, ErrEncodeFailed)
 		assert.NotErrorIs(t, err, ErrEmptyContent)
-		t.Logf("Full error: %v", err)
 	})
 
 	t.Run("respects custom size option", func(t *testing.T) {
@@ -178,6 +179,7 @@ func TestQRWrite(t *testing.T) {
 		var buf bytes.Buffer
 		err := q.Write(&buf, "")
 		require.Error(t, err)
+		t.Log(err)
 		assert.ErrorIs(t, err, ErrEmptyContent)
 	})
 }
@@ -219,6 +221,7 @@ func TestQRWriteFile(t *testing.T) {
 
 		err := q.WriteFile(filename, "")
 		require.Error(t, err)
+		t.Log(err)
 		assert.ErrorIs(t, err, ErrEmptyContent)
 
 		_, err = os.Stat(filename)

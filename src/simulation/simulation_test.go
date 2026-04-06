@@ -56,6 +56,8 @@ func TestPayNilRequest(t *testing.T) {
 	defer srv.Close()
 
 	err := svc.Pay(context.Background(), nil)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrNilRequest)
 }
 
@@ -64,6 +66,8 @@ func TestPayEmptyOrderID(t *testing.T) {
 	defer srv.Close()
 
 	err := svc.Pay(context.Background(), &PayRequest{OrderID: "", Amount: 99000})
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
 }
 
@@ -71,8 +75,15 @@ func TestPayInvalidAmount(t *testing.T) {
 	svc, srv := newTestService(t, func(w http.ResponseWriter, r *http.Request) {})
 	defer srv.Close()
 
-	assert.ErrorIs(t, svc.Pay(context.Background(), &PayRequest{OrderID: "INV123", Amount: 0}), sdkerrors.ErrInvalidAmount)
-	assert.ErrorIs(t, svc.Pay(context.Background(), &PayRequest{OrderID: "INV123", Amount: -500}), sdkerrors.ErrInvalidAmount)
+	err := svc.Pay(context.Background(), &PayRequest{OrderID: "INV123", Amount: 0})
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAmount)
+
+	err = svc.Pay(context.Background(), &PayRequest{OrderID: "INV123", Amount: -500})
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAmount)
 }
 
 func TestPayAPIError(t *testing.T) {
@@ -84,6 +95,7 @@ func TestPayAPIError(t *testing.T) {
 
 	err := svc.Pay(context.Background(), &PayRequest{OrderID: "INV123", Amount: 99000})
 	require.Error(t, err)
+	t.Log(err)
 	var apiErr *sdkerrors.APIError
 	assert.ErrorAs(t, err, &apiErr)
 }
@@ -121,5 +133,6 @@ func TestPayEncodeError(t *testing.T) {
 
 	err := svc.Pay(context.Background(), &PayRequest{OrderID: "INV123", Amount: 99000})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrEncodeJSON)
 }

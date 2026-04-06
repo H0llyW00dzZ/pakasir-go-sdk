@@ -46,9 +46,11 @@ func TestParseRFC3339UTC(t *testing.T) {
 func TestParseInvalid(t *testing.T) {
 	_, err := Parse("not-a-date")
 	require.Error(t, err)
+	t.Log(err)
 }
 
 func TestParseEmpty(t *testing.T) {
 	_, err := Parse("")
 	require.Error(t, err)
+	t.Log(err)
 }

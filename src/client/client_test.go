@@ -99,6 +99,7 @@ func TestDoEmptyProject(t *testing.T) {
 	c := New("", "my-key")
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidProject)
 }
 
@@ -106,6 +107,7 @@ func TestDoEmptyAPIKey(t *testing.T) {
 	c := New("my-project", "")
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAPIKey)
 }
 
@@ -113,6 +115,7 @@ func TestDoEmptyProjectIndonesian(t *testing.T) {
 	c := New("", "my-key", WithLanguage(i18n.Indonesian))
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 	assert.Contains(t, err.Error(), "slug proyek wajib diisi")
 }
 
@@ -155,6 +158,7 @@ func TestDo4xxReturnsAPIError(t *testing.T) {
 	c := newTestClient(t, srv.URL)
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 
 	var apiErr *sdkerrors.APIError
 	require.ErrorAs(t, err, &apiErr)
@@ -249,6 +253,7 @@ func TestDoRetriesExhausted(t *testing.T) {
 	)
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
 	assert.Contains(t, err.Error(), "request failed after")
 }
@@ -266,6 +271,7 @@ func TestDoContextCancelled(t *testing.T) {
 
 	_, err := c.Do(ctx, http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 }
 
 func TestDoContextCancelledDuringBackoff(t *testing.T) {
@@ -284,18 +290,21 @@ func TestDoContextCancelledDuringBackoff(t *testing.T) {
 
 	_, err := c.Do(ctx, http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 }
 
 func TestDoNetworkError(t *testing.T) {
 	c := newTestClient(t, "http://127.0.0.1:1")
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 }
 
 func TestDoInvalidURL(t *testing.T) {
 	c := New("proj", "key", WithBaseURL("://invalid"), WithRetries(0))
 	_, doErr := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, doErr)
+	t.Log(doErr)
 	assert.Contains(t, doErr.Error(), "failed to create request")
 }
 
@@ -308,6 +317,7 @@ func TestDoNetworkErrorRetryExhausted(t *testing.T) {
 
 	_, doErr := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, doErr)
+	t.Log(doErr)
 	assert.ErrorIs(t, doErr, sdkerrors.ErrRequestFailedAfterRetries)
 	assert.Contains(t, doErr.Error(), "request failed after")
 }
@@ -346,6 +356,7 @@ func TestDoReadBodyError(t *testing.T) {
 
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 	// With 0 retries the read error becomes the last error and retries are exhausted.
 	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
 }
@@ -405,6 +416,7 @@ func TestDoReadBodyNonRetryableError(t *testing.T) {
 
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 	// Must fail immediately with ErrRequestFailed, not exhaust retries.
 	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailed)
 	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
@@ -432,6 +444,7 @@ func TestDoResponseBodyExceedsLimit(t *testing.T) {
 
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrResponseTooLarge)
 }
 
@@ -454,6 +467,7 @@ func TestDoResponseBodyCustomLimit(t *testing.T) {
 
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrResponseTooLarge)
 }
 
@@ -498,6 +512,7 @@ func TestDoResponseBodyExceedsLimitNotRetried(t *testing.T) {
 
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 	// Must fail immediately with ErrRequestFailed, not exhaust retries.
 	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailed)
 	assert.ErrorIs(t, err, ErrResponseTooLarge)
@@ -686,6 +701,7 @@ func TestDoNonRetryableNetworkError(t *testing.T) {
 
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
+	t.Log(err)
 	// Must fail immediately with ErrRequestFailed, not ErrRequestFailedAfterRetries.
 	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailed)
 	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)

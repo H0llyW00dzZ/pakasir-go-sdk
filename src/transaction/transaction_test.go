@@ -74,6 +74,8 @@ func TestCreateInvalidMethod(t *testing.T) {
 	defer srv.Close()
 
 	_, err := svc.Create(context.Background(), "bitcoin", &CreateRequest{OrderID: "INV123", Amount: 99000})
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidPaymentMethod)
 }
 
@@ -82,6 +84,8 @@ func TestCreateEmptyOrderID(t *testing.T) {
 	defer srv.Close()
 
 	_, err := svc.Create(context.Background(), constants.MethodQRIS, &CreateRequest{OrderID: "", Amount: 99000})
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
 }
 
@@ -90,9 +94,13 @@ func TestCreateInvalidAmount(t *testing.T) {
 	defer srv.Close()
 
 	_, err := svc.Create(context.Background(), constants.MethodQRIS, &CreateRequest{OrderID: "INV123", Amount: 0})
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAmount)
 
 	_, err = svc.Create(context.Background(), constants.MethodQRIS, &CreateRequest{OrderID: "INV123", Amount: -100})
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAmount)
 }
 
@@ -105,6 +113,7 @@ func TestCreateAPIError(t *testing.T) {
 
 	_, err := svc.Create(context.Background(), constants.MethodQRIS, &CreateRequest{OrderID: "INV123", Amount: 99000})
 	require.Error(t, err)
+	t.Log(err)
 	var apiErr *sdkerrors.APIError
 	assert.ErrorAs(t, err, &apiErr)
 }
@@ -118,6 +127,7 @@ func TestCreateInvalidJSONResponse(t *testing.T) {
 
 	_, err := svc.Create(context.Background(), constants.MethodQRIS, &CreateRequest{OrderID: "INV123", Amount: 99000})
 	require.Error(t, err)
+	t.Log(err)
 	assert.Contains(t, err.Error(), "failed to decode response")
 }
 
@@ -126,6 +136,8 @@ func TestCreateNilRequest(t *testing.T) {
 	defer srv.Close()
 
 	_, err := svc.Create(context.Background(), constants.MethodQRIS, nil)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrNilRequest)
 }
 
@@ -149,6 +161,8 @@ func TestCancelEmptyOrderID(t *testing.T) {
 	defer srv.Close()
 
 	err := svc.Cancel(context.Background(), &CancelRequest{OrderID: "", Amount: 99000})
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
 }
 
@@ -157,6 +171,8 @@ func TestCancelInvalidAmount(t *testing.T) {
 	defer srv.Close()
 
 	err := svc.Cancel(context.Background(), &CancelRequest{OrderID: "INV123", Amount: 0})
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAmount)
 }
 
@@ -165,6 +181,8 @@ func TestCancelNilRequest(t *testing.T) {
 	defer srv.Close()
 
 	err := svc.Cancel(context.Background(), nil)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrNilRequest)
 }
 
@@ -198,6 +216,8 @@ func TestDetailEmptyOrderID(t *testing.T) {
 	defer srv.Close()
 
 	_, err := svc.Detail(context.Background(), &DetailRequest{OrderID: "", Amount: 22000})
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidOrderID)
 }
 
@@ -206,6 +226,8 @@ func TestDetailInvalidAmount(t *testing.T) {
 	defer srv.Close()
 
 	_, err := svc.Detail(context.Background(), &DetailRequest{OrderID: "INV123", Amount: -1})
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrInvalidAmount)
 }
 
@@ -218,6 +240,7 @@ func TestDetailInvalidJSONResponse(t *testing.T) {
 
 	_, err := svc.Detail(context.Background(), &DetailRequest{OrderID: "INV123", Amount: 22000})
 	require.Error(t, err)
+	t.Log(err)
 	assert.Contains(t, err.Error(), "failed to decode response")
 }
 
@@ -226,6 +249,8 @@ func TestDetailNilRequest(t *testing.T) {
 	defer srv.Close()
 
 	_, err := svc.Detail(context.Background(), nil)
+	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrNilRequest)
 }
 
@@ -249,6 +274,7 @@ func TestPaymentInfoParseTimeInvalid(t *testing.T) {
 	p := &PaymentInfo{ExpiredAt: "not-a-date"}
 	_, err := p.ParseTime()
 	require.Error(t, err)
+	t.Log(err)
 }
 
 func TestTransactionInfoParseTimeRFC3339(t *testing.T) {
@@ -269,6 +295,7 @@ func TestTransactionInfoParseTimeInvalid(t *testing.T) {
 	info := &TransactionInfo{CompletedAt: "invalid"}
 	_, err := info.ParseTime()
 	require.Error(t, err)
+	t.Log(err)
 }
 
 // --- Encode errors ---
@@ -306,6 +333,7 @@ func TestCreateEncodeError(t *testing.T) {
 	svc := NewService(newEncodeErrorClient())
 	_, err := svc.Create(context.Background(), constants.MethodQRIS, &CreateRequest{OrderID: "INV123", Amount: 99000})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrEncodeJSON)
 }
 
@@ -313,6 +341,7 @@ func TestCancelEncodeError(t *testing.T) {
 	svc := NewService(newEncodeErrorClient())
 	err := svc.Cancel(context.Background(), &CancelRequest{OrderID: "INV123", Amount: 99000})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrEncodeJSON)
 }
 
@@ -328,4 +357,5 @@ func TestDetailDoError(t *testing.T) {
 	svc := NewService(c)
 	_, err := svc.Detail(context.Background(), &DetailRequest{OrderID: "INV123", Amount: 22000})
 	require.Error(t, err)
+	t.Log(err)
 }

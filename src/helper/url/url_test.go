@@ -67,24 +67,28 @@ func TestBuildAllOptions(t *testing.T) {
 func TestBuildEmptyOrderID(t *testing.T) {
 	_, err := Build("https://app.pakasir.com", "proj", 22000, Options{OrderID: ""})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrEmptyOrderID)
 }
 
 func TestBuildZeroAmount(t *testing.T) {
 	_, err := Build("https://app.pakasir.com", "proj", 0, Options{OrderID: "INV1"})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrInvalidAmount)
 }
 
 func TestBuildNegativeAmount(t *testing.T) {
 	_, err := Build("https://app.pakasir.com", "proj", -100, Options{OrderID: "INV1"})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrInvalidAmount)
 }
 
 func TestBuildEmptyProject(t *testing.T) {
 	_, err := Build("https://app.pakasir.com", "", 22000, Options{OrderID: "INV1"})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrEmptyProject)
 }
 
@@ -104,5 +108,6 @@ func TestBuildProjectWithSpecialChars(t *testing.T) {
 func TestBuildEmptyBaseURL(t *testing.T) {
 	_, err := Build("", "proj", 22000, Options{OrderID: "INV1"})
 	require.Error(t, err)
+	t.Log(err)
 	assert.ErrorIs(t, err, ErrEmptyBaseURL)
 }
