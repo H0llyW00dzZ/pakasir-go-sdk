@@ -56,7 +56,7 @@ func TestNewWithContextString(t *testing.T) {
 
 func TestNewWithCauseError(t *testing.T) {
 	cause := fmt.Errorf("network timeout")
-	err := New(i18n.English, ErrRequestFailed, i18n.MsgRequestFailed, cause)
+	err := New(i18n.English, ErrRequestFailed, i18n.MsgRequestFailedPermanent, cause)
 	require.Error(t, err)
 	t.Log(err)
 	assert.ErrorIs(t, err, ErrRequestFailed)
@@ -117,7 +117,7 @@ func TestNewMultipleCauses(t *testing.T) {
 	cause1 := errors.New("first")
 	cause2 := errors.New("second")
 	// Only the first error cause should be wrapped.
-	err := New(i18n.English, ErrRequestFailed, i18n.MsgRequestFailed, cause1, cause2)
+	err := New(i18n.English, ErrRequestFailed, i18n.MsgRequestFailedPermanent, cause1, cause2)
 	require.Error(t, err)
 	t.Log(err)
 	assert.ErrorIs(t, err, ErrRequestFailed)
