@@ -102,7 +102,7 @@ Alias `net/url` as `neturl` when inside the `url` package.
 - **Constants**: grouped in `const ()` blocks with consistent prefix — `Method*`, `Status*`, `Default*`, `Msg*`, `Err*`, `SDK*`.
 - **Enums**: typed strings (`PaymentMethod string`, `TransactionStatus string`, `Language string`, `MessageKey string`) with a `Valid()` method and unexported validation map.
 - **Constructors**: `New(...)` returns `*Client` (no error); `NewService(c)` for service types. Credential validation is deferred to `Do()`.
-- **Functional options**: `type Option func(*Client)` with `With*` functions.
+- **Functional options**: `type Option func(*Client)` with `With*` functions. Webhook parsing uses `type ParseOption func(*parseConfig)` with `WithMaxBodySize`.
 - **Getters**: exported read-only accessors for encapsulated fields — `Project()`, `APIKey()`, `Lang()`, `GetBufferPool()`, `QR()`. Service packages use these to read client state.
 - **Receivers**: single-letter matching the type (`c *Client`, `s *Service`, `e *Event`, `m PaymentMethod`, `s TransactionStatus`).
 - **Unexported helpers**: camelCase (`isRetryable`, `calculateBackoff`, `validateRequest`).
@@ -188,5 +188,5 @@ Three direct dependencies — keep the footprint minimal:
 - Internal packages (`src/internal/`) for shared types and validation not exposed to consumers.
 - Shared validation via `request.ValidateOrderAndAmount` (avoid duplicating order/amount checks).
 - Shared JSON encoding via `request.EncodeJSON` (centralizes buffer pool acquire/encode/release).
-- Response body limiting: `client.Do` caps reads at 10 MB (`maxResponseSize`); `webhook.Parse`/`ParseRequest` cap at 1 MB.
+- Response body limiting: `client.Do` caps reads at `DefaultMaxResponseSize` (1 MB) configurable via `WithMaxResponseSize`; `webhook.Parse`/`ParseRequest` cap at `DefaultMaxBodySize` (1 MB) configurable via `WithMaxBodySize`.
 - Retry on 429 Too Many Requests in addition to 5xx and network errors; 4xx (other than 429) and TLS certificate errors are never retried.
