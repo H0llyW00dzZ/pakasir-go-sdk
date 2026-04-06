@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -413,10 +414,9 @@ func TestDoReadBodyNonRetryableError(t *testing.T) {
 }
 
 func TestDoResponseBodyExceedsLimit(t *testing.T) {
-	// Build a body that is exactly DefaultMaxResponseSize (1 MB).
-	// LimitReader caps at that limit, so the buffer fills completely
-	// and the truncation check triggers.
-	oversized := bytes.Repeat([]byte("x"), int(DefaultMaxResponseSize))
+	// Build a body that is one byte over DefaultMaxResponseSize (1 MB)
+	// so the size check rejects it.
+	oversized := bytes.Repeat([]byte("x"), int(DefaultMaxResponseSize)+1)
 
 	c := New("proj", "key",
 		WithRetries(0),
@@ -432,7 +432,7 @@ func TestDoResponseBodyExceedsLimit(t *testing.T) {
 
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "response body exceeds")
+	assert.ErrorIs(t, err, ErrResponseTooLarge)
 }
 
 func TestDoResponseBodyCustomLimit(t *testing.T) {
@@ -443,7 +443,7 @@ func TestDoResponseBodyCustomLimit(t *testing.T) {
 		WithMaxResponseSize(customLimit),
 		WithHTTPClient(&http.Client{
 			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
-				body := bytes.Repeat([]byte("x"), int(customLimit))
+				body := bytes.Repeat([]byte("x"), int(customLimit)+1)
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewReader(body)),
@@ -454,7 +454,56 @@ func TestDoResponseBodyCustomLimit(t *testing.T) {
 
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "response body exceeds")
+	assert.ErrorIs(t, err, ErrResponseTooLarge)
+}
+
+func TestDoResponseBodyExactlyAtLimit(t *testing.T) {
+	// A body of exactly DefaultMaxResponseSize bytes must be accepted.
+	exactBody := bytes.Repeat([]byte("x"), int(DefaultMaxResponseSize))
+
+	c := New("proj", "key",
+		WithRetries(0),
+		WithHTTPClient(&http.Client{
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewReader(exactBody)),
+				}, nil
+			}),
+		}),
+	)
+
+	data, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.NoError(t, err)
+	assert.Len(t, data, int(DefaultMaxResponseSize))
+}
+
+func TestDoResponseBodyExceedsLimitNotRetried(t *testing.T) {
+	var attempt atomic.Int32
+	oversized := bytes.Repeat([]byte("x"), int(DefaultMaxResponseSize)+1)
+
+	c := New("proj", "key",
+		WithRetries(3),
+		WithRetryWait(1*time.Millisecond, 2*time.Millisecond),
+		WithHTTPClient(&http.Client{
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				attempt.Add(1)
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewReader(oversized)),
+				}, nil
+			}),
+		}),
+	)
+
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	// Must fail immediately with ErrRequestFailed, not exhaust retries.
+	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailed)
+	assert.ErrorIs(t, err, ErrResponseTooLarge)
+	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
+	// Only one attempt — no retries wasted on deterministic failure.
+	assert.Equal(t, int32(1), attempt.Load())
 }
 
 // --- GetBufferPool ---
@@ -600,6 +649,8 @@ func TestIsRetryable(t *testing.T) {
 		{"nil error", nil, false},
 		{"generic network error", errors.New("timeout"), true},
 		{"connection refused", errors.New("connection refused"), true},
+		{"response too large", ErrResponseTooLarge, false},
+		{"wrapped response too large", fmt.Errorf("%w: exceeds 1048576 bytes", ErrResponseTooLarge), false},
 		{"tls unknown authority", &x509.UnknownAuthorityError{}, false},
 		{"tls hostname error", &x509.HostnameError{}, false},
 		{"tls cert invalid", &x509.CertificateInvalidError{}, false},

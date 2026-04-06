@@ -41,6 +41,11 @@ var (
 	// ErrReadBody is returned when reading the webhook body fails.
 	ErrReadBody = errors.New("webhook: failed to read body")
 
+	// ErrBodyTooLarge is returned when the webhook body exceeds the
+	// configured [DefaultMaxBodySize] (or the value set via
+	// [WithMaxBodySize]).
+	ErrBodyTooLarge = errors.New("webhook: body too large")
+
 	// ErrDecodeBody is returned when JSON decoding of the webhook body fails.
 	ErrDecodeBody = errors.New("webhook: failed to decode body")
 )
@@ -108,13 +113,19 @@ func Parse(r io.Reader, opts ...ParseOption) (*Event, error) {
 		opt(cfg)
 	}
 
-	data, err := io.ReadAll(io.LimitReader(r, cfg.maxBodySize))
+	// Read one extra byte beyond the limit so we can distinguish
+	// "exactly at limit" (valid) from "over limit" (rejected).
+	data, err := io.ReadAll(io.LimitReader(r, cfg.maxBodySize+1))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrReadBody, err)
 	}
 
-	if int64(len(data)) >= cfg.maxBodySize {
-		return nil, fmt.Errorf("%w: body exceeds %d bytes", ErrReadBody, cfg.maxBodySize)
+	if int64(len(data)) > cfg.maxBodySize {
+		return nil, fmt.Errorf("%w: exceeds %d bytes", ErrBodyTooLarge, cfg.maxBodySize)
+	}
+
+	if len(data) == 0 {
+		return nil, ErrEmptyBody
 	}
 
 	return ParseBytes(data)

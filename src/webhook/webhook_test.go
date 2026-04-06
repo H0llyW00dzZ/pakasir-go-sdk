@@ -65,6 +65,14 @@ type errorReader struct{}
 
 func (errorReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
 
+func TestParseEmptyReader(t *testing.T) {
+	// Parse must return ErrEmptyBody directly for an empty reader
+	// without delegating solely to ParseBytes.
+	_, err := Parse(strings.NewReader(""))
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrEmptyBody)
+}
+
 func TestParseReadError(t *testing.T) {
 	_, err := Parse(errorReader{})
 	require.Error(t, err)
@@ -73,21 +81,32 @@ func TestParseReadError(t *testing.T) {
 }
 
 func TestParseBodyExceedsLimit(t *testing.T) {
-	// DefaultMaxBodySize (1 MB) is the limit. Provide exactly that many
-	// bytes so the truncation check fires.
-	oversized := strings.NewReader(strings.Repeat("x", int(DefaultMaxBodySize)))
+	// DefaultMaxBodySize (1 MB) is the limit. Provide one byte over
+	// so the size check fires.
+	oversized := strings.NewReader(strings.Repeat("x", int(DefaultMaxBodySize)+1))
 	_, err := Parse(oversized)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrReadBody)
-	assert.Contains(t, err.Error(), "body exceeds")
+	assert.ErrorIs(t, err, ErrBodyTooLarge)
+	assert.Contains(t, err.Error(), "exceeds")
+}
+
+func TestParseBodyExactlyAtLimit(t *testing.T) {
+	// A body of exactly DefaultMaxBodySize bytes must be accepted
+	// (though it will fail JSON decoding since it's not valid JSON).
+	exact := strings.NewReader(strings.Repeat("x", int(DefaultMaxBodySize)))
+	_, err := Parse(exact)
+	require.Error(t, err)
+	// Accepted by the size check, rejected by JSON decoding.
+	assert.ErrorIs(t, err, ErrDecodeBody)
+	assert.NotErrorIs(t, err, ErrBodyTooLarge)
 }
 
 func TestParseCustomMaxBodySize(t *testing.T) {
 	// Set a tiny limit and verify it rejects a normal-sized payload.
 	_, err := Parse(strings.NewReader(testPayload), WithMaxBodySize(16))
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrReadBody)
-	assert.Contains(t, err.Error(), "body exceeds")
+	assert.ErrorIs(t, err, ErrBodyTooLarge)
+	assert.Contains(t, err.Error(), "exceeds")
 }
 
 func TestParseCustomMaxBodySizeLargeEnough(t *testing.T) {
@@ -113,7 +132,7 @@ func TestParseRequestCustomMaxBodySize(t *testing.T) {
 	r := &http.Request{Body: io.NopCloser(strings.NewReader(testPayload))}
 	_, err := ParseRequest(r, WithMaxBodySize(16))
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrReadBody)
+	assert.ErrorIs(t, err, ErrBodyTooLarge)
 }
 
 // --- ParseRequest (*http.Request) ---
