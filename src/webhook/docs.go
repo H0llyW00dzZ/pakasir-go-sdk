@@ -20,7 +20,7 @@
 // to decode the payload into a typed [Event] struct:
 //
 //   - [Parse]: accepts an [io.Reader] — works with any Go HTTP framework
-//   - [ParseRequest]: accepts an [*http.Request] — convenience for net/http
+//   - [ParseRequest]: accepts an [http.Request] — convenience for net/http
 //   - [ParseBytes]: accepts raw []byte — for frameworks like Fiber
 //
 // # Sentinel Errors

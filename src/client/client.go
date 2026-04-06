@@ -354,7 +354,7 @@ func isRetryableStatus(statusCode int) bool {
 // avoid wasting retry attempts.
 //
 // The [errors.AsType] checks traverse the entire error chain, including
-// errors nested inside [*net/url.Error] via its Unwrap method, so no
+// errors nested inside [net/url.Error] via its Unwrap method, so no
 // manual unwrapping is required.
 func isRetryable(err error) bool {
 	if err == nil {

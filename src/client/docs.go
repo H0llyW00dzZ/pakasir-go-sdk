@@ -65,8 +65,8 @@
 // Permanent failures are never retried:
 //
 //   - Client errors (4xx other than 429)
-//   - TLS certificate errors ([*tls.CertificateVerificationError], [*x509.UnknownAuthorityError], etc.)
-//   - Permanent DNS failures ([*net.DNSError] with IsNotFound: true, i.e., NXDOMAIN)
+//   - TLS certificate errors ([tls.CertificateVerificationError], [x509.UnknownAuthorityError], etc.)
+//   - Permanent DNS failures ([net.DNSError] with IsNotFound: true, i.e., NXDOMAIN)
 //   - Oversized responses ([ErrResponseTooLarge])
 //
 // DNS timeouts remain retryable. Response body reads are limited to
