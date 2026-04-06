@@ -433,7 +433,7 @@ func isRetryable(err error) bool {
 	// DNS timeouts remain retryable because IsTimeout is true and
 	// IsNotFound is false.
 	case sdkerrors.HasType[*net.DNSError](err):
-		dnsErr, _ := errors.AsType[*net.DNSError](err)
+		dnsErr, _ := sdkerrors.AsType[*net.DNSError](err)
 		return !dnsErr.IsNotFound
 	// TLS/x509 certificate errors are permanent — do not retry.
 	case sdkerrors.HasType[*tls.CertificateVerificationError](err),
