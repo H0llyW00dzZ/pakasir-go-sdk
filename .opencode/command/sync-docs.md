@@ -36,7 +36,7 @@ Invoke after changes involving:
 - `src/simulation/docs.go`
 - `src/webhook/docs.go`
 - `src/helper/gc/docs.go`
-- `src/helper/url/url.go` (package doc is inline, no separate docs.go)
+- `src/helper/url/docs.go`
 - Any new `**/docs.go` files for new packages
 
 ### 3. i18n Translations

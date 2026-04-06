@@ -123,7 +123,7 @@ type PaymentInfo struct {
 
 - **Sentinel errors** defined with `errors.New()` in `src/errors/`, prefixed `Err*`.
 - **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc.
-- **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey)` — always wraps with `%w` so `errors.Is()` works.
+- **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey, args...)` — always wraps with `%w` so `errors.Is()` works. The variadic `args` accept an error cause (wrapped with `%w`) and/or a string context (substituted into `%s` or appended as suffix).
 - **`fmt.Errorf` wrapping** for non-sentinel errors: `fmt.Errorf("context: %w", err)` with lowercase prefix.
 - **`APIError`** struct for HTTP error responses; checked with `errors.As()`.
 - **`errors.AsType[T]`** (Go 1.26 generics) for type-asserting errors without a separate variable — used in `isRetryable` to unwrap `*url.Error` and detect TLS certificate errors.
@@ -188,3 +188,5 @@ Three direct dependencies — keep the footprint minimal:
 - Internal packages (`src/internal/`) for shared types and validation not exposed to consumers.
 - Shared validation via `request.ValidateOrderAndAmount` (avoid duplicating order/amount checks).
 - Shared JSON encoding via `request.EncodeJSON` (centralizes buffer pool acquire/encode/release).
+- Response body limiting: `client.Do` caps reads at 10 MB (`maxResponseSize`); `webhook.Parse`/`ParseRequest` cap at 1 MB.
+- Retry on 429 Too Many Requests in addition to 5xx and network errors; 4xx (other than 429) and TLS certificate errors are never retried.
