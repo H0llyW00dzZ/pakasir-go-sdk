@@ -53,6 +53,28 @@ var (
 
 	// ErrRequestFailedAfterRetries is returned when all retry attempts are exhausted.
 	ErrRequestFailedAfterRetries = errors.New("request failed after retries")
+
+	// ErrResponseTooLarge is returned when a response body exceeds the
+	// configured maximum size. This error is non-retryable because an
+	// oversized response is a deterministic server behavior.
+	ErrResponseTooLarge = errors.New("response body too large")
+
+	// ErrBodyTooLarge is returned when a request or webhook body exceeds
+	// the configured maximum size.
+	ErrBodyTooLarge = errors.New("body too large")
+
+	// ErrNilReader is returned when a nil [io.Reader] is passed to a
+	// parse function.
+	ErrNilReader = errors.New("nil reader")
+
+	// ErrEmptyBody is returned when a request or webhook payload is empty.
+	ErrEmptyBody = errors.New("empty body")
+
+	// ErrReadBody is returned when reading a request or webhook body fails.
+	ErrReadBody = errors.New("read body failed")
+
+	// ErrDecodeBody is returned when JSON decoding of a webhook body fails.
+	ErrDecodeBody = errors.New("decode body failed")
 )
 
 // APIError represents an error response from the Pakasir API.

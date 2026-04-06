@@ -67,7 +67,7 @@ func (s *Service) Create(ctx context.Context, method constants.PaymentMethod, re
 		return nil, err
 	}
 
-	path := fmt.Sprintf("/api/transactioncreate/%s", method)
+	path := fmt.Sprintf("%s/%s", constants.PathTransactionCreate, method)
 	data, err = s.client.Do(ctx, http.MethodPost, path, data)
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (s *Service) Cancel(ctx context.Context, req *CancelRequest) error {
 		return err
 	}
 
-	_, err = s.client.Do(ctx, http.MethodPost, "/api/transactioncancel", data)
+	_, err = s.client.Do(ctx, http.MethodPost, constants.PathTransactionCancel, data)
 	return err
 }
 
@@ -136,7 +136,7 @@ func (s *Service) Detail(ctx context.Context, req *DetailRequest) (*DetailRespon
 	params.Set("order_id", req.OrderID)
 	params.Set("api_key", s.client.APIKey())
 
-	path := "/api/transactiondetail?" + params.Encode()
+	path := constants.PathTransactionDetail + "?" + params.Encode()
 
 	data, err := s.client.Do(ctx, http.MethodGet, path, nil)
 	if err != nil {

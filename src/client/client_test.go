@@ -535,7 +535,7 @@ func TestDoResponseBodyExceedsLimit(t *testing.T) {
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
 	t.Log(err)
-	assert.ErrorIs(t, err, ErrResponseTooLarge)
+	assert.ErrorIs(t, err, sdkerrors.ErrResponseTooLarge)
 }
 
 func TestDoResponseBodyCustomLimit(t *testing.T) {
@@ -558,7 +558,7 @@ func TestDoResponseBodyCustomLimit(t *testing.T) {
 	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
 	require.Error(t, err)
 	t.Log(err)
-	assert.ErrorIs(t, err, ErrResponseTooLarge)
+	assert.ErrorIs(t, err, sdkerrors.ErrResponseTooLarge)
 }
 
 func TestDoResponseBodyExactlyAtLimit(t *testing.T) {
@@ -605,7 +605,7 @@ func TestDoResponseBodyExceedsLimitNotRetried(t *testing.T) {
 	t.Log(err)
 	// Must fail immediately with ErrRequestFailed, not exhaust retries.
 	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailed)
-	assert.ErrorIs(t, err, ErrResponseTooLarge)
+	assert.ErrorIs(t, err, sdkerrors.ErrResponseTooLarge)
 	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
 	// Only one attempt — no retries wasted on deterministic failure.
 	assert.Equal(t, int32(1), attempt.Load())
@@ -769,8 +769,8 @@ func TestIsRetryable(t *testing.T) {
 		{"nil error", nil, false},
 		{"generic network error", errors.New("timeout"), true},
 		{"connection refused", errors.New("connection refused"), true},
-		{"response too large", ErrResponseTooLarge, false},
-		{"wrapped response too large", fmt.Errorf("%w: exceeds 1048576 bytes", ErrResponseTooLarge), false},
+		{"response too large", sdkerrors.ErrResponseTooLarge, false},
+		{"wrapped response too large", fmt.Errorf("%w: exceeds 1048576 bytes", sdkerrors.ErrResponseTooLarge), false},
 		{"tls unknown authority", &x509.UnknownAuthorityError{}, false},
 		{"tls hostname error", &x509.HostnameError{}, false},
 		{"tls cert invalid", &x509.CertificateInvalidError{}, false},
