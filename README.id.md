@@ -210,6 +210,8 @@ Semua fungsi parse mengembalikan sentinel error untuk penanganan programatik mel
 | `webhook.ErrReadBody` | Gagal membaca body (membungkus penyebab asli) |
 | `webhook.ErrBodyTooLarge` | Body melebihi batas ukuran yang dikonfigurasi |
 | `webhook.ErrDecodeBody` | Gagal decode JSON (membungkus penyebab asli) |
+| `webhook.ErrInvalidOrderID` | Order ID kosong dari `Event.Validate` |
+| `webhook.ErrInvalidAmount` | Amount tidak positif dari `Event.Validate` |
 
 ```go
 // net/http
@@ -264,6 +266,8 @@ SDK ini menyediakan sentinel error untuk penanganan programatik melalui `errors.
 | `webhook.ErrReadBody` | `webhook` | Gagal membaca body (membungkus penyebab asli) |
 | `webhook.ErrBodyTooLarge` | `webhook` | Body melebihi batas ukuran yang dikonfigurasi |
 | `webhook.ErrDecodeBody` | `webhook` | Gagal decode JSON (membungkus penyebab asli) |
+| `webhook.ErrInvalidOrderID` | `webhook` | Order ID kosong dari `Event.Validate` |
+| `webhook.ErrInvalidAmount` | `webhook` | Amount tidak positif dari `Event.Validate` |
 | `qr.ErrEmptyContent` | `qr` | String kosong diberikan ke `Encode`, `Write`, atau `WriteFile` |
 | `qr.ErrEncodeFailed` | `qr` | Encoding QR gagal (membungkus penyebab asli) |
 | `url.ErrEmptyBaseURL` | `url` | Base URL kosong |

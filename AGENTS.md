@@ -122,12 +122,13 @@ type PaymentInfo struct {
 ### Error Handling
 
 - **Sentinel errors** defined with `errors.New()` in `src/errors/`, prefixed `Err*`.
-- **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc. Standalone sentinels that overlap with `sdkerrors` sentinels wrap them via `fmt.Errorf("webhook: %w", sdkerrors.ErrNilRequest)` so callers can match either sentinel with `errors.Is`.
+- **Package-local sentinels** in standalone packages: `webhook.ErrNilReader`, `webhook.ErrEmptyBody`, `webhook.ErrInvalidOrderID`, `webhook.ErrInvalidAmount`, `url.ErrEmptyBaseURL`, `url.ErrEmptyOrderID`, `qr.ErrEmptyContent`, etc. Standalone sentinels that overlap with `sdkerrors` sentinels wrap them via `fmt.Errorf("webhook: %w", sdkerrors.ErrNilRequest)` so callers can match either sentinel with `errors.Is`.
 - **Localized wrapping** via `sdkerrors.New(lang, sentinel, messageKey, args...)` — always wraps with `%w` so `errors.Is()` works. The variadic `args` accept an error cause (wrapped with `%w`) and/or a string context (substituted into `%s` or appended as suffix). Used for both encoding errors (`ErrEncodeJSON`) and decoding errors (`ErrDecodeJSON`).
 - **`fmt.Errorf` wrapping** for non-sentinel errors: `fmt.Errorf("context: %w", err)` with lowercase prefix.
 - **`APIError`** struct for HTTP error responses; checked with `errors.As()` or the re-exported `sdkerrors.AsType[*sdkerrors.APIError](err)`.
 - **`errors.AsType[T]`** (Go 1.26 generics) for type-asserting errors without a separate variable — used in `isRetryable` to unwrap `*url.Error` and detect TLS certificate errors and permanent DNS failures. Re-exported as `sdkerrors.AsType` so consumers don't need a separate stdlib `errors` import.
-- **Package-prefixed messages** in standalone packages: `"webhook: ..."`, `"url: ..."`.
+- **`errors.HasType[T]`** — boolean shorthand for `AsType` when only presence matters. Re-exported as `sdkerrors.HasType`. Used internally in `isRetryable` to consolidate TLS/x509 checks into a single `switch` case.
+- **Package-prefixed messages** in standalone packages: `"webhook: ..."`, `"url: ..."`, `"client: ..."`.
 - **Validate early, return immediately** at the top of functions. `client.New` is an exception: it defers project/API-key validation to `Do()` so initialization is infallible.
 - **Nil-guard request pointers** in service methods using `sdkerrors.ErrNilRequest` — distinct from `ErrInvalidOrderID`.
 

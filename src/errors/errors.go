@@ -92,6 +92,11 @@ func AsType[T error](err error) (T, bool) { return errors.AsType[T](err) }
 //	if sdkerrors.HasType[*x509.UnknownAuthorityError](err) {
 //	    // handle certificate error
 //	}
+//
+// Note: The standard library does not provide a boolean-only variant of
+// [errors.AsType], so this helper is implemented here. It simplifies
+// switch case expressions that only need to check for type presence,
+// reducing repetition and cyclomatic complexity.
 func HasType[T error](err error) bool {
 	_, ok := AsType[T](err)
 	return ok
