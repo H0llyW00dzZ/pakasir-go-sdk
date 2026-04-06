@@ -15,6 +15,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -408,6 +409,29 @@ func TestDoReadBodyNonRetryableError(t *testing.T) {
 	assert.Contains(t, err.Error(), "permanent error")
 	// Only one attempt — no retries wasted.
 	assert.Equal(t, int32(1), attempt.Load())
+}
+
+func TestDoResponseBodyExceedsLimit(t *testing.T) {
+	// Build a body that is exactly maxResponseSize (10 MB).
+	// LimitReader caps at maxResponseSize, so the buffer fills to that
+	// limit and the truncation check triggers.
+	oversized := bytes.Repeat([]byte("x"), maxResponseSize)
+
+	c := New("proj", "key",
+		WithRetries(0),
+		WithHTTPClient(&http.Client{
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewReader(oversized)),
+				}, nil
+			}),
+		}),
+	)
+
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "response body exceeds")
 }
 
 // --- GetBufferPool ---

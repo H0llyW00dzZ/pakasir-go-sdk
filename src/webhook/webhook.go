@@ -108,6 +108,10 @@ func Parse(r io.Reader) (*Event, error) {
 		return nil, fmt.Errorf("%w: %w", ErrReadBody, err)
 	}
 
+	if int64(len(data)) >= maxBodySize {
+		return nil, fmt.Errorf("%w: body exceeds %d bytes", ErrReadBody, maxBodySize)
+	}
+
 	return ParseBytes(data)
 }
 

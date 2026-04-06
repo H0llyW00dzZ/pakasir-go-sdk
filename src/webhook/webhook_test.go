@@ -72,6 +72,16 @@ func TestParseReadError(t *testing.T) {
 	assert.True(t, errors.Is(err, io.ErrUnexpectedEOF), "should wrap the underlying cause")
 }
 
+func TestParseBodyExceedsLimit(t *testing.T) {
+	// 1 MB is the limit inside Parse. Provide exactly that many bytes
+	// so the truncation check fires.
+	oversized := strings.NewReader(strings.Repeat("x", 1<<20))
+	_, err := Parse(oversized)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrReadBody)
+	assert.Contains(t, err.Error(), "body exceeds")
+}
+
 // --- ParseRequest (*http.Request) ---
 
 func TestParseRequestSuccess(t *testing.T) {
