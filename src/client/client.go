@@ -413,8 +413,8 @@ func isRetryableStatus(statusCode int) bool {
 }
 
 // isRetryable determines whether a network-level error is transient
-// and worth retrying. TLS certificate errors, system root pool errors,
-// permanent DNS failures, oversized responses, and other permanent
+// and worth retrying. TLS certificate/handshake errors, system root pool
+// errors, permanent DNS failures, oversized responses, and other permanent
 // failures return false to avoid wasting retry attempts.
 //
 // The [errors.AsType] checks traverse the entire error chain, including
@@ -437,12 +437,14 @@ func isRetryable(err error) bool {
 	// Oversized responses are deterministic — do not retry.
 	case errors.Is(err, ErrResponseTooLarge):
 		return false
-	// TLS/x509 certificate errors are permanent — do not retry.
+	// TLS/x509 certificate and handshake errors are permanent — do not retry.
 	case sdkerrors.HasType[*tls.CertificateVerificationError](err),
 		sdkerrors.HasType[*x509.UnknownAuthorityError](err),
 		sdkerrors.HasType[*x509.HostnameError](err),
 		sdkerrors.HasType[*x509.CertificateInvalidError](err),
-		sdkerrors.HasType[*x509.SystemRootsError](err):
+		sdkerrors.HasType[*x509.SystemRootsError](err),
+		sdkerrors.HasType[tls.AlertError](err),
+		sdkerrors.HasType[tls.RecordHeaderError](err):
 		return false
 	// All other network errors (timeouts, connection refused, etc.)
 	// are considered transient.
