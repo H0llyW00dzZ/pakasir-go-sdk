@@ -31,7 +31,8 @@
 //
 // [EncodeJSON] encodes a value as JSON using a pooled buffer, copies
 // the result into an independent []byte, and returns the buffer to the
-// pool. It returns a localized error on failure. This centralizes the
+// pool. On failure it returns a localized [errors.ErrEncodeJSON] error
+// wrapping the original marshal cause. This centralizes the
 // buffer acquire/encode/release lifecycle so service packages do not
 // manage it directly.
 //

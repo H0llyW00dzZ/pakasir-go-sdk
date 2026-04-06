@@ -63,7 +63,7 @@ func main() {
 - **Context-First** — All I/O operations accept `context.Context`
 - **Typed Requests/Responses** — No raw maps; fully typed structs with JSON tags
 - **Buffer Pooling** — Memory-efficient request serialization via [`bytebufferpool`](https://github.com/valyala/bytebufferpool)
-- **Exponential Backoff with Jitter** — Automatic retry for transient failures (5xx, network errors)
+- **Exponential Backoff with Jitter** — Automatic retry for transient failures (429, 5xx, network errors)
 - **i18n** — Localized error messages in English and Indonesian
 - **Sentinel Errors** — Programmatic error handling via `errors.Is` and `errors.As`
 - **Time Parsing Helpers** — Unified `ParseTime()` on response types
@@ -252,6 +252,10 @@ The SDK provides sentinel errors for programmatic handling via `errors.Is`:
 | `errors.ErrEncodeJSON` | `errors` | JSON marshaling of a request body failed |
 | `errors.ErrRequestFailed` | `errors` | Permanent request failure (non-retryable) |
 | `errors.ErrRequestFailedAfterRetries` | `errors` | All retry attempts exhausted |
+| `url.ErrEmptyBaseURL` | `url` | Empty base URL |
+| `url.ErrEmptyProject` | `url` | Empty project slug |
+| `url.ErrEmptyOrderID` | `url` | Empty order ID |
+| `url.ErrInvalidAmount` | `url` | Non-positive amount |
 
 API error responses are returned as `*errors.APIError` and can be inspected via `errors.As`:
 
