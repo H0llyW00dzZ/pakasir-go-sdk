@@ -425,16 +425,18 @@ func isRetryable(err error) bool {
 		return false
 	}
 
+	// Permanent DNS failures (NXDOMAIN) are not transient — do not retry.
+	// DNS timeouts remain retryable because IsTimeout is true and
+	// IsNotFound is false. Checked before the switch because we need
+	// the extracted value to inspect IsNotFound.
+	if dnsErr, ok := sdkerrors.AsType[*net.DNSError](err); ok {
+		return !dnsErr.IsNotFound
+	}
+
 	switch {
 	// Oversized responses are deterministic — do not retry.
 	case errors.Is(err, ErrResponseTooLarge):
 		return false
-	// Permanent DNS failures (NXDOMAIN) are not transient — do not retry.
-	// DNS timeouts remain retryable because IsTimeout is true and
-	// IsNotFound is false.
-	case sdkerrors.HasType[*net.DNSError](err):
-		dnsErr, _ := sdkerrors.AsType[*net.DNSError](err)
-		return !dnsErr.IsNotFound
 	// TLS/x509 certificate errors are permanent — do not retry.
 	case sdkerrors.HasType[*tls.CertificateVerificationError](err),
 		sdkerrors.HasType[*x509.UnknownAuthorityError](err),
