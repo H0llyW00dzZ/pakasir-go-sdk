@@ -31,8 +31,34 @@
 //	// Register with a standard gRPC server:
 //	pakasirv1.RegisterSimulationServiceServer(grpcServer, simGRPC)
 //
-//	// Or with the grpc-template pattern:
+//	// Or with the [grpc-template] pattern:
 //	srv.RegisterService(func(r grpc.ServiceRegistrar) {
 //	    pakasirv1.RegisterSimulationServiceServer(r, simGRPC)
 //	})
+//
+// # Embedding
+//
+// The [Service] struct is exported and can be embedded into your own types
+// to add custom behavior while delegating the core [Pay] RPC to the SDK.
+// Use [NewService] to initialize the embedded service — the unexported sdk
+// field requires the constructor:
+//
+//	type SandboxService struct {
+//	    *simulation.Service
+//	    logger logging.Handler
+//	}
+//
+//	func NewSandboxService(sdk *sdksim.Service, l logging.Handler) *SandboxService {
+//	    return &SandboxService{
+//	        Service: simulation.NewService(sdk),
+//	        logger:  l,
+//	    }
+//	}
+//
+//	// Register provides a [grpc-template]-compatible registration method.
+//	func (s *SandboxService) Register(r grpc.ServiceRegistrar) {
+//	    pakasirv1.RegisterSimulationServiceServer(r, s)
+//	}
+//
+// [grpc-template]: https://github.com/H0llyW00dzZ/grpc-template
 package simulation

@@ -69,6 +69,80 @@
 //	    ),
 //	)
 //
+// # Embedding into Existing Codebases
+//
+// The [Service] types in transaction/ and simulation/ are exported structs
+// that can be embedded into your own types. This lets you combine the
+// Pakasir RPCs with your own dependencies — databases, caches, message
+// queues, metrics, loggers — while delegating the core payment logic to
+// the SDK. Use [NewService] to initialize the embedded service — the
+// unexported sdk field requires the constructor.
+//
+// Embed a service alongside application dependencies:
+//
+//	type PaymentService struct {
+//	    *grpctxn.Service
+//	    db     *sql.DB
+//	    cache  *redis.Client
+//	    logger logging.Handler
+//	}
+//
+//	func NewPaymentService(sdk *sdktxn.Service, db *sql.DB, cache *redis.Client, l logging.Handler) *PaymentService {
+//	    return &PaymentService{
+//	        Service: grpctxn.NewService(sdk),
+//	        db:      db,
+//	        cache:   cache,
+//	        logger:  l,
+//	    }
+//	}
+//
+//	func (s *PaymentService) Register(r grpc.ServiceRegistrar) {
+//	    pakasirv1.RegisterTransactionServiceServer(r, s)
+//	}
+//
+// Override individual methods to add custom behavior — unoverridden
+// methods are inherited from the embedded [Service]. For example,
+// persist the transaction to your database after creation:
+//
+//	func (s *PaymentService) Create(ctx context.Context, req *pakasirv1.CreateRequest) (*pakasirv1.CreateResponse, error) {
+//	    resp, err := s.Service.Create(ctx, req) // delegate to SDK
+//	    if err != nil {
+//	        return nil, err
+//	    }
+//	    // Store in your database, update cache, publish event, etc.
+//	    _ = s.db.ExecContext(ctx, "INSERT INTO orders ...", req.GetOrderId())
+//	    return resp, nil
+//	}
+//
+// Compose multiple Pakasir services into a single registration unit:
+//
+//	type PakasirServices struct {
+//	    txn *grpctxn.Service
+//	    sim *grpcsim.Service
+//	}
+//
+//	func NewPakasirServices(c *client.Client) *PakasirServices {
+//	    return &PakasirServices{
+//	        txn: grpctxn.NewService(sdktxn.NewService(c)),
+//	        sim: grpcsim.NewService(sdksim.NewService(c)),
+//	    }
+//	}
+//
+//	func (s *PakasirServices) Register(r grpc.ServiceRegistrar) {
+//	    pakasirv1.RegisterTransactionServiceServer(r, s.txn)
+//	    pakasirv1.RegisterSimulationServiceServer(r, s.sim)
+//	}
+//
+// Then register alongside other [grpc-template] services:
+//
+//	pakasirSvc := NewPakasirServices(sdkClient)
+//	greeterSvc := greeter.NewService(srv.Logger())
+//
+//	srv.RegisterService(
+//	    greeterSvc.Register,
+//	    pakasirSvc.Register,
+//	)
+//
 // # Client Usage
 //
 // On the client side, use the generated stubs directly with any gRPC
