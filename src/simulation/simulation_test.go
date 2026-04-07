@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -98,6 +99,51 @@ func TestPayAPIError(t *testing.T) {
 	t.Log(err)
 	var apiErr *sdkerrors.APIError
 	assert.ErrorAs(t, err, &apiErr)
+}
+
+// --- Context cancellation ---
+
+func TestPayContextCanceled(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	c := client.New("test-project", "test-key",
+		client.WithBaseURL(srv.URL),
+		client.WithRetries(0),
+	)
+	svc := NewService(c)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := svc.Pay(ctx, &PayRequest{OrderID: "SIM-CTX-001", Amount: 99000})
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestPayContextDeadlineExceeded(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	c := client.New("test-project", "test-key",
+		client.WithBaseURL(srv.URL),
+		client.WithRetries(0),
+	)
+	svc := NewService(c)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+	time.Sleep(5 * time.Millisecond)
+
+	err := svc.Pay(ctx, &PayRequest{OrderID: "SIM-CTX-002", Amount: 99000})
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
 }
 
 // --- Encode error ---

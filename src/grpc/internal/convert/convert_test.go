@@ -15,6 +15,7 @@
 package convert
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -192,6 +193,52 @@ func TestErrorBodyTooLarge(t *testing.T) {
 	st, ok := status.FromError(grpcErr)
 	assert.True(t, ok)
 	assert.Equal(t, codes.ResourceExhausted, st.Code())
+}
+
+func TestErrorRequestFailedAfterRetries(t *testing.T) {
+	grpcErr := Error(sdkerrors.ErrRequestFailedAfterRetries)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Unavailable, st.Code())
+	assert.Contains(t, st.Message(), "request failed after retries")
+}
+
+func TestErrorWrappedRequestFailedAfterRetries(t *testing.T) {
+	wrapped := fmt.Errorf("all 3 attempts failed: %w", sdkerrors.ErrRequestFailedAfterRetries)
+	grpcErr := Error(wrapped)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Unavailable, st.Code())
+}
+
+func TestErrorContextCanceled(t *testing.T) {
+	grpcErr := Error(context.Canceled)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Canceled, st.Code())
+}
+
+func TestErrorWrappedContextCanceled(t *testing.T) {
+	wrapped := fmt.Errorf("request aborted: %w", context.Canceled)
+	grpcErr := Error(wrapped)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Canceled, st.Code())
+}
+
+func TestErrorContextDeadlineExceeded(t *testing.T) {
+	grpcErr := Error(context.DeadlineExceeded)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.DeadlineExceeded, st.Code())
+}
+
+func TestErrorWrappedContextDeadlineExceeded(t *testing.T) {
+	wrapped := fmt.Errorf("timed out: %w", context.DeadlineExceeded)
+	grpcErr := Error(wrapped)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.DeadlineExceeded, st.Code())
 }
 
 func TestErrorAPIError(t *testing.T) {

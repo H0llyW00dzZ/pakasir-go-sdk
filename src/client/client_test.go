@@ -362,6 +362,29 @@ func TestDoContextCancelled(t *testing.T) {
 	_, err := c.Do(ctx, http.MethodGet, "/test", nil)
 	require.Error(t, err)
 	t.Log(err)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
+}
+
+func TestDoContextDeadlineExceeded(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(5 * time.Second)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+
+	// Let the deadline expire before making the request.
+	time.Sleep(5 * time.Millisecond)
+
+	_, err := c.Do(ctx, http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
 }
 
 func TestDoContextCancelledDuringBackoff(t *testing.T) {
@@ -381,6 +404,58 @@ func TestDoContextCancelledDuringBackoff(t *testing.T) {
 	_, err := c.Do(ctx, http.MethodGet, "/test", nil)
 	require.Error(t, err)
 	t.Log(err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
+}
+
+func TestDoContextCancelledDuringRequest(t *testing.T) {
+	// The server blocks indefinitely; context cancellation aborts the HTTP call.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL, WithRetries(2))
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Cancel after a short delay so the HTTP request is in-flight.
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		cancel()
+	}()
+
+	_, err := c.Do(ctx, http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
+}
+
+func TestDoContextDeadlineDuringRetryRequest(t *testing.T) {
+	// Server always returns 503, but a tight deadline ensures the context
+	// expires during the backoff or next attempt, not after all retries.
+	var attempt atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempt.Add(1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte(`unavailable`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL,
+		WithRetries(10),
+		WithRetryWait(200*time.Millisecond, 1*time.Second),
+	)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	_, err := c.Do(ctx, http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
+	// Should have done far fewer attempts than the max 10.
+	assert.Less(t, attempt.Load(), int32(10), "context deadline should short-circuit retries")
 }
 
 func TestDoNetworkError(t *testing.T) {

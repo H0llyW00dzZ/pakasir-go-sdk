@@ -80,6 +80,9 @@
 //     → [codes.InvalidArgument]
 //   - Encoding/decoding errors → [codes.Internal]
 //   - Response/body too large → [codes.ResourceExhausted]
+//   - Retries exhausted → [codes.Unavailable]
+//   - [context.Canceled] → [codes.Canceled]
+//   - [context.DeadlineExceeded] → [codes.DeadlineExceeded]
 //   - [sdkerrors.APIError] 400 → [codes.InvalidArgument]
 //   - [sdkerrors.APIError] 401 → [codes.Unauthenticated]
 //   - [sdkerrors.APIError] 403 → [codes.PermissionDenied]
@@ -240,6 +243,9 @@
 // [codes.PermissionDenied]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.NotFound]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.ResourceExhausted]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.Unavailable]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.Canceled]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.DeadlineExceeded]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.Internal]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [status.FromError]: https://pkg.go.dev/google.golang.org/grpc/status#FromError
 package grpc

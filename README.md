@@ -233,7 +233,7 @@ resp, err := txn.Create(ctx, &pakasirv1.CreateRequest{
 })
 ```
 
-The services work with any gRPC interceptor chain (logging, auth, recovery, etc.) without SDK-specific middleware. SDK errors are automatically mapped to proper gRPC status codes (`InvalidArgument`, `NotFound`, `PermissionDenied`, `Internal`, etc.).
+The services work with any gRPC interceptor chain (logging, auth, recovery, etc.) without SDK-specific middleware. SDK errors are automatically mapped to proper gRPC status codes (`InvalidArgument`, `NotFound`, `PermissionDenied`, `Unavailable`, `Canceled`, `DeadlineExceeded`, `Internal`, etc.).
 
 ## Webhook Handling
 

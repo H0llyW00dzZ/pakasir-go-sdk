@@ -16,12 +16,18 @@ package grpctest
 
 import (
 	"context"
+	"io"
+	"net/http"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 func TestNewBufListener(t *testing.T) {
@@ -72,4 +78,183 @@ func TestDialBufNetWithExtraOpts(t *testing.T) {
 
 	t.Logf("bufconn client connected with extra opts: target=%s state=%s", conn.Target(), conn.GetState())
 	assert.NoError(t, conn.Close())
+}
+
+// --- MockErrorServer ---
+
+func TestMockErrorServer(t *testing.T) {
+	srv := MockErrorServer(t)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/any-path")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"error":"internal server error"}`, string(body))
+}
+
+// --- MockHTTPStatusServer ---
+
+func TestMockHTTPStatusServer(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		body       string
+	}{
+		{"400 bad request", 400, `{"error":"bad"}`},
+		{"401 unauthorized", 401, `{"error":"unauthorized"}`},
+		{"200 ok", 200, `{"status":"ok"}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := MockHTTPStatusServer(t, tt.statusCode, tt.body)
+			defer srv.Close()
+
+			resp, err := http.Get(srv.URL + "/test")
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.statusCode, resp.StatusCode)
+			assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.body, string(body))
+		})
+	}
+}
+
+// --- LoggingInterceptor ---
+
+func TestLoggingInterceptor(t *testing.T) {
+	var counter atomic.Int64
+	interceptor := LoggingInterceptor(t, &counter)
+	require.NotNil(t, interceptor)
+
+	handler := func(ctx context.Context, req any) (any, error) {
+		return "response", nil
+	}
+	info := &grpc.UnaryServerInfo{FullMethod: "/test.Service/Method"}
+
+	resp, err := interceptor(context.Background(), "request", info, handler)
+	require.NoError(t, err)
+	assert.Equal(t, "response", resp)
+	assert.Equal(t, int64(1), counter.Load())
+
+	// Second call increments counter.
+	_, err = interceptor(context.Background(), "request", info, handler)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), counter.Load())
+}
+
+func TestLoggingInterceptorPropagatesError(t *testing.T) {
+	var counter atomic.Int64
+	interceptor := LoggingInterceptor(t, &counter)
+
+	handler := func(ctx context.Context, req any) (any, error) {
+		return nil, status.Error(codes.NotFound, "not found")
+	}
+	info := &grpc.UnaryServerInfo{FullMethod: "/test.Service/Method"}
+
+	resp, err := interceptor(context.Background(), "request", info, handler)
+	assert.Nil(t, resp)
+	require.Error(t, err)
+	assert.Equal(t, int64(1), counter.Load())
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.NotFound, st.Code())
+}
+
+// --- AuthInterceptor ---
+
+func TestAuthInterceptorSuccess(t *testing.T) {
+	interceptor := AuthInterceptor("secret-token")
+	require.NotNil(t, interceptor)
+
+	handler := func(ctx context.Context, req any) (any, error) {
+		return "authorized", nil
+	}
+	info := &grpc.UnaryServerInfo{FullMethod: "/test.Service/Method"}
+
+	ctx := metadata.NewIncomingContext(context.Background(),
+		metadata.Pairs("authorization", "Bearer secret-token"),
+	)
+
+	resp, err := interceptor(ctx, "request", info, handler)
+	require.NoError(t, err)
+	assert.Equal(t, "authorized", resp)
+}
+
+func TestAuthInterceptorMissingMetadata(t *testing.T) {
+	interceptor := AuthInterceptor("secret-token")
+	info := &grpc.UnaryServerInfo{FullMethod: "/test.Service/Method"}
+
+	handler := func(ctx context.Context, req any) (any, error) {
+		t.Fatal("handler must not be called")
+		return nil, nil
+	}
+
+	// No metadata at all.
+	resp, err := interceptor(context.Background(), "request", info, handler)
+	assert.Nil(t, resp)
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+	assert.Contains(t, st.Message(), "missing metadata")
+}
+
+func TestAuthInterceptorNoAuthHeader(t *testing.T) {
+	interceptor := AuthInterceptor("secret-token")
+	info := &grpc.UnaryServerInfo{FullMethod: "/test.Service/Method"}
+
+	handler := func(ctx context.Context, req any) (any, error) {
+		t.Fatal("handler must not be called")
+		return nil, nil
+	}
+
+	// Metadata present but no authorization key.
+	ctx := metadata.NewIncomingContext(context.Background(),
+		metadata.Pairs("other-key", "value"),
+	)
+
+	resp, err := interceptor(ctx, "request", info, handler)
+	assert.Nil(t, resp)
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+	assert.Contains(t, st.Message(), "invalid token")
+}
+
+func TestAuthInterceptorWrongToken(t *testing.T) {
+	interceptor := AuthInterceptor("secret-token")
+	info := &grpc.UnaryServerInfo{FullMethod: "/test.Service/Method"}
+
+	handler := func(ctx context.Context, req any) (any, error) {
+		t.Fatal("handler must not be called")
+		return nil, nil
+	}
+
+	ctx := metadata.NewIncomingContext(context.Background(),
+		metadata.Pairs("authorization", "Bearer wrong-token"),
+	)
+
+	resp, err := interceptor(ctx, "request", info, handler)
+	assert.Nil(t, resp)
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+	assert.Contains(t, st.Message(), "invalid token")
 }
