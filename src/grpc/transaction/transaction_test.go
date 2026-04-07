@@ -148,6 +148,16 @@ func mockErrorServer(t *testing.T) *httptest.Server {
 	}))
 }
 
+// mockHTTPStatusServer returns an httptest.Server that always returns the given status code.
+func mockHTTPStatusServer(t *testing.T, statusCode int, body string) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		w.Write([]byte(body))
+	}))
+}
+
 // startGRPCServer creates a gRPC server with the given service and
 // interceptors, starts it on a bufconn listener, and returns the
 // client connection and a cleanup function.
@@ -302,6 +312,10 @@ func TestE2ECreateTransactionError(t *testing.T) {
 	t.Logf("Create RPC (error path): %v, err=%v", elapsed, err)
 
 	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Internal, st.Code())
+	t.Logf("  code=%s message=%s", st.Code(), st.Message())
 }
 
 func TestE2ECancelTransactionError(t *testing.T) {
@@ -329,6 +343,10 @@ func TestE2ECancelTransactionError(t *testing.T) {
 	t.Logf("Cancel RPC (error path): %v, err=%v", elapsed, err)
 
 	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Internal, st.Code())
+	t.Logf("  code=%s message=%s", st.Code(), st.Message())
 }
 
 func TestE2EGetTransactionDetailError(t *testing.T) {
@@ -356,6 +374,185 @@ func TestE2EGetTransactionDetailError(t *testing.T) {
 	t.Logf("Detail RPC (error path): %v, err=%v", elapsed, err)
 
 	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Internal, st.Code())
+	t.Logf("  code=%s message=%s", st.Code(), st.Message())
+}
+
+// --- E2E tests (validation → InvalidArgument) ---
+
+func TestE2ECreateValidationErrors(t *testing.T) {
+	mock := mockPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	grpcSvc := NewService(sdktxn.NewService(c))
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+	ctx := context.Background()
+
+	tests := []struct {
+		name string
+		req  *pakasirv1.CreateRequest
+	}{
+		{"empty order id", &pakasirv1.CreateRequest{
+			OrderId: "", Amount: 10000,
+			PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+		}},
+		{"zero amount", &pakasirv1.CreateRequest{
+			OrderId: "VAL-001", Amount: 0,
+			PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+		}},
+		{"negative amount", &pakasirv1.CreateRequest{
+			OrderId: "VAL-002", Amount: -100,
+			PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+		}},
+		{"unspecified payment method", &pakasirv1.CreateRequest{
+			OrderId: "VAL-003", Amount: 10000,
+			PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_UNSPECIFIED,
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := txnClient.Create(ctx, tt.req)
+			require.Error(t, err)
+
+			st, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, codes.InvalidArgument, st.Code())
+			t.Logf("  code=%s message=%s", st.Code(), st.Message())
+		})
+	}
+}
+
+func TestE2ECancelValidationErrors(t *testing.T) {
+	mock := mockPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	grpcSvc := NewService(sdktxn.NewService(c))
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+	ctx := context.Background()
+
+	tests := []struct {
+		name string
+		req  *pakasirv1.CancelRequest
+	}{
+		{"empty order id", &pakasirv1.CancelRequest{OrderId: "", Amount: 10000}},
+		{"zero amount", &pakasirv1.CancelRequest{OrderId: "VAL-010", Amount: 0}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := txnClient.Cancel(ctx, tt.req)
+			require.Error(t, err)
+
+			st, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, codes.InvalidArgument, st.Code())
+			t.Logf("  code=%s message=%s", st.Code(), st.Message())
+		})
+	}
+}
+
+func TestE2EDetailValidationErrors(t *testing.T) {
+	mock := mockPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	grpcSvc := NewService(sdktxn.NewService(c))
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+	ctx := context.Background()
+
+	tests := []struct {
+		name string
+		req  *pakasirv1.DetailRequest
+	}{
+		{"empty order id", &pakasirv1.DetailRequest{OrderId: "", Amount: 10000}},
+		{"zero amount", &pakasirv1.DetailRequest{OrderId: "VAL-020", Amount: 0}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := txnClient.Detail(ctx, tt.req)
+			require.Error(t, err)
+
+			st, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, codes.InvalidArgument, st.Code())
+			t.Logf("  code=%s message=%s", st.Code(), st.Message())
+		})
+	}
+}
+
+// --- E2E tests (APIError → gRPC status code mapping) ---
+
+func TestE2ECreateAPIErrorStatusCodes(t *testing.T) {
+	tests := []struct {
+		name       string
+		httpStatus int
+		httpBody   string
+		grpcCode   codes.Code
+	}{
+		{"400 bad request", 400, `{"error":"bad request"}`, codes.InvalidArgument},
+		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
+		{"403 forbidden", 403, `{"error":"forbidden"}`, codes.PermissionDenied},
+		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
+		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.ResourceExhausted},
+		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Internal},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := mockHTTPStatusServer(t, tt.httpStatus, tt.httpBody)
+			defer mock.Close()
+
+			c := client.New("testproject", "test-api-key",
+				client.WithBaseURL(mock.URL),
+				client.WithRetries(0),
+			)
+			grpcSvc := NewService(sdktxn.NewService(c))
+
+			conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+			defer cleanup()
+
+			txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+			_, err := txnClient.Create(context.Background(), &pakasirv1.CreateRequest{
+				OrderId:       "API-ERR-001",
+				Amount:        10000,
+				PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+			})
+			require.Error(t, err)
+
+			st, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, tt.grpcCode, st.Code())
+			t.Logf("  HTTP %d → gRPC %s: %s", tt.httpStatus, st.Code(), st.Message())
+		})
+	}
 }
 
 // --- Interceptor pluggability tests ---
