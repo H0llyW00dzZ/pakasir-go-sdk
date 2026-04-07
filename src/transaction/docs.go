@@ -70,4 +70,8 @@
 //   - Never call Detail from client-side / browser code
 //
 // [Pakasir API]: https://pakasir.com/p/docs
+// [errors.ErrNilRequest]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrNilRequest
+// [errors.ErrInvalidOrderID]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrInvalidOrderID
+// [errors.ErrInvalidAmount]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrInvalidAmount
+// [errors.Is]: https://pkg.go.dev/errors#Is
 package transaction

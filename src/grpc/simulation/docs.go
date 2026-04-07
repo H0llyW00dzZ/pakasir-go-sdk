@@ -39,7 +39,7 @@
 // # Embedding
 //
 // The [Service] struct is exported and can be embedded into your own types
-// to add custom behavior while delegating the core [Pay] RPC to the SDK.
+// to add custom behavior while delegating the core [Service.Pay] RPC to the SDK.
 // Use [NewService] to initialize the embedded service — the unexported sdk
 // field requires the constructor:
 //

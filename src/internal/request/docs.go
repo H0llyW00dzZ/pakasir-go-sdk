@@ -37,4 +37,6 @@
 // manage it directly.
 //
 // This package is internal and not part of the public SDK API.
+//
+// [errors.ErrEncodeJSON]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrEncodeJSON
 package request

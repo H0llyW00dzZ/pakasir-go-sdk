@@ -99,4 +99,7 @@
 //
 //	q := qr.New(qr.WithSize(512))
 //	png, err := q.Encode(paymentNumber)
+//
+// [errors.ErrResponseTooLarge]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrResponseTooLarge
+// [qr]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/qr
 package client
