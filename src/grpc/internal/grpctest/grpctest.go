@@ -16,6 +16,11 @@
 //
 // It uses [bufconn] for zero-port in-memory connections, following the
 // same pattern as the grpc-template's testutil package.
+//
+// In addition to bufconn helpers, this package provides reusable mock
+// HTTP servers ([MockErrorServer], [MockHTTPStatusServer]) for simulating
+// upstream API responses, and interceptor factories ([LoggingInterceptor],
+// [AuthInterceptor]) for verifying interceptor pluggability in E2E tests.
 package grpctest
 
 import (

@@ -233,7 +233,7 @@ resp, err := txn.Create(ctx, &pakasirv1.CreateRequest{
 })
 ```
 
-Layanan ini bekerja dengan rantai interceptor gRPC manapun (logging, auth, recovery, dll.) tanpa middleware khusus SDK. Error SDK secara otomatis dipetakan ke kode status gRPC yang sesuai (`InvalidArgument`, `NotFound`, `PermissionDenied`, `Internal`, dll.).
+Layanan ini bekerja dengan rantai interceptor gRPC manapun (logging, auth, recovery, dll.) tanpa middleware khusus SDK. Error SDK secara otomatis dipetakan ke kode status gRPC yang sesuai (`InvalidArgument`, `NotFound`, `PermissionDenied`, `Unavailable`, `Canceled`, `DeadlineExceeded`, `Internal`, dll.).
 
 ## Penanganan Webhook
 

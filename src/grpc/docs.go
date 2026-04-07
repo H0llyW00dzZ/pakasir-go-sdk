@@ -243,6 +243,9 @@
 // [codes.PermissionDenied]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.NotFound]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.ResourceExhausted]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.Unavailable]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.Canceled]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.DeadlineExceeded]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.Internal]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [status.FromError]: https://pkg.go.dev/google.golang.org/grpc/status#FromError
 package grpc
