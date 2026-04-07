@@ -69,6 +69,32 @@
 //	    ),
 //	)
 //
+// # Error Mapping
+//
+// All gRPC service methods convert SDK errors to proper gRPC status codes
+// via the internal convert.Error function. The original error message is
+// preserved in the status message. Mapping:
+//
+//   - Validation sentinels (nil request, invalid order ID, invalid amount,
+//     invalid payment method, invalid project, invalid API key)
+//     → [codes.InvalidArgument]
+//   - Encoding/decoding errors → [codes.Internal]
+//   - Response/body too large → [codes.ResourceExhausted]
+//   - [sdkerrors.APIError] 400 → [codes.InvalidArgument]
+//   - [sdkerrors.APIError] 401 → [codes.Unauthenticated]
+//   - [sdkerrors.APIError] 403 → [codes.PermissionDenied]
+//   - [sdkerrors.APIError] 404 → [codes.NotFound]
+//   - [sdkerrors.APIError] 429 → [codes.ResourceExhausted]
+//   - [sdkerrors.APIError] 5xx → [codes.Internal]
+//   - All other errors → [codes.Internal]
+//
+// gRPC clients check errors via [status.FromError]:
+//
+//	st, ok := status.FromError(err)
+//	if ok && st.Code() == codes.InvalidArgument {
+//	    // handle validation error
+//	}
+//
 // # Embedding into Existing Codebases
 //
 // The [Service] types in transaction/ and simulation/ are exported structs
@@ -208,4 +234,12 @@
 // [grpc.Server]: https://pkg.go.dev/google.golang.org/grpc#Server
 // [Service]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/transaction#Service
 // [NewService]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/transaction#NewService
+// [sdkerrors.APIError]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#APIError
+// [codes.InvalidArgument]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.Unauthenticated]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.PermissionDenied]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.NotFound]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.ResourceExhausted]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.Internal]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [status.FromError]: https://pkg.go.dev/google.golang.org/grpc/status#FromError
 package grpc
