@@ -23,6 +23,7 @@ on:
       - '.gitignore'
       - '.ignore'
       - '.github/dependabot.yml'
+      - '**/docs.go'
   pull_request:
     branches: [ master ]
     paths-ignore:
@@ -31,6 +32,7 @@ on:
       - '.gitignore'
       - '.ignore'
       - '.github/dependabot.yml'
+      - '**/docs.go'
 
 jobs:
   coverage:
