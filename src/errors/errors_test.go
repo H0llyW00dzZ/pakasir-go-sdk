@@ -114,6 +114,19 @@ func TestNewContextStrOnNonFormatMessage(t *testing.T) {
 	assert.NotContains(t, err.Error(), "EXTRA")
 }
 
+func TestNewFormatMessageEmptyContextTrimsSeparator(t *testing.T) {
+	// MsgInvalidPaymentMethod = "unsupported payment method: %s" (has %s verb).
+	// Empty contextStr should replace %s and trim trailing ": " to prevent
+	// dangling separators like "unsupported payment method: : invalid payment method".
+	err := New(i18n.English, ErrInvalidPaymentMethod, i18n.MsgInvalidPaymentMethod, "")
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, ErrInvalidPaymentMethod)
+	assert.Contains(t, err.Error(), "unsupported payment method: invalid payment method")
+	assert.NotContains(t, err.Error(), ": :")
+	assert.NotContains(t, err.Error(), "%s")
+}
+
 func TestNewMultipleCauses(t *testing.T) {
 	cause1 := errors.New("first")
 	cause2 := errors.New("second")
