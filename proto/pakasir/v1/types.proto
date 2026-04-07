@@ -1,0 +1,130 @@
+// Copyright 2026 H0llyW00dzZ
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package pakasir.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1;pakasirv1";
+
+// PaymentMethod enumerates the supported payment methods.
+enum PaymentMethod {
+  // PAYMENT_METHOD_UNSPECIFIED is the default zero value.
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+
+  // PAYMENT_METHOD_CIMB_NIAGA_VA is CIMB Niaga Virtual Account.
+  PAYMENT_METHOD_CIMB_NIAGA_VA = 1;
+
+  // PAYMENT_METHOD_BNI_VA is BNI Virtual Account.
+  PAYMENT_METHOD_BNI_VA = 2;
+
+  // PAYMENT_METHOD_QRIS is QRIS payment.
+  PAYMENT_METHOD_QRIS = 3;
+
+  // PAYMENT_METHOD_SAMPOERNA_VA is Sampoerna Virtual Account.
+  PAYMENT_METHOD_SAMPOERNA_VA = 4;
+
+  // PAYMENT_METHOD_BNC_VA is BNC Virtual Account.
+  PAYMENT_METHOD_BNC_VA = 5;
+
+  // PAYMENT_METHOD_MAYBANK_VA is Maybank Virtual Account.
+  PAYMENT_METHOD_MAYBANK_VA = 6;
+
+  // PAYMENT_METHOD_PERMATA_VA is Permata Virtual Account.
+  PAYMENT_METHOD_PERMATA_VA = 7;
+
+  // PAYMENT_METHOD_ATM_BERSAMA_VA is ATM Bersama Virtual Account.
+  PAYMENT_METHOD_ATM_BERSAMA_VA = 8;
+
+  // PAYMENT_METHOD_ARTHA_GRAHA_VA is Artha Graha Virtual Account.
+  PAYMENT_METHOD_ARTHA_GRAHA_VA = 9;
+
+  // PAYMENT_METHOD_BRI_VA is BRI Virtual Account.
+  PAYMENT_METHOD_BRI_VA = 10;
+
+  // PAYMENT_METHOD_PAYPAL is PayPal payment.
+  PAYMENT_METHOD_PAYPAL = 11;
+}
+
+// TransactionStatus enumerates the possible transaction states.
+enum TransactionStatus {
+  // TRANSACTION_STATUS_UNSPECIFIED is the default zero value.
+  TRANSACTION_STATUS_UNSPECIFIED = 0;
+
+  // TRANSACTION_STATUS_PENDING indicates the transaction is awaiting payment.
+  TRANSACTION_STATUS_PENDING = 1;
+
+  // TRANSACTION_STATUS_COMPLETED indicates the transaction has been paid.
+  TRANSACTION_STATUS_COMPLETED = 2;
+
+  // TRANSACTION_STATUS_EXPIRED indicates the transaction has expired.
+  TRANSACTION_STATUS_EXPIRED = 3;
+
+  // TRANSACTION_STATUS_CANCELLED indicates the transaction was cancelled (British spelling).
+  TRANSACTION_STATUS_CANCELLED = 4;
+
+  // TRANSACTION_STATUS_CANCELED indicates the transaction was canceled (American spelling).
+  TRANSACTION_STATUS_CANCELED = 5;
+}
+
+// PaymentInfo contains the details of a created payment.
+message PaymentInfo {
+  // project is the project slug.
+  string project = 1;
+
+  // order_id is the unique order identifier.
+  string order_id = 2;
+
+  // amount is the original order amount in the smallest currency unit.
+  int64 amount = 3;
+
+  // fee is the payment processing fee.
+  int64 fee = 4;
+
+  // total_payment is amount + fee.
+  int64 total_payment = 5;
+
+  // payment_method is the selected payment method.
+  PaymentMethod payment_method = 6;
+
+  // payment_number is the virtual account number or payment reference.
+  string payment_number = 7;
+
+  // expired_at is when the payment expires.
+  google.protobuf.Timestamp expired_at = 8;
+}
+
+// TransactionInfo contains the details of a queried transaction.
+message TransactionInfo {
+  // amount is the transaction amount in the smallest currency unit.
+  int64 amount = 1;
+
+  // order_id is the unique order identifier.
+  string order_id = 2;
+
+  // project is the project slug.
+  string project = 3;
+
+  // status is the current transaction status.
+  TransactionStatus status = 4;
+
+  // payment_method is the payment method used.
+  PaymentMethod payment_method = 5;
+
+  // completed_at is when the transaction was completed.
+  google.protobuf.Timestamp completed_at = 6;
+}
+

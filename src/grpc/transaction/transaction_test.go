@@ -1,0 +1,558 @@
+// Copyright 2026 H0llyW00dzZ
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package transaction
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/client"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/internal/grpctest"
+	pakasirv1 "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1"
+	sdktxn "github.com/H0llyW00dzZ/pakasir-go-sdk/src/transaction"
+)
+
+// --- Unit tests ---
+
+func TestNewService(t *testing.T) {
+	svc := NewService(nil)
+	require.NotNil(t, svc)
+}
+
+func TestPaymentInfoToProto(t *testing.T) {
+	p := &sdktxn.PaymentInfo{
+		Project:       "myproject",
+		OrderID:       "INV-001",
+		Amount:        50000,
+		Fee:           1000,
+		TotalPayment:  51000,
+		PaymentMethod: constants.MethodQRIS,
+		PaymentNumber: "00020101...",
+		ExpiredAt:     "2026-04-07T12:00:00Z",
+	}
+
+	pb := paymentInfoToProto(p)
+	require.NotNil(t, pb)
+	assert.Equal(t, "myproject", pb.GetProject())
+	assert.Equal(t, "INV-001", pb.GetOrderId())
+	assert.Equal(t, int64(50000), pb.GetAmount())
+	assert.Equal(t, int64(1000), pb.GetFee())
+	assert.Equal(t, int64(51000), pb.GetTotalPayment())
+	assert.Equal(t, pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS, pb.GetPaymentMethod())
+	assert.Equal(t, "00020101...", pb.GetPaymentNumber())
+	assert.NotNil(t, pb.GetExpiredAt())
+}
+
+func TestPaymentInfoToProtoNil(t *testing.T) {
+	assert.Nil(t, paymentInfoToProto(nil))
+}
+
+func TestTransactionInfoToProto(t *testing.T) {
+	ti := &sdktxn.TransactionInfo{
+		Amount:        99000,
+		OrderID:       "INV-002",
+		Project:       "shop",
+		Status:        constants.StatusCompleted,
+		PaymentMethod: constants.MethodPermataVA,
+		CompletedAt:   "2026-04-07T15:30:00Z",
+	}
+
+	pb := transactionInfoToProto(ti)
+	require.NotNil(t, pb)
+	assert.Equal(t, int64(99000), pb.GetAmount())
+	assert.Equal(t, "INV-002", pb.GetOrderId())
+	assert.Equal(t, "shop", pb.GetProject())
+	assert.Equal(t, pakasirv1.TransactionStatus_TRANSACTION_STATUS_COMPLETED, pb.GetStatus())
+	assert.Equal(t, pakasirv1.PaymentMethod_PAYMENT_METHOD_PERMATA_VA, pb.GetPaymentMethod())
+	assert.NotNil(t, pb.GetCompletedAt())
+}
+
+func TestTransactionInfoToProtoNil(t *testing.T) {
+	assert.Nil(t, transactionInfoToProto(nil))
+}
+
+// --- Test helpers ---
+
+// mockPakasirServer returns an httptest.Server that simulates the Pakasir API.
+func mockPakasirServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/api/transactioncreate/"):
+			json.NewEncoder(w).Encode(map[string]any{
+				"payment": map[string]any{
+					"project":        "testproject",
+					"order_id":       "E2E-001",
+					"amount":         50000,
+					"fee":            1000,
+					"total_payment":  51000,
+					"payment_method": "qris",
+					"payment_number": "00020101...",
+					"expired_at":     "2026-12-25T23:59:59Z",
+				},
+			})
+		case r.URL.Path == "/api/transactioncancel":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{}`))
+		case r.URL.Path == "/api/transactiondetail":
+			json.NewEncoder(w).Encode(map[string]any{
+				"transaction": map[string]any{
+					"amount":         50000,
+					"order_id":       "E2E-001",
+					"project":        "testproject",
+					"status":         "completed",
+					"payment_method": "qris",
+					"completed_at":   "2026-12-25T12:00:00Z",
+				},
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+}
+
+// mockErrorServer returns an httptest.Server that always returns 500.
+func mockErrorServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error":"internal server error"}`))
+	}))
+}
+
+// startGRPCServer creates a gRPC server with the given service and
+// interceptors, starts it on a bufconn listener, and returns the
+// client connection and a cleanup function.
+func startGRPCServer(t *testing.T, svc *Service, unary []grpc.UnaryServerInterceptor) (*grpc.ClientConn, func()) {
+	t.Helper()
+	lis := grpctest.NewBufListener()
+
+	opts := []grpc.ServerOption{}
+	if len(unary) > 0 {
+		opts = append(opts, grpc.ChainUnaryInterceptor(unary...))
+	}
+
+	srv := grpc.NewServer(opts...)
+	pakasirv1.RegisterTransactionServiceServer(srv, svc)
+
+	go func() {
+		if err := srv.Serve(lis); err != nil {
+			// Server stopped; this is expected during cleanup.
+		}
+	}()
+
+	conn, err := grpctest.DialBufNet(context.Background(), lis)
+	require.NoError(t, err)
+
+	return conn, func() {
+		conn.Close()
+		srv.GracefulStop()
+	}
+}
+
+// --- E2E tests (happy path) ---
+
+func TestE2ECreateTransaction(t *testing.T) {
+	mock := mockPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	sdkSvc := sdktxn.NewService(c)
+	grpcSvc := NewService(sdkSvc)
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	start := time.Now()
+	resp, err := txnClient.Create(context.Background(), &pakasirv1.CreateRequest{
+		OrderId:       "E2E-001",
+		Amount:        50000,
+		PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+	})
+	elapsed := time.Since(start)
+	t.Logf("Create RPC: %v", elapsed)
+
+	require.NoError(t, err)
+	require.NotNil(t, resp.GetPayment())
+	assert.Equal(t, "testproject", resp.GetPayment().GetProject())
+	assert.Equal(t, "E2E-001", resp.GetPayment().GetOrderId())
+	assert.Equal(t, int64(51000), resp.GetPayment().GetTotalPayment())
+	assert.Equal(t, pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS, resp.GetPayment().GetPaymentMethod())
+	assert.NotNil(t, resp.GetPayment().GetExpiredAt())
+}
+
+func TestE2ECancelTransaction(t *testing.T) {
+	mock := mockPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	sdkSvc := sdktxn.NewService(c)
+	grpcSvc := NewService(sdkSvc)
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	start := time.Now()
+	resp, err := txnClient.Cancel(context.Background(), &pakasirv1.CancelRequest{
+		OrderId: "E2E-001",
+		Amount:  50000,
+	})
+	elapsed := time.Since(start)
+	t.Logf("Cancel RPC: %v", elapsed)
+
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+}
+
+func TestE2EGetTransactionDetail(t *testing.T) {
+	mock := mockPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	sdkSvc := sdktxn.NewService(c)
+	grpcSvc := NewService(sdkSvc)
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	start := time.Now()
+	resp, err := txnClient.Detail(context.Background(), &pakasirv1.DetailRequest{
+		OrderId: "E2E-001",
+		Amount:  50000,
+	})
+	elapsed := time.Since(start)
+	t.Logf("Detail RPC: %v", elapsed)
+
+	require.NoError(t, err)
+	require.NotNil(t, resp.GetTransaction())
+	assert.Equal(t, "E2E-001", resp.GetTransaction().GetOrderId())
+	assert.Equal(t, pakasirv1.TransactionStatus_TRANSACTION_STATUS_COMPLETED, resp.GetTransaction().GetStatus())
+	assert.Equal(t, pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS, resp.GetTransaction().GetPaymentMethod())
+	assert.NotNil(t, resp.GetTransaction().GetCompletedAt())
+}
+
+// --- E2E tests (error paths) ---
+
+func TestE2ECreateTransactionError(t *testing.T) {
+	mock := mockErrorServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	sdkSvc := sdktxn.NewService(c)
+	grpcSvc := NewService(sdkSvc)
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	start := time.Now()
+	_, err := txnClient.Create(context.Background(), &pakasirv1.CreateRequest{
+		OrderId:       "ERR-001",
+		Amount:        10000,
+		PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+	})
+	elapsed := time.Since(start)
+	t.Logf("Create RPC (error path): %v, err=%v", elapsed, err)
+
+	require.Error(t, err)
+}
+
+func TestE2ECancelTransactionError(t *testing.T) {
+	mock := mockErrorServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	sdkSvc := sdktxn.NewService(c)
+	grpcSvc := NewService(sdkSvc)
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	start := time.Now()
+	_, err := txnClient.Cancel(context.Background(), &pakasirv1.CancelRequest{
+		OrderId: "ERR-002",
+		Amount:  10000,
+	})
+	elapsed := time.Since(start)
+	t.Logf("Cancel RPC (error path): %v, err=%v", elapsed, err)
+
+	require.Error(t, err)
+}
+
+func TestE2EGetTransactionDetailError(t *testing.T) {
+	mock := mockErrorServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	sdkSvc := sdktxn.NewService(c)
+	grpcSvc := NewService(sdkSvc)
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	start := time.Now()
+	_, err := txnClient.Detail(context.Background(), &pakasirv1.DetailRequest{
+		OrderId: "ERR-003",
+		Amount:  10000,
+	})
+	elapsed := time.Since(start)
+	t.Logf("Detail RPC (error path): %v, err=%v", elapsed, err)
+
+	require.Error(t, err)
+}
+
+// --- Interceptor pluggability tests ---
+
+// loggingInterceptor is a test interceptor that increments a counter
+// every time an RPC is handled and logs the method and duration.
+func loggingInterceptor(t *testing.T, counter *atomic.Int64) grpc.UnaryServerInterceptor {
+	t.Helper()
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		start := time.Now()
+		counter.Add(1)
+		resp, err := handler(ctx, req)
+		t.Logf("[interceptor/logging] method=%s duration=%v err=%v",
+			info.FullMethod, time.Since(start), err)
+		return resp, err
+	}
+}
+
+// authInterceptor is a test interceptor that rejects requests without
+// a valid "authorization" metadata key.
+func authInterceptor(validToken string) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		md, ok := metadata.FromIncomingContext(ctx)
+		if !ok {
+			return nil, status.Error(codes.Unauthenticated, "missing metadata")
+		}
+		tokens := md.Get("authorization")
+		if len(tokens) == 0 || tokens[0] != "Bearer "+validToken {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+		return handler(ctx, req)
+	}
+}
+
+func TestE2EWithLoggingInterceptor(t *testing.T) {
+	mock := mockPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	sdkSvc := sdktxn.NewService(c)
+	grpcSvc := NewService(sdkSvc)
+
+	var callCount atomic.Int64
+	conn, cleanup := startGRPCServer(t, grpcSvc, []grpc.UnaryServerInterceptor{
+		loggingInterceptor(t, &callCount),
+	})
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	start := time.Now()
+
+	_, err := txnClient.Create(context.Background(), &pakasirv1.CreateRequest{
+		OrderId: "LOG-001", Amount: 10000,
+		PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+	})
+	require.NoError(t, err)
+
+	_, err = txnClient.Cancel(context.Background(), &pakasirv1.CancelRequest{
+		OrderId: "LOG-001", Amount: 10000,
+	})
+	require.NoError(t, err)
+
+	_, err = txnClient.Detail(context.Background(), &pakasirv1.DetailRequest{
+		OrderId: "LOG-001", Amount: 10000,
+	})
+	require.NoError(t, err)
+
+	t.Logf("3 RPCs with logging interceptor: total=%v, calls=%d", time.Since(start), callCount.Load())
+	assert.Equal(t, int64(3), callCount.Load())
+}
+
+func TestE2EWithAuthInterceptorSuccess(t *testing.T) {
+	mock := mockPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	sdkSvc := sdktxn.NewService(c)
+	grpcSvc := NewService(sdkSvc)
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, []grpc.UnaryServerInterceptor{
+		authInterceptor("secret-token"),
+	})
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	ctx := metadata.AppendToOutgoingContext(context.Background(),
+		"authorization", "Bearer secret-token",
+	)
+
+	start := time.Now()
+	resp, err := txnClient.Create(ctx, &pakasirv1.CreateRequest{
+		OrderId: "AUTH-001", Amount: 25000,
+		PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_BNI_VA,
+	})
+	t.Logf("Create RPC with auth (success): %v", time.Since(start))
+
+	require.NoError(t, err)
+	assert.NotNil(t, resp.GetPayment())
+}
+
+func TestE2EWithAuthInterceptorReject(t *testing.T) {
+	mock := mockPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	sdkSvc := sdktxn.NewService(c)
+	grpcSvc := NewService(sdkSvc)
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, []grpc.UnaryServerInterceptor{
+		authInterceptor("secret-token"),
+	})
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	// No auth token.
+	start := time.Now()
+	_, err := txnClient.Create(context.Background(), &pakasirv1.CreateRequest{
+		OrderId: "AUTH-002", Amount: 25000,
+		PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_BNI_VA,
+	})
+	t.Logf("Create RPC with auth (no token): %v, err=%v", time.Since(start), err)
+
+	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+
+	// Wrong token.
+	ctx := metadata.AppendToOutgoingContext(context.Background(),
+		"authorization", "Bearer wrong-token",
+	)
+	start = time.Now()
+	_, err = txnClient.Create(ctx, &pakasirv1.CreateRequest{
+		OrderId: "AUTH-003", Amount: 25000,
+		PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_BNI_VA,
+	})
+	t.Logf("Create RPC with auth (wrong token): %v, err=%v", time.Since(start), err)
+
+	require.Error(t, err)
+	st, ok = status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+}
+
+func TestE2EWithChainedInterceptors(t *testing.T) {
+	mock := mockPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	sdkSvc := sdktxn.NewService(c)
+	grpcSvc := NewService(sdkSvc)
+
+	var callCount atomic.Int64
+	conn, cleanup := startGRPCServer(t, grpcSvc, []grpc.UnaryServerInterceptor{
+		loggingInterceptor(t, &callCount),
+		authInterceptor("chain-token"),
+	})
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	// Valid auth.
+	ctx := metadata.AppendToOutgoingContext(context.Background(),
+		"authorization", "Bearer chain-token",
+	)
+	start := time.Now()
+	resp, err := txnClient.Detail(ctx, &pakasirv1.DetailRequest{
+		OrderId: "CHAIN-001", Amount: 10000,
+	})
+	t.Logf("Detail RPC chained (auth pass): %v", time.Since(start))
+
+	require.NoError(t, err)
+	assert.NotNil(t, resp.GetTransaction())
+	assert.Equal(t, int64(1), callCount.Load())
+
+	// Invalid auth.
+	start = time.Now()
+	_, err = txnClient.Detail(context.Background(), &pakasirv1.DetailRequest{
+		OrderId: "CHAIN-002", Amount: 10000,
+	})
+	t.Logf("Detail RPC chained (auth reject): %v, err=%v", time.Since(start), err)
+
+	require.Error(t, err)
+	assert.Equal(t, int64(2), callCount.Load())
+}
