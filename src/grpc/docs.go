@@ -27,17 +27,17 @@
 //
 // # Package Layout
 //
-//   - pakasir/v1/      — Generated protobuf code: server interfaces + client stubs (do not edit).
-//   - transaction/     — Server: [pakasirv1.TransactionServiceServer] implementation.
-//   - simulation/      — Server: [pakasirv1.SimulationServiceServer] implementation.
-//   - internal/convert — Shared enum and timestamp mapping (unexported).
+//   - pakasir/v1/       — Generated protobuf code: server interfaces + client stubs (do not edit).
+//   - transaction/      — Server: [pakasirv1.TransactionServiceServer] implementation.
+//   - simulation/       — Server: [pakasirv1.SimulationServiceServer] implementation.
+//   - internal/convert  — Shared enum and timestamp mapping (unexported).
 //   - internal/grpctest — In-memory bufconn test helpers (unexported).
 //
 // # Server Registration
 //
 // The services implement standard gRPC server interfaces and can be
 // registered with any [grpc.ServiceRegistrar] — a plain [grpc.Server],
-// the grpc-template's server package, or any other framework:
+// the [grpc-template]'s server package, or any other framework:
 //
 //	// SDK setup.
 //	c := client.New("my-project", "api-key")
@@ -87,4 +87,6 @@
 // completed) running over gRPC with automatic proto-to-SDK conversion:
 //
 //	go test -v -race -run TestE2EPaymentFlowSuccess ./src/grpc/
+//
+// [grpc-template]: https://github.com/H0llyW00dzZ/grpc-template
 package grpc
