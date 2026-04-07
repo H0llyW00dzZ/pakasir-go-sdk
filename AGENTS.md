@@ -231,6 +231,10 @@ Five direct dependencies — keep the footprint minimal:
 - `Accept: application/json` header is set on all requests by `buildRequest`.
 - `Client.Do` is decomposed into small helpers (`validateCredentials`, `executeAttempt`, `handleResponse`, `retriesExhaustedError`) to keep cyclomatic complexity low. Non-retryable errors are propagated via the unexported `stopRetry` wrapper, which `Do` unwraps before returning to the caller.
 - Response JSON decode errors are localized via `sdkerrors.New(lang, sdkerrors.ErrDecodeJSON, i18n.MsgFailedToDecode, err)` in transaction service methods.
+- gRPC error mapping: `conv.Error` in `grpc/internal/convert` maps SDK errors to proper gRPC status codes. Validation sentinels → `codes.InvalidArgument`, `APIError` → mapped by HTTP status (400→InvalidArgument, 401→Unauthenticated, 403→PermissionDenied, 404→NotFound, 429→ResourceExhausted, 5xx→Internal), encode/decode → `codes.Internal`, size limits → `codes.ResourceExhausted`. All gRPC service methods call `conv.Error(err)` instead of returning raw SDK errors.
+- gRPC early enum validation: `grpc/transaction.Create` validates `PAYMENT_METHOD_UNSPECIFIED` before delegating to the SDK, returning the proto enum name (e.g., `PAYMENT_METHOD_UNSPECIFIED`) in the gRPC status message instead of the empty SDK string.
+- `formatMessage` in `src/errors/` trims trailing `": "` when `%s` is replaced with an empty string, preventing dangling separators in error messages.
+- Invalid payment method errors use `strconv.Quote(method.String())` to make the invalid input visible in error messages (e.g., `"bitcoin"` instead of bare `bitcoin`).
 
 ### Security
 
