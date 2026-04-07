@@ -135,7 +135,8 @@ func TimeString(ts *timestamppb.Timestamp) string {
 //   - [sdkerrors.ErrRequestFailedAfterRetries] → [codes.Unavailable]
 //   - [context.Canceled] → [codes.Canceled]
 //   - [context.DeadlineExceeded] → [codes.DeadlineExceeded]
-//   - [sdkerrors.APIError] → mapped by HTTP status code
+//   - [sdkerrors.APIError] → mapped by HTTP status code (503 → [codes.Unavailable],
+//     other 5xx → [codes.Internal])
 //   - All other errors → [codes.Internal]
 func Error(err error) error {
 	if err == nil {
@@ -194,6 +195,8 @@ func httpStatusToCode(statusCode int) codes.Code {
 		return codes.AlreadyExists
 	case 429:
 		return codes.ResourceExhausted
+	case 503:
+		return codes.Unavailable
 	default:
 		if statusCode >= 500 {
 			return codes.Internal
