@@ -38,10 +38,14 @@ Invoke after changes involving:
 - `src/simulation/docs.go`
 - `src/webhook/docs.go`
 - `src/grpc/docs.go`
+- `src/grpc/pakasir/v1/docs.go`
 - `src/grpc/transaction/docs.go`
 - `src/grpc/simulation/docs.go`
 - `src/helper/gc/docs.go`
+- `src/helper/qr/docs.go`
 - `src/helper/url/docs.go`
+- `src/internal/request/docs.go`
+- `src/internal/timefmt/docs.go`
 - Any new `**/docs.go` files for new packages
 
 ### 3. i18n Translations
