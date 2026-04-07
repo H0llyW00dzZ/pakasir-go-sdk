@@ -67,7 +67,7 @@
 //	    pakasirv1.RegisterTransactionServiceServer(r, s)
 //	}
 //
-// Override individual methods as needed — [Create], [Cancel], and [Detail]
+// Override individual methods as needed — [Service.Create], [Service.Cancel], and [Service.Detail]
 // are inherited from the embedded [Service] unless explicitly overridden.
 // For example, persist the transaction to your database after creation:
 //

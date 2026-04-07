@@ -33,4 +33,8 @@
 //
 // A nil request pointer returns [errors.ErrNilRequest]. Invalid fields
 // return localized errors via [errors.Is] (e.g., [errors.ErrInvalidOrderID]).
+//
+// [errors.ErrNilRequest]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrNilRequest
+// [errors.ErrInvalidOrderID]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrInvalidOrderID
+// [errors.Is]: https://pkg.go.dev/errors#Is
 package simulation

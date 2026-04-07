@@ -55,4 +55,6 @@
 //	    Amount:        50000,
 //	    PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
 //	})
+//
+// [grpc]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc
 package pakasirv1

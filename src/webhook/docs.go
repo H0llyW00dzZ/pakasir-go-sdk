@@ -94,4 +94,15 @@
 // # Fiber
 //
 //	event, err := webhook.ParseBytes(c.Body())
+//
+// [errors.Is]: https://pkg.go.dev/errors#Is
+// [errors]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors
+// [errors.ErrNilReader]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrNilReader
+// [errors.ErrNilRequest]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrNilRequest
+// [errors.ErrEmptyBody]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrEmptyBody
+// [errors.ErrReadBody]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrReadBody
+// [errors.ErrBodyTooLarge]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrBodyTooLarge
+// [errors.ErrDecodeBody]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrDecodeBody
+// [errors.ErrInvalidOrderID]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrInvalidOrderID
+// [errors.ErrInvalidAmount]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrInvalidAmount
 package webhook

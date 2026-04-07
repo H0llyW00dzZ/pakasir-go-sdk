@@ -200,4 +200,12 @@
 //	go test -v -race -run TestE2EPaymentFlowSuccess ./src/grpc/
 //
 // [grpc-template]: https://github.com/H0llyW00dzZ/grpc-template
+// [pakasirv1.TransactionServiceServer]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1#TransactionServiceServer
+// [pakasirv1.SimulationServiceServer]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1#SimulationServiceServer
+// [pakasirv1.NewTransactionServiceClient]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1#NewTransactionServiceClient
+// [pakasirv1.NewSimulationServiceClient]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1#NewSimulationServiceClient
+// [grpc.ServiceRegistrar]: https://pkg.go.dev/google.golang.org/grpc#ServiceRegistrar
+// [grpc.Server]: https://pkg.go.dev/google.golang.org/grpc#Server
+// [Service]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/transaction#Service
+// [NewService]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/transaction#NewService
 package grpc
