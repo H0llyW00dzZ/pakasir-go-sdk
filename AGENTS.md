@@ -2,16 +2,30 @@
 
 Unofficial Go SDK for the Pakasir payment gateway. Module: `github.com/H0llyW00dzZ/pakasir-go-sdk`. Go 1.26+.
 
-All source code lives under `src/`. No Makefile or task runner — use standard Go tooling.
+All source code lives under `src/`. A `Makefile` is provided for common tasks; standard Go tooling also works directly.
 
 ## Build / Lint / Test Commands
 
 ```bash
+# ── Makefile targets (preferred) ─────────────────────────
+make build        # Compile check all packages
+make test         # Run all tests with race detector
+make test-cover   # Tests + coverage report
+make test-e2e     # gRPC end-to-end payment flow test
+make vet          # Static analysis
+make fmt          # Check formatting (fails if unformatted)
+make proto        # Regenerate Go code from proto files (buf generate)
+make lint-proto   # Lint proto files (buf lint)
+make deps         # Install buf + protoc-gen-go tools
+make clean        # Remove coverage artifacts
+
+# ── Raw Go commands ──────────────────────────────────────
 # Build all packages
 go build ./...
 
 # Run all tests with race detector and coverage
-go test -v -race -coverprofile=coverage.txt -covermode=atomic ./src/...
+# (excludes generated proto package — same as Makefile)
+go test -v -race -coverprofile=coverage.txt -covermode=atomic $(go list ./src/... | grep -v /grpc/pakasir/)
 
 # Run a single package's tests
 go test -v -race ./src/client/
@@ -19,6 +33,9 @@ go test -v -race ./src/transaction/
 
 # Run a single test by name (regex match)
 go test -v -race -run TestDoRetryOn5xxThenSuccess ./src/client/
+
+# Run the gRPC E2E payment flow test
+go test -v -race -run TestE2EPaymentFlowSuccess ./src/grpc/
 
 # Static analysis
 go vet ./src/...
@@ -32,24 +49,35 @@ gofmt -s -d .
 
 CI runs on 8 OS matrix combinations (ubuntu x86/ARM, macOS, Windows x86/ARM) testing Go 1.26.0 and 1.26.1.
 Race detector is skipped on `windows-11-arm`. Coverage is uploaded to Codecov from `ubuntu-latest` only.
+CI and Makefile test targets exclude the generated proto package (`grpc/pakasir/v1`) from test runs via `go list ./src/... | grep -v /grpc/pakasir/`.
 
 ## Project Layout
 
 ```
+Makefile                    — Build, test, proto generation, benchmarks
+buf.yaml                    — Buf module config for proto linting/breaking changes
+buf.gen.yaml                — Buf code generation config (Go output to src/grpc)
 src/
-  client/           — Core HTTP client, functional options, retry/backoff
-  constants/        — PaymentMethod/TransactionStatus enums, SDK version, API paths
-  errors/           — Sentinel errors (ErrInvalid*, ErrResponseTooLarge, ErrBodyTooLarge, etc.), APIError type, i18n wrapping
-  i18n/             — Language type (en/id), message keys, translation map
-  transaction/      — Service: Create, Cancel, Detail
-  simulation/       — Service: Pay (sandbox)
-  webhook/          — Parse webhook HTTP requests into Event structs
-  helper/gc/        — Buffer/Pool interfaces wrapping bytebufferpool
-  helper/qr/        — QR code generation for QRIS payment strings (go-qrcode)
-  helper/url/       — Payment redirect URL builder
-  internal/request/ — Shared request body struct, validation, and JSON encoding (unexported)
-  internal/timefmt/ — Shared RFC3339 time-parsing helper (unexported)
-examples/           — Example usage (build-tagged with //go:build ignore)
+  client/                   — Core HTTP client, functional options, retry/backoff
+  constants/                — PaymentMethod/TransactionStatus enums, SDK version, API paths
+  errors/                   — Sentinel errors (ErrInvalid*, ErrResponseTooLarge, ErrBodyTooLarge, etc.), APIError type, i18n wrapping
+  i18n/                     — Language type (en/id), message keys, translation map
+  transaction/              — Service: Create, Cancel, Detail
+  simulation/               — Service: Pay (sandbox)
+  webhook/                  — Parse webhook HTTP requests into Event structs
+  grpc/                     — Server-side gRPC service implementations (top-level docs + e2e tests)
+  grpc/pakasir/v1/          — Generated protobuf Go code: server interfaces + client stubs (do not edit)
+  grpc/transaction/         — gRPC TransactionServiceServer implementation (delegates to SDK transaction.Service)
+  grpc/simulation/          — gRPC SimulationServiceServer implementation (delegates to SDK simulation.Service)
+  grpc/internal/convert/    — Shared enum/timestamp mapping between SDK constants and proto types (unexported)
+  grpc/internal/grpctest/   — In-memory bufconn test helpers (unexported)
+  helper/gc/                — Buffer/Pool interfaces wrapping bytebufferpool
+  helper/qr/                — QR code generation for QRIS payment strings (go-qrcode)
+  helper/url/               — Payment redirect URL builder
+  internal/request/         — Shared request body struct, validation, and JSON encoding (unexported)
+  internal/timefmt/         — Shared RFC3339 time-parsing helper (unexported)
+proto/                      — Protobuf definitions (.proto files) for gRPC services
+examples/                   — Example usage (build-tagged with //go:build ignore)
 ```
 
 Every package has a `docs.go` with package-level godoc. Every package has tests.
@@ -176,10 +204,12 @@ In `readResponseBody`, manual pool management (explicit `Reset`+`Put` on each re
 
 ### Dependencies
 
-Three direct dependencies — keep the footprint minimal:
+Five direct dependencies — keep the footprint minimal:
 - `github.com/stretchr/testify` (test only)
 - `github.com/valyala/bytebufferpool`
 - `github.com/skip2/go-qrcode`
+- `google.golang.org/grpc`
+- `google.golang.org/protobuf`
 
 ### Patterns to Preserve
 

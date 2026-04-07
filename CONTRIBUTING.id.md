@@ -8,6 +8,7 @@ Terima kasih atas minat Anda untuk berkontribusi! Panduan ini akan membantu Anda
 
 - **Go 1.26** atau lebih baru
 - `git`
+- `buf` (untuk pembuatan proto — instal melalui `make deps`)
 
 ## Memulai
 
@@ -23,9 +24,9 @@ Terima kasih atas minat Anda untuk berkontribusi! Panduan ini akan membantu Anda
 3. **Verifikasi** bahwa semuanya berjalan dengan baik:
 
    ```bash
-   go build ./...
-   go test ./...
-   go vet ./...
+   make build
+   make test
+   make vet
    ```
 
 ## Struktur Proyek
@@ -40,6 +41,11 @@ pakasir-go-sdk/
 │   ├── transaction/     # Layanan transaksi
 │   ├── simulation/      # Layanan simulasi sandbox
 │   ├── webhook/         # Parsing webhook
+│   ├── grpc/
+│   │   ├── pakasir/v1/  # Kode protobuf yang di-generate (jangan diedit)
+│   │   ├── transaction/ # Server gRPC TransactionService
+│   │   ├── simulation/  # Server gRPC SimulationService
+│   │   └── internal/    # Konversi enum bersama dan helper pengujian
 │   ├── helper/
 │   │   ├── gc/          # Pengelolaan buffer pool
 │   │   ├── qr/          # Pembuatan kode QR untuk pembayaran QRIS
@@ -47,6 +53,10 @@ pakasir-go-sdk/
 │   └── internal/
 │       ├── request/     # Body request internal bersama
 │       └── timefmt/     # Helper parsing waktu RFC3339 bersama
+├── Makefile             # Target build, test, pembuatan proto
+├── buf.yaml             # Konfigurasi modul Buf untuk linting proto
+├── buf.gen.yaml         # Konfigurasi pembuatan kode Buf
+├── proto/               # Definisi Protobuf (berkas .proto)
 ├── examples/            # Contoh penggunaan
 ├── LICENSE              # Lisensi Apache 2.0
 └── README.md
@@ -93,6 +103,13 @@ Saat menambahkan pesan baru yang ditampilkan ke pengguna:
 - Bungkus error dengan pesan yang telah diterjemahkan menggunakan `errors.New()`.
 - Semua error harus mendukung `errors.Is()` terhadap sentinel-nya.
 
+### Layanan gRPC
+
+- **Jangan** mengedit berkas yang di-generate di `src/grpc/pakasir/v1/`. Generate ulang dari definisi `proto/` menggunakan `make proto` (menjalankan `buf generate`).
+- Implementasi layanan gRPC mendelegasikan ke layanan berbasis REST SDK — tidak boleh mengandung logika bisnis.
+- Konversi enum antara tipe proto dan SDK berada di `src/grpc/internal/convert/`.
+- Gunakan helper `src/grpc/internal/grpctest/` (bufconn) untuk pengujian gRPC in-memory.
+
 ## Mengirim Perubahan
 
 1. Buat branch fitur:
@@ -106,10 +123,10 @@ Saat menambahkan pesan baru yang ditampilkan ke pengguna:
 3. Pastikan semua pengecekan berhasil:
 
    ```bash
-   go build ./...
-   go test ./...
-   go vet ./...
-   gofmt -s -d .
+   make build
+   make test
+   make vet
+   make fmt
    ```
 
 4. Push dan buat Pull Request ke branch `master`.

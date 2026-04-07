@@ -57,12 +57,12 @@ jobs:
 
     - name: Run tests with coverage (with race detector)
       if: ${{ matrix.os != 'windows-11-arm' }}
-      run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./src/...
+      run: go test -v -race -coverprofile=coverage.txt -covermode=atomic $(go list ./src/... | grep -v /grpc/pakasir/)
       shell: bash
 
     - name: Run tests with coverage (without race detector)
       if: ${{ matrix.os == 'windows-11-arm' }}
-      run: go test -v -coverprofile=coverage.txt -covermode=atomic ./src/...
+      run: go test -v -coverprofile=coverage.txt -covermode=atomic $(go list ./src/... | grep -v /grpc/pakasir/)
       shell: bash
 
     - name: Upload coverage to Codecov

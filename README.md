@@ -65,6 +65,7 @@ func main() {
 - **Time Parsing Helpers** — Unified `ParseTime()` on response types
 - **URL Builder** — Helper for redirect-based payment integrations
 - **QR Code Generation** — Render QRIS payment strings as PNG images with configurable size, recovery level, and colors
+- **gRPC Services** — Server-side gRPC implementations for transaction and simulation services, with generated client stubs
 
 ## Project Structure
 
@@ -78,6 +79,11 @@ pakasir-go-sdk/
 │   ├── transaction/     # Transaction service (create, cancel, detail)
 │   ├── simulation/      # Payment simulation service (sandbox)
 │   ├── webhook/         # Webhook parsing helper
+│   ├── grpc/
+│   │   ├── pakasir/v1/  # Generated protobuf code (server + client stubs)
+│   │   ├── transaction/ # gRPC TransactionService server
+│   │   ├── simulation/  # gRPC SimulationService server
+│   │   └── internal/    # Shared enum conversion and test helpers
 │   ├── helper/
 │   │   ├── gc/          # Buffer pool management
 │   │   ├── qr/          # QR code generation for QRIS payments
@@ -85,6 +91,10 @@ pakasir-go-sdk/
 │   └── internal/
 │       ├── request/     # Shared request body and validation
 │       └── timefmt/     # Shared RFC3339 time-parsing helper
+├── Makefile             # Build, test, proto generation targets
+├── buf.yaml             # Buf module config for proto linting
+├── buf.gen.yaml         # Buf code generation config
+├── proto/               # Protobuf definitions (.proto files)
 ├── examples/            # Usage examples
 ├── LICENSE              # Apache License 2.0
 └── README.md
@@ -183,6 +193,47 @@ All QR methods return sentinel errors for programmatic handling via `errors.Is`:
 | `qr.WithRecoveryLevel(level)` | Error correction level | `RecoveryMedium` |
 | `qr.WithForegroundColor(color)` | QR module color | `color.Black` |
 | `qr.WithBackgroundColor(color)` | Background color | `color.White` |
+
+## gRPC Services
+
+The `grpc` package provides server-side gRPC implementations that delegate to the SDK's REST-based services. Generated client stubs are included for consumers.
+
+### Server Setup
+
+```go
+import (
+    "github.com/H0llyW00dzZ/pakasir-go-sdk/src/client"
+    pakasirv1 "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1"
+    grpcsim "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/simulation"
+    grpctxn "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/transaction"
+    sdksim "github.com/H0llyW00dzZ/pakasir-go-sdk/src/simulation"
+    sdktxn "github.com/H0llyW00dzZ/pakasir-go-sdk/src/transaction"
+    "google.golang.org/grpc"
+)
+
+// SDK setup
+c := client.New("my-project", "api-key")
+txnSvc := grpctxn.NewService(sdktxn.NewService(c))
+simSvc := grpcsim.NewService(sdksim.NewService(c))
+
+// Register on any grpc.ServiceRegistrar
+grpcServer := grpc.NewServer()
+pakasirv1.RegisterTransactionServiceServer(grpcServer, txnSvc)
+pakasirv1.RegisterSimulationServiceServer(grpcServer, simSvc)
+```
+
+### Client Usage
+
+```go
+txn := pakasirv1.NewTransactionServiceClient(conn)
+resp, err := txn.Create(ctx, &pakasirv1.CreateRequest{
+    OrderId:       "INV-001",
+    Amount:        50000,
+    PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+})
+```
+
+The services work with any gRPC interceptor chain (logging, auth, recovery, etc.) without SDK-specific middleware.
 
 ## Webhook Handling
 

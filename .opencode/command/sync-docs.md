@@ -37,6 +37,9 @@ Invoke after changes involving:
 - `src/transaction/docs.go`
 - `src/simulation/docs.go`
 - `src/webhook/docs.go`
+- `src/grpc/docs.go`
+- `src/grpc/transaction/docs.go`
+- `src/grpc/simulation/docs.go`
 - `src/helper/gc/docs.go`
 - `src/helper/url/docs.go`
 - Any new `**/docs.go` files for new packages
@@ -50,6 +53,7 @@ Invoke after changes involving:
 - Ensure godoc examples in `docs.go` files match current API
 
 ### 5. Other
+- `Makefile` if build/test targets change
 - `.github/workflows/test.yml` if CI changes (OS matrix, Go version)
 - `go.mod` if dependency changes affect documented requirements
 
@@ -70,9 +74,9 @@ Update all `docs.go` files with accurate godoc, examples, option lists matching 
 If new user-facing errors were added, ensure `MessageKey` constants and both EN/ID translations exist in `src/i18n/messages.go`.
 
 ### Step 4: Verify & Test
-- Run `go vet ./src/...`
-- Run `go test -v -race ./src/...`
-- Run `gofmt -s -d .` (must produce no output)
+- Run `make vet`
+- Run `make test`
+- Run `make fmt` (must pass with no errors)
 - Ensure examples in docs.go are valid and match code
 - Check all public APIs are documented
 
@@ -107,7 +111,7 @@ docs: sync documentation after [brief change desc]
 - [ ] CONTRIBUTING.id.md updated (if guidelines changed)
 - [ ] `docs.go` files updated with accurate godoc
 - [ ] i18n translations complete (EN + ID)
-- [ ] `go vet ./src/...` passes
-- [ ] `go test -v -race ./src/...` passes
-- [ ] `gofmt -s -d .` produces no output
+- [ ] `go vet ./src/...` passes (or `make vet`)
+- [ ] `go test -v -race ./src/...` passes (or `make test`)
+- [ ] `gofmt -s -d .` produces no output (or `make fmt`)
 - [ ] No references to outdated features
