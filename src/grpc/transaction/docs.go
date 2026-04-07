@@ -33,8 +33,52 @@
 //	// Register with a standard gRPC server:
 //	pakasirv1.RegisterTransactionServiceServer(grpcServer, txnGRPC)
 //
-//	// Or with the grpc-template pattern:
+//	// Or with the [grpc-template] pattern:
 //	srv.RegisterService(func(r grpc.ServiceRegistrar) {
 //	    pakasirv1.RegisterTransactionServiceServer(r, txnGRPC)
 //	})
+//
+// # Embedding
+//
+// The [Service] struct is exported and can be embedded into your own types
+// to combine Pakasir payment RPCs with application-specific dependencies
+// such as databases, caches, message queues, or loggers. Use [NewService]
+// to initialize the embedded service — the unexported sdk field requires
+// the constructor:
+//
+//	type PaymentService struct {
+//	    *transaction.Service
+//	    db     *sql.DB
+//	    cache  *redis.Client
+//	    logger logging.Handler
+//	}
+//
+//	func NewPaymentService(sdk *sdktxn.Service, db *sql.DB, cache *redis.Client, l logging.Handler) *PaymentService {
+//	    return &PaymentService{
+//	        Service: transaction.NewService(sdk),
+//	        db:      db,
+//	        cache:   cache,
+//	        logger:  l,
+//	    }
+//	}
+//
+//	// Register provides a [grpc-template]-compatible registration method.
+//	func (s *PaymentService) Register(r grpc.ServiceRegistrar) {
+//	    pakasirv1.RegisterTransactionServiceServer(r, s)
+//	}
+//
+// Override individual methods as needed — [Create], [Cancel], and [Detail]
+// are inherited from the embedded [Service] unless explicitly overridden.
+// For example, persist the transaction to your database after creation:
+//
+//	func (s *PaymentService) Create(ctx context.Context, req *pakasirv1.CreateRequest) (*pakasirv1.CreateResponse, error) {
+//	    resp, err := s.Service.Create(ctx, req)
+//	    if err != nil {
+//	        return nil, err
+//	    }
+//	    _ = s.db.ExecContext(ctx, "INSERT INTO orders ...", req.GetOrderId())
+//	    return resp, nil
+//	}
+//
+// [grpc-template]: https://github.com/H0llyW00dzZ/grpc-template
 package transaction
