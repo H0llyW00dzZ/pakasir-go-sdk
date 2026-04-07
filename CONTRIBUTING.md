@@ -40,6 +40,11 @@ pakasir-go-sdk/
 │   ├── transaction/     # Transaction service
 │   ├── simulation/      # Sandbox simulation service
 │   ├── webhook/         # Webhook parsing
+│   ├── grpc/
+│   │   ├── pakasir/v1/  # Generated protobuf code (do not edit)
+│   │   ├── transaction/ # gRPC TransactionService server
+│   │   ├── simulation/  # gRPC SimulationService server
+│   │   └── internal/    # Shared enum conversion and test helpers
 │   ├── helper/
 │   │   ├── gc/          # Buffer pool management
 │   │   ├── qr/          # QR code generation
@@ -47,6 +52,7 @@ pakasir-go-sdk/
 │   └── internal/
 │       ├── request/     # Shared internal request body
 │       └── timefmt/     # Shared RFC3339 time-parsing helper
+├── proto/               # Protobuf definitions (.proto files)
 ├── examples/            # Usage examples
 ├── LICENSE              # Apache License 2.0
 └── README.md
@@ -92,6 +98,13 @@ When adding new user-facing messages:
 - Use sentinel errors from `src/errors/` for programmatic handling.
 - Wrap errors with localized messages using `errors.New()`.
 - All errors must support `errors.Is()` against their sentinel.
+
+### gRPC Services
+
+- Do **not** edit generated files in `src/grpc/pakasir/v1/`. Regenerate from `proto/` definitions using `protoc`.
+- gRPC service implementations delegate to the SDK's REST-based services — they should not contain business logic.
+- Enum conversions between proto and SDK types live in `src/grpc/internal/convert/`.
+- Use `src/grpc/internal/grpctest/` helpers (bufconn) for in-memory gRPC tests.
 
 ## Submitting Changes
 

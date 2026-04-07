@@ -40,6 +40,11 @@ pakasir-go-sdk/
 │   ├── transaction/     # Layanan transaksi
 │   ├── simulation/      # Layanan simulasi sandbox
 │   ├── webhook/         # Parsing webhook
+│   ├── grpc/
+│   │   ├── pakasir/v1/  # Kode protobuf yang di-generate (jangan diedit)
+│   │   ├── transaction/ # Server gRPC TransactionService
+│   │   ├── simulation/  # Server gRPC SimulationService
+│   │   └── internal/    # Konversi enum bersama dan helper pengujian
 │   ├── helper/
 │   │   ├── gc/          # Pengelolaan buffer pool
 │   │   ├── qr/          # Pembuatan kode QR untuk pembayaran QRIS
@@ -47,6 +52,7 @@ pakasir-go-sdk/
 │   └── internal/
 │       ├── request/     # Body request internal bersama
 │       └── timefmt/     # Helper parsing waktu RFC3339 bersama
+├── proto/               # Definisi Protobuf (berkas .proto)
 ├── examples/            # Contoh penggunaan
 ├── LICENSE              # Lisensi Apache 2.0
 └── README.md
@@ -92,6 +98,13 @@ Saat menambahkan pesan baru yang ditampilkan ke pengguna:
 - Gunakan sentinel error dari `src/errors/` untuk penanganan programatik.
 - Bungkus error dengan pesan yang telah diterjemahkan menggunakan `errors.New()`.
 - Semua error harus mendukung `errors.Is()` terhadap sentinel-nya.
+
+### Layanan gRPC
+
+- **Jangan** mengedit berkas yang di-generate di `src/grpc/pakasir/v1/`. Generate ulang dari definisi `proto/` menggunakan `protoc`.
+- Implementasi layanan gRPC mendelegasikan ke layanan berbasis REST SDK — tidak boleh mengandung logika bisnis.
+- Konversi enum antara tipe proto dan SDK berada di `src/grpc/internal/convert/`.
+- Gunakan helper `src/grpc/internal/grpctest/` (bufconn) untuk pengujian gRPC in-memory.
 
 ## Mengirim Perubahan
 

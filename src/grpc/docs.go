@@ -80,4 +80,11 @@
 //	    Amount:        50000,
 //	    PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
 //	})
+//
+// # End-to-End Test
+//
+// To see the full payment lifecycle (create -> simulate pay -> verify
+// completed) running over gRPC with automatic proto-to-SDK conversion:
+//
+//	go test -v -race -run TestE2EPaymentFlowSuccess ./src/grpc/
 package grpc

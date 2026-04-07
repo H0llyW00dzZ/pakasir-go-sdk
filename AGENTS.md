@@ -44,11 +44,18 @@ src/
   transaction/      — Service: Create, Cancel, Detail
   simulation/       — Service: Pay (sandbox)
   webhook/          — Parse webhook HTTP requests into Event structs
+  grpc/             — Server-side gRPC service implementations (top-level docs + e2e tests)
+  grpc/pakasir/v1/  — Generated protobuf Go code: server interfaces + client stubs (do not edit)
+  grpc/transaction/  — gRPC TransactionServiceServer implementation (delegates to SDK transaction.Service)
+  grpc/simulation/   — gRPC SimulationServiceServer implementation (delegates to SDK simulation.Service)
+  grpc/internal/convert/ — Shared enum/timestamp mapping between SDK constants and proto types (unexported)
+  grpc/internal/grpctest/ — In-memory bufconn test helpers (unexported)
   helper/gc/        — Buffer/Pool interfaces wrapping bytebufferpool
   helper/qr/        — QR code generation for QRIS payment strings (go-qrcode)
   helper/url/       — Payment redirect URL builder
   internal/request/ — Shared request body struct, validation, and JSON encoding (unexported)
   internal/timefmt/ — Shared RFC3339 time-parsing helper (unexported)
+proto/              — Protobuf definitions (.proto files) for gRPC services
 examples/           — Example usage (build-tagged with //go:build ignore)
 ```
 
@@ -176,10 +183,12 @@ In `readResponseBody`, manual pool management (explicit `Reset`+`Put` on each re
 
 ### Dependencies
 
-Three direct dependencies — keep the footprint minimal:
+Five direct dependencies — keep the footprint minimal:
 - `github.com/stretchr/testify` (test only)
 - `github.com/valyala/bytebufferpool`
 - `github.com/skip2/go-qrcode`
+- `google.golang.org/grpc`
+- `google.golang.org/protobuf`
 
 ### Patterns to Preserve
 

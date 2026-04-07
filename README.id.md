@@ -65,6 +65,7 @@ func main() {
 - **Helper Parsing Waktu** — Method `ParseTime()` pada tipe response
 - **URL Builder** — Helper untuk integrasi pembayaran berbasis redirect
 - **Pembuatan Kode QR** — Render string pembayaran QRIS menjadi gambar PNG dengan ukuran, tingkat pemulihan, dan warna yang dapat dikonfigurasi
+- **Layanan gRPC** — Implementasi gRPC sisi server untuk layanan transaksi dan simulasi, dengan stub klien yang telah di-generate
 
 ## Struktur Proyek
 
@@ -78,6 +79,11 @@ pakasir-go-sdk/
 │   ├── transaction/     # Layanan transaksi (buat, batalkan, detail)
 │   ├── simulation/      # Layanan simulasi pembayaran (sandbox)
 │   ├── webhook/         # Helper parsing webhook
+│   ├── grpc/
+│   │   ├── pakasir/v1/  # Kode protobuf yang di-generate (server + stub klien)
+│   │   ├── transaction/ # Server gRPC TransactionService
+│   │   ├── simulation/  # Server gRPC SimulationService
+│   │   └── internal/    # Konversi enum bersama dan helper pengujian
 │   ├── helper/
 │   │   ├── gc/          # Pengelolaan buffer pool
 │   │   ├── qr/          # Pembuatan kode QR untuk pembayaran QRIS
@@ -85,6 +91,7 @@ pakasir-go-sdk/
 │   └── internal/
 │       ├── request/     # Body request internal bersama
 │       └── timefmt/     # Helper parsing waktu RFC3339 bersama
+├── proto/               # Definisi Protobuf (berkas .proto)
 ├── examples/            # Contoh penggunaan
 ├── LICENSE              # Lisensi Apache 2.0
 └── README.md
@@ -183,6 +190,47 @@ Semua method QR mengembalikan sentinel error untuk penanganan programatik melalu
 | `qr.WithRecoveryLevel(level)` | Tingkat koreksi error | `RecoveryMedium` |
 | `qr.WithForegroundColor(color)` | Warna modul QR | `color.Black` |
 | `qr.WithBackgroundColor(color)` | Warna latar belakang | `color.White` |
+
+## Layanan gRPC
+
+Paket `grpc` menyediakan implementasi gRPC sisi server yang mendelegasikan ke layanan berbasis REST SDK. Stub klien yang telah di-generate tersedia untuk konsumen.
+
+### Pengaturan Server
+
+```go
+import (
+    "github.com/H0llyW00dzZ/pakasir-go-sdk/src/client"
+    pakasirv1 "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1"
+    grpcsim "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/simulation"
+    grpctxn "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/transaction"
+    sdksim "github.com/H0llyW00dzZ/pakasir-go-sdk/src/simulation"
+    sdktxn "github.com/H0llyW00dzZ/pakasir-go-sdk/src/transaction"
+    "google.golang.org/grpc"
+)
+
+// Pengaturan SDK
+c := client.New("proyek-saya", "api-key")
+txnSvc := grpctxn.NewService(sdktxn.NewService(c))
+simSvc := grpcsim.NewService(sdksim.NewService(c))
+
+// Daftarkan pada grpc.ServiceRegistrar manapun
+grpcServer := grpc.NewServer()
+pakasirv1.RegisterTransactionServiceServer(grpcServer, txnSvc)
+pakasirv1.RegisterSimulationServiceServer(grpcServer, simSvc)
+```
+
+### Penggunaan Klien
+
+```go
+txn := pakasirv1.NewTransactionServiceClient(conn)
+resp, err := txn.Create(ctx, &pakasirv1.CreateRequest{
+    OrderId:       "INV-001",
+    Amount:        50000,
+    PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+})
+```
+
+Layanan ini bekerja dengan rantai interceptor gRPC manapun (logging, auth, recovery, dll.) tanpa middleware khusus SDK.
 
 ## Penanganan Webhook
 
