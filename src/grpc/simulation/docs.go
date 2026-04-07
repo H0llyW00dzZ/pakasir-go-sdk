@@ -60,5 +60,34 @@
 //	    pakasirv1.RegisterSimulationServiceServer(r, s)
 //	}
 //
+// # Internal Dependency in Custom Services
+//
+// The [Service] can also be used as an in-process dependency inside your
+// own proto-defined services. Call [Service.Pay] directly — it is a plain
+// Go method call that delegates to the SDK's REST client, not a gRPC call.
+// No /pakasir.v1.* routes are created unless you explicitly register them:
+//
+//	// proto: package myapp.v1; service TestingService { rpc SimulatePayment(...) ... }
+//	type TestingService struct {
+//	    myappv1.UnimplementedTestingServiceServer
+//	    sandbox *simulation.Service // in-process dependency
+//	    logger  logging.Handler
+//	}
+//
+//	func (s *TestingService) SimulatePayment(ctx context.Context, req *myappv1.SimulatePaymentRequest) (*myappv1.SimulatePaymentResponse, error) {
+//	    _, err := s.sandbox.Pay(ctx, &pakasirv1.PayRequest{
+//	        OrderId: req.GetOrderId(),
+//	        Amount:  req.GetAmount(),
+//	    })
+//	    if err != nil {
+//	        return nil, err
+//	    }
+//	    s.logger.Info("payment simulated", "order_id", req.GetOrderId())
+//	    return &myappv1.SimulatePaymentResponse{}, nil
+//	}
+//
+// The route is /myapp.v1.TestingService/SimulatePayment — determined
+// entirely by your proto definition, not by the Pakasir SDK.
+//
 // [grpc-template]: https://github.com/H0llyW00dzZ/grpc-template
 package simulation

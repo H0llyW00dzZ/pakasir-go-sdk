@@ -80,5 +80,39 @@
 //	    return resp, nil
 //	}
 //
+// # Internal Dependency in Custom Services
+//
+// The [Service] can also be used as an in-process dependency inside your
+// own proto-defined services. Call [Service.Create], [Service.Cancel], or
+// [Service.Detail] directly — these are plain Go method calls that
+// delegate to the SDK's REST client, not gRPC calls. No /pakasir.v1.*
+// routes are created unless you explicitly register them:
+//
+//	// proto: package myapp.v1; service OrderService { rpc PlaceOrder(...) ... }
+//	type OrderService struct {
+//	    myappv1.UnimplementedOrderServiceServer
+//	    db      *sql.DB
+//	    pakasir *transaction.Service // in-process dependency
+//	}
+//
+//	func (s *OrderService) PlaceOrder(ctx context.Context, req *myappv1.PlaceOrderRequest) (*myappv1.PlaceOrderResponse, error) {
+//	    resp, err := s.pakasir.Create(ctx, &pakasirv1.CreateRequest{
+//	        OrderId:       req.GetOrderId(),
+//	        Amount:        req.GetAmount(),
+//	        PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+//	    })
+//	    if err != nil {
+//	        return nil, err
+//	    }
+//	    payment := resp.GetPayment()
+//	    _ = s.db.ExecContext(ctx, "INSERT INTO orders ...", req.GetOrderId())
+//	    return &myappv1.PlaceOrderResponse{
+//	        PaymentNumber: payment.GetPaymentNumber(),
+//	    }, nil
+//	}
+//
+// The route is /myapp.v1.OrderService/PlaceOrder — determined entirely
+// by your proto definition, not by the Pakasir SDK.
+//
 // [grpc-template]: https://github.com/H0llyW00dzZ/grpc-template
 package transaction
