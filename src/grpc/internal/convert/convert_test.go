@@ -15,13 +15,17 @@
 package convert
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
+	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
 	pakasirv1 "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1"
 )
 
@@ -115,4 +119,124 @@ func TestTimeString(t *testing.T) {
 
 func TestTimeStringNil(t *testing.T) {
 	assert.Equal(t, "", TimeString(nil))
+}
+
+// --- Error ---
+
+func TestErrorNil(t *testing.T) {
+	assert.Nil(t, Error(nil))
+}
+
+func TestErrorValidationSentinels(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		code codes.Code
+	}{
+		{"nil request", sdkerrors.ErrNilRequest, codes.InvalidArgument},
+		{"invalid order id", sdkerrors.ErrInvalidOrderID, codes.InvalidArgument},
+		{"invalid amount", sdkerrors.ErrInvalidAmount, codes.InvalidArgument},
+		{"invalid payment method", sdkerrors.ErrInvalidPaymentMethod, codes.InvalidArgument},
+		{"invalid project", sdkerrors.ErrInvalidProject, codes.InvalidArgument},
+		{"invalid api key", sdkerrors.ErrInvalidAPIKey, codes.InvalidArgument},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			grpcErr := Error(tt.err)
+			st, ok := status.FromError(grpcErr)
+			assert.True(t, ok)
+			assert.Equal(t, tt.code, st.Code())
+			assert.Contains(t, st.Message(), tt.err.Error())
+		})
+	}
+}
+
+func TestErrorWrappedValidation(t *testing.T) {
+	wrapped := fmt.Errorf("order ID is required: %w", sdkerrors.ErrInvalidOrderID)
+	grpcErr := Error(wrapped)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.InvalidArgument, st.Code())
+	assert.Contains(t, st.Message(), "order ID is required")
+}
+
+func TestErrorEncodeDecode(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{"encode json", sdkerrors.ErrEncodeJSON},
+		{"decode json", sdkerrors.ErrDecodeJSON},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			grpcErr := Error(tt.err)
+			st, ok := status.FromError(grpcErr)
+			assert.True(t, ok)
+			assert.Equal(t, codes.Internal, st.Code())
+		})
+	}
+}
+
+func TestErrorResponseTooLarge(t *testing.T) {
+	grpcErr := Error(sdkerrors.ErrResponseTooLarge)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.ResourceExhausted, st.Code())
+}
+
+func TestErrorBodyTooLarge(t *testing.T) {
+	grpcErr := Error(sdkerrors.ErrBodyTooLarge)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.ResourceExhausted, st.Code())
+}
+
+func TestErrorAPIError(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		code       codes.Code
+	}{
+		{"400 bad request", 400, codes.InvalidArgument},
+		{"401 unauthorized", 401, codes.Unauthenticated},
+		{"403 forbidden", 403, codes.PermissionDenied},
+		{"404 not found", 404, codes.NotFound},
+		{"409 conflict", 409, codes.AlreadyExists},
+		{"429 too many requests", 429, codes.ResourceExhausted},
+		{"500 internal", 500, codes.Internal},
+		{"502 bad gateway", 502, codes.Internal},
+		{"503 unavailable", 503, codes.Internal},
+		{"418 teapot", 418, codes.Unknown},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			apiErr := &sdkerrors.APIError{StatusCode: tt.statusCode, Body: `{"error":"test"}`}
+			grpcErr := Error(apiErr)
+			st, ok := status.FromError(grpcErr)
+			assert.True(t, ok)
+			assert.Equal(t, tt.code, st.Code())
+			assert.Contains(t, st.Message(), "pakasir api error")
+		})
+	}
+}
+
+func TestErrorWrappedAPIError(t *testing.T) {
+	apiErr := &sdkerrors.APIError{StatusCode: 403, Body: `{"error":"forbidden"}`}
+	wrapped := fmt.Errorf("request failed: %w", apiErr)
+	grpcErr := Error(wrapped)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.PermissionDenied, st.Code())
+}
+
+func TestErrorGenericFallback(t *testing.T) {
+	grpcErr := Error(fmt.Errorf("something unexpected"))
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Internal, st.Code())
+	assert.Contains(t, st.Message(), "something unexpected")
 }

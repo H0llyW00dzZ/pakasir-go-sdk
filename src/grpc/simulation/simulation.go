@@ -17,6 +17,7 @@ package simulation
 import (
 	"context"
 
+	conv "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/internal/convert"
 	pakasirv1 "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1"
 	sdksim "github.com/H0llyW00dzZ/pakasir-go-sdk/src/simulation"
 )
@@ -42,7 +43,7 @@ func (s *Service) Pay(ctx context.Context, req *pakasirv1.PayRequest) (*pakasirv
 	}
 
 	if err := s.sdk.Pay(ctx, sdkReq); err != nil {
-		return nil, err
+		return nil, conv.Error(err)
 	}
 
 	return &pakasirv1.PayResponse{}, nil

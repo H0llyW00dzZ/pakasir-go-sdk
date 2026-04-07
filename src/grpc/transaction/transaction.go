@@ -45,7 +45,7 @@ func (s *Service) Create(ctx context.Context, req *pakasirv1.CreateRequest) (*pa
 
 	resp, err := s.sdk.Create(ctx, method, sdkReq)
 	if err != nil {
-		return nil, err
+		return nil, conv.Error(err)
 	}
 
 	return &pakasirv1.CreateResponse{
@@ -61,7 +61,7 @@ func (s *Service) Cancel(ctx context.Context, req *pakasirv1.CancelRequest) (*pa
 	}
 
 	if err := s.sdk.Cancel(ctx, sdkReq); err != nil {
-		return nil, err
+		return nil, conv.Error(err)
 	}
 
 	return &pakasirv1.CancelResponse{}, nil
@@ -76,7 +76,7 @@ func (s *Service) Detail(ctx context.Context, req *pakasirv1.DetailRequest) (*pa
 
 	resp, err := s.sdk.Detail(ctx, sdkReq)
 	if err != nil {
-		return nil, err
+		return nil, conv.Error(err)
 	}
 
 	return &pakasirv1.DetailResponse{
