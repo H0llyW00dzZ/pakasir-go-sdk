@@ -8,6 +8,7 @@ Thank you for your interest in contributing! This guide will help you get set up
 
 - **Go 1.26** or later
 - `git`
+- `buf` (for proto generation — install via `make deps`)
 
 ## Getting Started
 
@@ -23,9 +24,9 @@ Thank you for your interest in contributing! This guide will help you get set up
 3. **Verify** the setup:
 
    ```bash
-   go build ./...
-   go test ./...
-   go vet ./...
+   make build
+   make test
+   make vet
    ```
 
 ## Project Structure
@@ -52,6 +53,9 @@ pakasir-go-sdk/
 │   └── internal/
 │       ├── request/     # Shared internal request body
 │       └── timefmt/     # Shared RFC3339 time-parsing helper
+├── Makefile             # Build, test, proto generation targets
+├── buf.yaml             # Buf module config for proto linting
+├── buf.gen.yaml         # Buf code generation config
 ├── proto/               # Protobuf definitions (.proto files)
 ├── examples/            # Usage examples
 ├── LICENSE              # Apache License 2.0
@@ -101,7 +105,7 @@ When adding new user-facing messages:
 
 ### gRPC Services
 
-- Do **not** edit generated files in `src/grpc/pakasir/v1/`. Regenerate from `proto/` definitions using `protoc`.
+- Do **not** edit generated files in `src/grpc/pakasir/v1/`. Regenerate from `proto/` definitions using `make proto` (runs `buf generate`).
 - gRPC service implementations delegate to the SDK's REST-based services — they should not contain business logic.
 - Enum conversions between proto and SDK types live in `src/grpc/internal/convert/`.
 - Use `src/grpc/internal/grpctest/` helpers (bufconn) for in-memory gRPC tests.
@@ -119,10 +123,10 @@ When adding new user-facing messages:
 3. Ensure all checks pass:
 
    ```bash
-   go build ./...
-   go test ./...
-   go vet ./...
-   gofmt -s -d .
+   make build
+   make test
+   make vet
+   make fmt
    ```
 
 4. Push and open a Pull Request against `master`.

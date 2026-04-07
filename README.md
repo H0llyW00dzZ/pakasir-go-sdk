@@ -91,6 +91,9 @@ pakasir-go-sdk/
 │   └── internal/
 │       ├── request/     # Shared request body and validation
 │       └── timefmt/     # Shared RFC3339 time-parsing helper
+├── Makefile             # Build, test, proto generation targets
+├── buf.yaml             # Buf module config for proto linting
+├── buf.gen.yaml         # Buf code generation config
 ├── proto/               # Protobuf definitions (.proto files)
 ├── examples/            # Usage examples
 ├── LICENSE              # Apache License 2.0
