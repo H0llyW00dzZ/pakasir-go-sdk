@@ -18,11 +18,15 @@
 package convert
 
 import (
+	"errors"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
+	sdkerrors "github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors"
 	pakasirv1 "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/internal/timefmt"
 )
@@ -115,4 +119,70 @@ func TimeString(ts *timestamppb.Timestamp) string {
 		return ts.AsTime().Format(time.RFC3339Nano)
 	}
 	return ""
+}
+
+// Error maps an SDK error to a gRPC [status.Error] with an appropriate
+// [codes.Code]. The original error message is preserved.
+//
+// Mapping:
+//
+//   - Validation errors ([sdkerrors.ErrNilRequest], [sdkerrors.ErrInvalidOrderID],
+//     [sdkerrors.ErrInvalidAmount], [sdkerrors.ErrInvalidPaymentMethod],
+//     [sdkerrors.ErrInvalidProject], [sdkerrors.ErrInvalidAPIKey]) → [codes.InvalidArgument]
+//   - Encoding/decoding errors ([sdkerrors.ErrEncodeJSON], [sdkerrors.ErrDecodeJSON]) → [codes.Internal]
+//   - [sdkerrors.APIError] → mapped by HTTP status code
+//   - All other errors → [codes.Internal]
+func Error(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// Validation sentinels → InvalidArgument.
+	switch {
+	case errors.Is(err, sdkerrors.ErrNilRequest),
+		errors.Is(err, sdkerrors.ErrInvalidOrderID),
+		errors.Is(err, sdkerrors.ErrInvalidAmount),
+		errors.Is(err, sdkerrors.ErrInvalidPaymentMethod),
+		errors.Is(err, sdkerrors.ErrInvalidProject),
+		errors.Is(err, sdkerrors.ErrInvalidAPIKey):
+		return status.Error(codes.InvalidArgument, err.Error())
+
+	case errors.Is(err, sdkerrors.ErrEncodeJSON),
+		errors.Is(err, sdkerrors.ErrDecodeJSON):
+		return status.Error(codes.Internal, err.Error())
+
+	case errors.Is(err, sdkerrors.ErrResponseTooLarge),
+		errors.Is(err, sdkerrors.ErrBodyTooLarge):
+		return status.Error(codes.ResourceExhausted, err.Error())
+	}
+
+	// APIError → map HTTP status to gRPC code.
+	if apiErr, ok := sdkerrors.AsType[*sdkerrors.APIError](err); ok {
+		return status.Error(httpStatusToCode(apiErr.StatusCode), err.Error())
+	}
+
+	return status.Error(codes.Internal, err.Error())
+}
+
+// httpStatusToCode maps an HTTP status code to the appropriate gRPC
+// [codes.Code] following the conventions in gRPC documentation.
+func httpStatusToCode(statusCode int) codes.Code {
+	switch {
+	case statusCode == 400:
+		return codes.InvalidArgument
+	case statusCode == 401:
+		return codes.Unauthenticated
+	case statusCode == 403:
+		return codes.PermissionDenied
+	case statusCode == 404:
+		return codes.NotFound
+	case statusCode == 409:
+		return codes.AlreadyExists
+	case statusCode == 429:
+		return codes.ResourceExhausted
+	case statusCode >= 500:
+		return codes.Internal
+	default:
+		return codes.Unknown
+	}
 }
