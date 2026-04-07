@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -254,6 +255,137 @@ func TestDetailNilRequest(t *testing.T) {
 	require.Error(t, err)
 	t.Log(err)
 	assert.ErrorIs(t, err, sdkerrors.ErrNilRequest)
+}
+
+// --- Context cancellation ---
+
+func TestCreateContextCanceled(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	c := client.New("test-project", "test-key",
+		client.WithBaseURL(srv.URL),
+		client.WithRetries(0),
+	)
+	svc := NewService(c)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := svc.Create(ctx, constants.MethodQRIS, &CreateRequest{OrderID: "INV-CTX-001", Amount: 50000})
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestCreateContextDeadlineExceeded(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	c := client.New("test-project", "test-key",
+		client.WithBaseURL(srv.URL),
+		client.WithRetries(0),
+	)
+	svc := NewService(c)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+	time.Sleep(5 * time.Millisecond)
+
+	_, err := svc.Create(ctx, constants.MethodQRIS, &CreateRequest{OrderID: "INV-CTX-002", Amount: 50000})
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+}
+
+func TestCancelContextCanceled(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	c := client.New("test-project", "test-key",
+		client.WithBaseURL(srv.URL),
+		client.WithRetries(0),
+	)
+	svc := NewService(c)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := svc.Cancel(ctx, &CancelRequest{OrderID: "INV-CTX-003", Amount: 50000})
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestCancelContextDeadlineExceeded(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	c := client.New("test-project", "test-key",
+		client.WithBaseURL(srv.URL),
+		client.WithRetries(0),
+	)
+	svc := NewService(c)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+	time.Sleep(5 * time.Millisecond)
+
+	err := svc.Cancel(ctx, &CancelRequest{OrderID: "INV-CTX-004", Amount: 50000})
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+}
+
+func TestDetailContextCanceled(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	c := client.New("test-project", "test-key",
+		client.WithBaseURL(srv.URL),
+		client.WithRetries(0),
+	)
+	svc := NewService(c)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := svc.Detail(ctx, &DetailRequest{OrderID: "INV-CTX-005", Amount: 22000})
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestDetailContextDeadlineExceeded(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	c := client.New("test-project", "test-key",
+		client.WithBaseURL(srv.URL),
+		client.WithRetries(0),
+	)
+	svc := NewService(c)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+	time.Sleep(5 * time.Millisecond)
+
+	_, err := svc.Detail(ctx, &DetailRequest{OrderID: "INV-CTX-006", Amount: 22000})
+	require.Error(t, err)
+	t.Log(err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
 }
 
 // --- Time Parsers ---

@@ -18,6 +18,7 @@
 package convert
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -130,6 +131,10 @@ func TimeString(ts *timestamppb.Timestamp) string {
 //     [sdkerrors.ErrInvalidAmount], [sdkerrors.ErrInvalidPaymentMethod],
 //     [sdkerrors.ErrInvalidProject], [sdkerrors.ErrInvalidAPIKey]) → [codes.InvalidArgument]
 //   - Encoding/decoding errors ([sdkerrors.ErrEncodeJSON], [sdkerrors.ErrDecodeJSON]) → [codes.Internal]
+//   - Size limit errors ([sdkerrors.ErrResponseTooLarge], [sdkerrors.ErrBodyTooLarge]) → [codes.ResourceExhausted]
+//   - [sdkerrors.ErrRequestFailedAfterRetries] → [codes.Unavailable]
+//   - [context.Canceled] → [codes.Canceled]
+//   - [context.DeadlineExceeded] → [codes.DeadlineExceeded]
 //   - [sdkerrors.APIError] → mapped by HTTP status code
 //   - All other errors → [codes.Internal]
 func Error(err error) error {
@@ -154,6 +159,15 @@ func Error(err error) error {
 	case errors.Is(err, sdkerrors.ErrResponseTooLarge),
 		errors.Is(err, sdkerrors.ErrBodyTooLarge):
 		return status.Error(codes.ResourceExhausted, err.Error())
+
+	case errors.Is(err, sdkerrors.ErrRequestFailedAfterRetries):
+		return status.Error(codes.Unavailable, err.Error())
+
+	case errors.Is(err, context.Canceled):
+		return status.Error(codes.Canceled, err.Error())
+
+	case errors.Is(err, context.DeadlineExceeded):
+		return status.Error(codes.DeadlineExceeded, err.Error())
 	}
 
 	// APIError → map HTTP status to gRPC code.
@@ -167,22 +181,23 @@ func Error(err error) error {
 // httpStatusToCode maps an HTTP status code to the appropriate gRPC
 // [codes.Code] following the conventions in gRPC documentation.
 func httpStatusToCode(statusCode int) codes.Code {
-	switch {
-	case statusCode == 400:
+	switch statusCode {
+	case 400:
 		return codes.InvalidArgument
-	case statusCode == 401:
+	case 401:
 		return codes.Unauthenticated
-	case statusCode == 403:
+	case 403:
 		return codes.PermissionDenied
-	case statusCode == 404:
+	case 404:
 		return codes.NotFound
-	case statusCode == 409:
+	case 409:
 		return codes.AlreadyExists
-	case statusCode == 429:
+	case 429:
 		return codes.ResourceExhausted
-	case statusCode >= 500:
-		return codes.Internal
 	default:
+		if statusCode >= 500 {
+			return codes.Internal
+		}
 		return codes.Unknown
 	}
 }

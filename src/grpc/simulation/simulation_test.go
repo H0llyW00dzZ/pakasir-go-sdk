@@ -30,6 +30,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/client"
+	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants"
 	"github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/internal/grpctest"
 	pakasirv1 "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1"
 	sdksim "github.com/H0llyW00dzZ/pakasir-go-sdk/src/simulation"
@@ -50,32 +51,12 @@ func mockPakasirServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if r.URL.Path == "/api/paymentsimulation" && r.Method == http.MethodPost {
+		if r.URL.Path == constants.PathPaymentSimulation && r.Method == http.MethodPost {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{}`))
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
-	}))
-}
-
-// mockErrorServer returns an httptest.Server that always returns 500.
-func mockErrorServer(t *testing.T) *httptest.Server {
-	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"internal server error"}`))
-	}))
-}
-
-// mockHTTPStatusServer returns an httptest.Server that always returns the given status code.
-func mockHTTPStatusServer(t *testing.T, statusCode int, body string) *httptest.Server {
-	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		w.Write([]byte(body))
 	}))
 }
 
@@ -86,7 +67,7 @@ func startGRPCServer(t *testing.T, svc *Service, unary []grpc.UnaryServerInterce
 	t.Helper()
 	lis := grpctest.NewBufListener()
 
-	opts := []grpc.ServerOption{}
+	var opts []grpc.ServerOption
 	if len(unary) > 0 {
 		opts = append(opts, grpc.ChainUnaryInterceptor(unary...))
 	}
@@ -142,7 +123,7 @@ func TestE2ESimulatePay(t *testing.T) {
 // --- E2E tests (error path) ---
 
 func TestE2ESimulatePayError(t *testing.T) {
-	mock := mockErrorServer(t)
+	mock := grpctest.MockErrorServer(t)
 	defer mock.Close()
 
 	c := client.New("testproject", "test-api-key",
@@ -168,7 +149,7 @@ func TestE2ESimulatePayError(t *testing.T) {
 	require.Error(t, err)
 	st, ok := status.FromError(err)
 	require.True(t, ok)
-	assert.Equal(t, codes.Internal, st.Code())
+	assert.Equal(t, codes.Unavailable, st.Code())
 	t.Logf("  code=%s message=%s", st.Code(), st.Message())
 }
 
@@ -225,13 +206,13 @@ func TestE2EPayAPIErrorStatusCodes(t *testing.T) {
 		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
 		{"403 not sandbox", 403, `{"error":"not sandbox"}`, codes.PermissionDenied},
 		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
-		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.ResourceExhausted},
-		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Internal},
+		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.Unavailable},
+		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Unavailable},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := mockHTTPStatusServer(t, tt.httpStatus, tt.httpBody)
+			mock := grpctest.MockHTTPStatusServer(t, tt.httpStatus, tt.httpBody)
 			defer mock.Close()
 
 			c := client.New("testproject", "test-api-key",
@@ -259,35 +240,92 @@ func TestE2EPayAPIErrorStatusCodes(t *testing.T) {
 	}
 }
 
+// --- E2E tests (context cancellation) ---
+
+// slowPakasirServer returns an httptest.Server that delays responses
+// long enough for context cancellation to trigger. The handler
+// uses a bounded sleep to avoid blocking server cleanup.
+func slowPakasirServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-time.After(1 * time.Second):
+		}
+	}))
+}
+
+func TestE2ESimulatePayContextCanceled(t *testing.T) {
+	mock := slowPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	grpcSvc := NewService(sdksim.NewService(c))
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	simClient := pakasirv1.NewSimulationServiceClient(conn)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := simClient.Pay(ctx, &pakasirv1.PayRequest{
+		OrderId: "SIM-CTX-001",
+		Amount:  10000,
+	})
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Canceled, st.Code())
+	t.Logf("  code=%s message=%s", st.Code(), st.Message())
+}
+
+func TestE2ESimulatePayContextDeadlineExceeded(t *testing.T) {
+	mock := slowPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	grpcSvc := NewService(sdksim.NewService(c))
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	simClient := pakasirv1.NewSimulationServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := simClient.Pay(ctx, &pakasirv1.PayRequest{
+		OrderId: "SIM-CTX-002",
+		Amount:  10000,
+	})
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.DeadlineExceeded, st.Code())
+	t.Logf("  code=%s message=%s", st.Code(), st.Message())
+}
+
 // --- Interceptor pluggability tests ---
 
 // loggingInterceptor increments a counter for every RPC handled and
 // logs the method and duration.
 func loggingInterceptor(t *testing.T, counter *atomic.Int64) grpc.UnaryServerInterceptor {
-	t.Helper()
-	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		start := time.Now()
-		counter.Add(1)
-		resp, err := handler(ctx, req)
-		t.Logf("[interceptor/logging] method=%s duration=%v err=%v",
-			info.FullMethod, time.Since(start), err)
-		return resp, err
-	}
+	return grpctest.LoggingInterceptor(t, counter)
 }
 
 // authInterceptor rejects requests without a valid "authorization" metadata key.
 func authInterceptor(validToken string) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		md, ok := metadata.FromIncomingContext(ctx)
-		if !ok {
-			return nil, status.Error(codes.Unauthenticated, "missing metadata")
-		}
-		tokens := md.Get("authorization")
-		if len(tokens) == 0 || tokens[0] != "Bearer "+validToken {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		return handler(ctx, req)
-	}
+	return grpctest.AuthInterceptor(validToken)
 }
 
 func TestE2ESimulatePayWithLogging(t *testing.T) {

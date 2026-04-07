@@ -105,7 +105,7 @@ func mockPakasirServer(t *testing.T) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
-		case strings.HasPrefix(r.URL.Path, "/api/transactioncreate/"):
+		case strings.HasPrefix(r.URL.Path, constants.PathTransactionCreate+"/"):
 			json.NewEncoder(w).Encode(map[string]any{
 				"payment": map[string]any{
 					"project":        "testproject",
@@ -118,10 +118,10 @@ func mockPakasirServer(t *testing.T) *httptest.Server {
 					"expired_at":     "2026-12-25T23:59:59Z",
 				},
 			})
-		case r.URL.Path == "/api/transactioncancel":
+		case r.URL.Path == constants.PathTransactionCancel:
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{}`))
-		case r.URL.Path == "/api/transactiondetail":
+		case r.URL.Path == constants.PathTransactionDetail:
 			json.NewEncoder(w).Encode(map[string]any{
 				"transaction": map[string]any{
 					"amount":         50000,
@@ -138,26 +138,6 @@ func mockPakasirServer(t *testing.T) *httptest.Server {
 	}))
 }
 
-// mockErrorServer returns an httptest.Server that always returns 500.
-func mockErrorServer(t *testing.T) *httptest.Server {
-	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"internal server error"}`))
-	}))
-}
-
-// mockHTTPStatusServer returns an httptest.Server that always returns the given status code.
-func mockHTTPStatusServer(t *testing.T, statusCode int, body string) *httptest.Server {
-	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		w.Write([]byte(body))
-	}))
-}
-
 // startGRPCServer creates a gRPC server with the given service and
 // interceptors, starts it on a bufconn listener, and returns the
 // client connection and a cleanup function.
@@ -165,7 +145,7 @@ func startGRPCServer(t *testing.T, svc *Service, unary []grpc.UnaryServerInterce
 	t.Helper()
 	lis := grpctest.NewBufListener()
 
-	opts := []grpc.ServerOption{}
+	var opts []grpc.ServerOption
 	if len(unary) > 0 {
 		opts = append(opts, grpc.ChainUnaryInterceptor(unary...))
 	}
@@ -287,7 +267,7 @@ func TestE2EGetTransactionDetail(t *testing.T) {
 // --- E2E tests (error paths) ---
 
 func TestE2ECreateTransactionError(t *testing.T) {
-	mock := mockErrorServer(t)
+	mock := grpctest.MockErrorServer(t)
 	defer mock.Close()
 
 	c := client.New("testproject", "test-api-key",
@@ -314,12 +294,12 @@ func TestE2ECreateTransactionError(t *testing.T) {
 	require.Error(t, err)
 	st, ok := status.FromError(err)
 	require.True(t, ok)
-	assert.Equal(t, codes.Internal, st.Code())
+	assert.Equal(t, codes.Unavailable, st.Code())
 	t.Logf("  code=%s message=%s", st.Code(), st.Message())
 }
 
 func TestE2ECancelTransactionError(t *testing.T) {
-	mock := mockErrorServer(t)
+	mock := grpctest.MockErrorServer(t)
 	defer mock.Close()
 
 	c := client.New("testproject", "test-api-key",
@@ -345,12 +325,12 @@ func TestE2ECancelTransactionError(t *testing.T) {
 	require.Error(t, err)
 	st, ok := status.FromError(err)
 	require.True(t, ok)
-	assert.Equal(t, codes.Internal, st.Code())
+	assert.Equal(t, codes.Unavailable, st.Code())
 	t.Logf("  code=%s message=%s", st.Code(), st.Message())
 }
 
 func TestE2EGetTransactionDetailError(t *testing.T) {
-	mock := mockErrorServer(t)
+	mock := grpctest.MockErrorServer(t)
 	defer mock.Close()
 
 	c := client.New("testproject", "test-api-key",
@@ -376,7 +356,7 @@ func TestE2EGetTransactionDetailError(t *testing.T) {
 	require.Error(t, err)
 	st, ok := status.FromError(err)
 	require.True(t, ok)
-	assert.Equal(t, codes.Internal, st.Code())
+	assert.Equal(t, codes.Unavailable, st.Code())
 	t.Logf("  code=%s message=%s", st.Code(), st.Message())
 }
 
@@ -520,13 +500,13 @@ func TestE2ECreateAPIErrorStatusCodes(t *testing.T) {
 		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
 		{"403 forbidden", 403, `{"error":"forbidden"}`, codes.PermissionDenied},
 		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
-		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.ResourceExhausted},
-		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Internal},
+		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.Unavailable},
+		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Unavailable},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := mockHTTPStatusServer(t, tt.httpStatus, tt.httpBody)
+			mock := grpctest.MockHTTPStatusServer(t, tt.httpStatus, tt.httpBody)
 			defer mock.Close()
 
 			c := client.New("testproject", "test-api-key",
@@ -555,36 +535,237 @@ func TestE2ECreateAPIErrorStatusCodes(t *testing.T) {
 	}
 }
 
+func TestE2ECancelAPIErrorStatusCodes(t *testing.T) {
+	tests := []struct {
+		name       string
+		httpStatus int
+		httpBody   string
+		grpcCode   codes.Code
+	}{
+		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
+		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := grpctest.MockHTTPStatusServer(t, tt.httpStatus, tt.httpBody)
+			defer mock.Close()
+
+			c := client.New("testproject", "test-api-key",
+				client.WithBaseURL(mock.URL),
+				client.WithRetries(0),
+			)
+			grpcSvc := NewService(sdktxn.NewService(c))
+
+			conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+			defer cleanup()
+
+			txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+			_, err := txnClient.Cancel(context.Background(), &pakasirv1.CancelRequest{
+				OrderId: "API-ERR-002",
+				Amount:  10000,
+			})
+			require.Error(t, err)
+
+			st, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, tt.grpcCode, st.Code())
+			t.Logf("  HTTP %d → gRPC %s: %s", tt.httpStatus, st.Code(), st.Message())
+		})
+	}
+}
+
+func TestE2EDetailAPIErrorStatusCodes(t *testing.T) {
+	tests := []struct {
+		name       string
+		httpStatus int
+		httpBody   string
+		grpcCode   codes.Code
+	}{
+		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
+		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := grpctest.MockHTTPStatusServer(t, tt.httpStatus, tt.httpBody)
+			defer mock.Close()
+
+			c := client.New("testproject", "test-api-key",
+				client.WithBaseURL(mock.URL),
+				client.WithRetries(0),
+			)
+			grpcSvc := NewService(sdktxn.NewService(c))
+
+			conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+			defer cleanup()
+
+			txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+			_, err := txnClient.Detail(context.Background(), &pakasirv1.DetailRequest{
+				OrderId: "API-ERR-003",
+				Amount:  10000,
+			})
+			require.Error(t, err)
+
+			st, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, tt.grpcCode, st.Code())
+			t.Logf("  HTTP %d → gRPC %s: %s", tt.httpStatus, st.Code(), st.Message())
+		})
+	}
+}
+
+// --- E2E tests (context cancellation) ---
+
+// slowPakasirServer returns an httptest.Server that delays responses
+// long enough for context cancellation to trigger. The handler
+// uses a bounded sleep to avoid blocking server cleanup.
+func slowPakasirServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-time.After(1 * time.Second):
+		}
+	}))
+}
+
+func TestE2ECreateContextCanceled(t *testing.T) {
+	mock := slowPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	grpcSvc := NewService(sdktxn.NewService(c))
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := txnClient.Create(ctx, &pakasirv1.CreateRequest{
+		OrderId:       "CTX-001",
+		Amount:        10000,
+		PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+	})
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Canceled, st.Code())
+	t.Logf("  code=%s message=%s", st.Code(), st.Message())
+}
+
+func TestE2ECreateContextDeadlineExceeded(t *testing.T) {
+	mock := slowPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	grpcSvc := NewService(sdktxn.NewService(c))
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := txnClient.Create(ctx, &pakasirv1.CreateRequest{
+		OrderId:       "CTX-002",
+		Amount:        10000,
+		PaymentMethod: pakasirv1.PaymentMethod_PAYMENT_METHOD_QRIS,
+	})
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.DeadlineExceeded, st.Code())
+	t.Logf("  code=%s message=%s", st.Code(), st.Message())
+}
+
+func TestE2ECancelContextCanceled(t *testing.T) {
+	mock := slowPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	grpcSvc := NewService(sdktxn.NewService(c))
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := txnClient.Cancel(ctx, &pakasirv1.CancelRequest{
+		OrderId: "CTX-003",
+		Amount:  10000,
+	})
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Canceled, st.Code())
+	t.Logf("  code=%s message=%s", st.Code(), st.Message())
+}
+
+func TestE2EDetailContextDeadlineExceeded(t *testing.T) {
+	mock := slowPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	grpcSvc := NewService(sdktxn.NewService(c))
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	txnClient := pakasirv1.NewTransactionServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := txnClient.Detail(ctx, &pakasirv1.DetailRequest{
+		OrderId: "CTX-004",
+		Amount:  10000,
+	})
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.DeadlineExceeded, st.Code())
+	t.Logf("  code=%s message=%s", st.Code(), st.Message())
+}
+
 // --- Interceptor pluggability tests ---
 
 // loggingInterceptor is a test interceptor that increments a counter
 // every time an RPC is handled and logs the method and duration.
 func loggingInterceptor(t *testing.T, counter *atomic.Int64) grpc.UnaryServerInterceptor {
-	t.Helper()
-	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		start := time.Now()
-		counter.Add(1)
-		resp, err := handler(ctx, req)
-		t.Logf("[interceptor/logging] method=%s duration=%v err=%v",
-			info.FullMethod, time.Since(start), err)
-		return resp, err
-	}
+	return grpctest.LoggingInterceptor(t, counter)
 }
 
 // authInterceptor is a test interceptor that rejects requests without
 // a valid "authorization" metadata key.
 func authInterceptor(validToken string) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		md, ok := metadata.FromIncomingContext(ctx)
-		if !ok {
-			return nil, status.Error(codes.Unauthenticated, "missing metadata")
-		}
-		tokens := md.Get("authorization")
-		if len(tokens) == 0 || tokens[0] != "Bearer "+validToken {
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
-		}
-		return handler(ctx, req)
-	}
+	return grpctest.AuthInterceptor(validToken)
 }
 
 func TestE2EWithLoggingInterceptor(t *testing.T) {
