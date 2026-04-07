@@ -54,30 +54,30 @@ CI and Makefile test targets exclude the generated proto package (`grpc/pakasir/
 ## Project Layout
 
 ```
-Makefile            — Build, test, proto generation, benchmarks
-buf.yaml            — Buf module config for proto linting/breaking changes
-buf.gen.yaml        — Buf code generation config (Go output to src/grpc)
+Makefile                    — Build, test, proto generation, benchmarks
+buf.yaml                    — Buf module config for proto linting/breaking changes
+buf.gen.yaml                — Buf code generation config (Go output to src/grpc)
 src/
-  client/           — Core HTTP client, functional options, retry/backoff
-  constants/        — PaymentMethod/TransactionStatus enums, SDK version, API paths
-  errors/           — Sentinel errors (ErrInvalid*, ErrResponseTooLarge, ErrBodyTooLarge, etc.), APIError type, i18n wrapping
-  i18n/             — Language type (en/id), message keys, translation map
-  transaction/      — Service: Create, Cancel, Detail
-  simulation/       — Service: Pay (sandbox)
-  webhook/          — Parse webhook HTTP requests into Event structs
-  grpc/             — Server-side gRPC service implementations (top-level docs + e2e tests)
-  grpc/pakasir/v1/  — Generated protobuf Go code: server interfaces + client stubs (do not edit)
-  grpc/transaction/  — gRPC TransactionServiceServer implementation (delegates to SDK transaction.Service)
-  grpc/simulation/   — gRPC SimulationServiceServer implementation (delegates to SDK simulation.Service)
-  grpc/internal/convert/ — Shared enum/timestamp mapping between SDK constants and proto types (unexported)
-  grpc/internal/grpctest/ — In-memory bufconn test helpers (unexported)
-  helper/gc/        — Buffer/Pool interfaces wrapping bytebufferpool
-  helper/qr/        — QR code generation for QRIS payment strings (go-qrcode)
-  helper/url/       — Payment redirect URL builder
-  internal/request/ — Shared request body struct, validation, and JSON encoding (unexported)
-  internal/timefmt/ — Shared RFC3339 time-parsing helper (unexported)
-proto/              — Protobuf definitions (.proto files) for gRPC services
-examples/           — Example usage (build-tagged with //go:build ignore)
+  client/                   — Core HTTP client, functional options, retry/backoff
+  constants/                — PaymentMethod/TransactionStatus enums, SDK version, API paths
+  errors/                   — Sentinel errors (ErrInvalid*, ErrResponseTooLarge, ErrBodyTooLarge, etc.), APIError type, i18n wrapping
+  i18n/                     — Language type (en/id), message keys, translation map
+  transaction/              — Service: Create, Cancel, Detail
+  simulation/               — Service: Pay (sandbox)
+  webhook/                  — Parse webhook HTTP requests into Event structs
+  grpc/                     — Server-side gRPC service implementations (top-level docs + e2e tests)
+  grpc/pakasir/v1/          — Generated protobuf Go code: server interfaces + client stubs (do not edit)
+  grpc/transaction/         — gRPC TransactionServiceServer implementation (delegates to SDK transaction.Service)
+  grpc/simulation/          — gRPC SimulationServiceServer implementation (delegates to SDK simulation.Service)
+  grpc/internal/convert/    — Shared enum/timestamp mapping between SDK constants and proto types (unexported)
+  grpc/internal/grpctest/   — In-memory bufconn test helpers (unexported)
+  helper/gc/                — Buffer/Pool interfaces wrapping bytebufferpool
+  helper/qr/                — QR code generation for QRIS payment strings (go-qrcode)
+  helper/url/               — Payment redirect URL builder
+  internal/request/         — Shared request body struct, validation, and JSON encoding (unexported)
+  internal/timefmt/         — Shared RFC3339 time-parsing helper (unexported)
+proto/                      — Protobuf definitions (.proto files) for gRPC services
+examples/                   — Example usage (build-tagged with //go:build ignore)
 ```
 
 Every package has a `docs.go` with package-level godoc. Every package has tests.
