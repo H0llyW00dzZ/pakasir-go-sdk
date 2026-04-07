@@ -23,7 +23,7 @@ const (
 
 	// SDKVersion is the current version of this SDK.
 	// This should be updated with each release.
-	SDKVersion = "0.1.1"
+	SDKVersion = "0.2.0"
 
 	// SDKRepository is the GitHub repository URL for this SDK.
 	SDKRepository = "https://github.com/H0llyW00dzZ/pakasir-go-sdk"
