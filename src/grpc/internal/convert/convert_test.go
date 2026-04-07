@@ -255,7 +255,7 @@ func TestErrorAPIError(t *testing.T) {
 		{"429 too many requests", 429, codes.ResourceExhausted},
 		{"500 internal", 500, codes.Internal},
 		{"502 bad gateway", 502, codes.Internal},
-		{"503 unavailable", 503, codes.Internal},
+		{"503 unavailable", 503, codes.Unavailable},
 		{"418 teapot", 418, codes.Unknown},
 	}
 
