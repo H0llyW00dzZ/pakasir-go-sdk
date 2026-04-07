@@ -16,6 +16,10 @@ package transaction
 
 import (
 	"context"
+	"fmt"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	conv "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/internal/convert"
 	pakasirv1 "github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1"
@@ -38,6 +42,10 @@ func NewService(sdk *sdktxn.Service) *Service {
 // Create creates a new payment transaction.
 func (s *Service) Create(ctx context.Context, req *pakasirv1.CreateRequest) (*pakasirv1.CreateResponse, error) {
 	method := conv.PaymentMethod(req.GetPaymentMethod())
+	if method == "" {
+		return nil, status.Error(codes.InvalidArgument,
+			fmt.Sprintf("unsupported payment method: %s", req.GetPaymentMethod()))
+	}
 	sdkReq := &sdktxn.CreateRequest{
 		OrderID: req.GetOrderId(),
 		Amount:  req.GetAmount(),

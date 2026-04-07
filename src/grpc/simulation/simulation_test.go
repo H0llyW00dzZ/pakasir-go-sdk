@@ -69,6 +69,16 @@ func mockErrorServer(t *testing.T) *httptest.Server {
 	}))
 }
 
+// mockHTTPStatusServer returns an httptest.Server that always returns the given status code.
+func mockHTTPStatusServer(t *testing.T, statusCode int, body string) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		w.Write([]byte(body))
+	}))
+}
+
 // startGRPCServer creates a gRPC server with the simulation service and
 // optional interceptors, starts it on a bufconn listener, and returns
 // the client connection and a cleanup function.
@@ -156,6 +166,97 @@ func TestE2ESimulatePayError(t *testing.T) {
 	t.Logf("Pay RPC (error path): %v, err=%v", elapsed, err)
 
 	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Internal, st.Code())
+	t.Logf("  code=%s message=%s", st.Code(), st.Message())
+}
+
+// --- E2E tests (validation → InvalidArgument) ---
+
+func TestE2EPayValidationErrors(t *testing.T) {
+	mock := mockPakasirServer(t)
+	defer mock.Close()
+
+	c := client.New("testproject", "test-api-key",
+		client.WithBaseURL(mock.URL),
+		client.WithRetries(0),
+	)
+	grpcSvc := NewService(sdksim.NewService(c))
+
+	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	defer cleanup()
+
+	simClient := pakasirv1.NewSimulationServiceClient(conn)
+	ctx := context.Background()
+
+	tests := []struct {
+		name string
+		req  *pakasirv1.PayRequest
+	}{
+		{"empty order id", &pakasirv1.PayRequest{OrderId: "", Amount: 10000}},
+		{"zero amount", &pakasirv1.PayRequest{OrderId: "VAL-SIM-001", Amount: 0}},
+		{"negative amount", &pakasirv1.PayRequest{OrderId: "VAL-SIM-002", Amount: -100}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := simClient.Pay(ctx, tt.req)
+			require.Error(t, err)
+
+			st, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, codes.InvalidArgument, st.Code())
+			t.Logf("  code=%s message=%s", st.Code(), st.Message())
+		})
+	}
+}
+
+// --- E2E tests (APIError → gRPC status code mapping) ---
+
+func TestE2EPayAPIErrorStatusCodes(t *testing.T) {
+	tests := []struct {
+		name       string
+		httpStatus int
+		httpBody   string
+		grpcCode   codes.Code
+	}{
+		{"400 bad request", 400, `{"error":"bad request"}`, codes.InvalidArgument},
+		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
+		{"403 not sandbox", 403, `{"error":"not sandbox"}`, codes.PermissionDenied},
+		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
+		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.ResourceExhausted},
+		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Internal},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := mockHTTPStatusServer(t, tt.httpStatus, tt.httpBody)
+			defer mock.Close()
+
+			c := client.New("testproject", "test-api-key",
+				client.WithBaseURL(mock.URL),
+				client.WithRetries(0),
+			)
+			grpcSvc := NewService(sdksim.NewService(c))
+
+			conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+			defer cleanup()
+
+			simClient := pakasirv1.NewSimulationServiceClient(conn)
+
+			_, err := simClient.Pay(context.Background(), &pakasirv1.PayRequest{
+				OrderId: "API-ERR-SIM-001",
+				Amount:  10000,
+			})
+			require.Error(t, err)
+
+			st, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, tt.grpcCode, st.Code())
+			t.Logf("  HTTP %d → gRPC %s: %s", tt.httpStatus, st.Code(), st.Message())
+		})
+	}
 }
 
 // --- Interceptor pluggability tests ---

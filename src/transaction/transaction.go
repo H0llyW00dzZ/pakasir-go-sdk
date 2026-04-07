@@ -49,7 +49,7 @@ func (s *Service) Create(ctx context.Context, method constants.PaymentMethod, re
 		return nil, sdkerrors.New(s.client.Lang(), sdkerrors.ErrNilRequest, i18n.MsgNilRequest)
 	}
 	if !method.Valid() {
-		return nil, sdkerrors.New(s.client.Lang(), sdkerrors.ErrInvalidPaymentMethod, i18n.MsgInvalidPaymentMethod, method.String())
+		return nil, sdkerrors.New(s.client.Lang(), sdkerrors.ErrInvalidPaymentMethod, i18n.MsgInvalidPaymentMethod, strconv.Quote(method.String()))
 	}
 	if err := s.validateRequest(req.OrderID, req.Amount); err != nil {
 		return nil, err
