@@ -256,6 +256,6 @@
 // [codes.DeadlineExceeded]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.Internal]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [status.FromError]: https://pkg.go.dev/google.golang.org/grpc/status#FromError
-// [context.Canceled]: https://pkg.go.dev/context#pkg-variables
-// [context.DeadlineExceeded]: https://pkg.go.dev/context#pkg-variables
+// [context.Canceled]: https://pkg.go.dev/context#Canceled
+// [context.DeadlineExceeded]: https://pkg.go.dev/context#DeadlineExceeded
 package grpc
