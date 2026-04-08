@@ -191,8 +191,10 @@ func Error(err error) error {
 	return status.Error(codes.Internal, err.Error())
 }
 
-// httpStatusToCode maps an HTTP status code to the appropriate gRPC
-// [codes.Code] following the conventions in gRPC documentation.
+// httpStatusCodes maps HTTP status codes to the appropriate gRPC
+// [codes.Code]. Only non-5xx and special 5xx codes need explicit entries;
+// unlisted 5xx defaults to [codes.Internal] and unlisted non-5xx defaults
+// to [codes.Unknown] in [httpStatusToCode].
 //
 // Gateway/proxy errors (502, 503, 504) all map to [codes.Unavailable]
 // because they indicate the upstream service is unreachable, not a bug
@@ -200,30 +202,33 @@ func Error(err error) error {
 // are enabled: with retries the SDK exhausts attempts and returns
 // [sdkerrors.ErrRequestFailedAfterRetries] (caught earlier by [Error]),
 // but with retries disabled (WithRetries(0)) the raw [sdkerrors.APIError]
-// reaches this function directly.
+// reaches [httpStatusToCode] directly.
 //
 // HTTP 429 is intentionally absent: the SDK client retries 429 responses,
-// so the error reaching this function is always
+// so the error reaching [Error] is always
 // [sdkerrors.ErrRequestFailedAfterRetries] (mapped to [codes.Unavailable]
-// by [Error] before the [sdkerrors.APIError] branch is reached).
+// before the [sdkerrors.APIError] branch is reached).
+var httpStatusCodes = map[int]codes.Code{
+	400: codes.InvalidArgument,
+	401: codes.Unauthenticated,
+	403: codes.PermissionDenied,
+	404: codes.NotFound,
+	409: codes.AlreadyExists,
+	502: codes.Unavailable,
+	503: codes.Unavailable,
+	504: codes.Unavailable,
+}
+
+// httpStatusToCode maps an HTTP status code to the appropriate gRPC
+// [codes.Code]. Known codes are looked up in [httpStatusCodes]; unknown
+// 5xx codes default to [codes.Internal], and unknown non-5xx codes
+// default to [codes.Unknown].
 func httpStatusToCode(statusCode int) codes.Code {
-	switch statusCode {
-	case 400:
-		return codes.InvalidArgument
-	case 401:
-		return codes.Unauthenticated
-	case 403:
-		return codes.PermissionDenied
-	case 404:
-		return codes.NotFound
-	case 409:
-		return codes.AlreadyExists
-	case 502, 503, 504:
-		return codes.Unavailable
-	default:
-		if statusCode >= 500 {
-			return codes.Internal
-		}
-		return codes.Unknown
+	if c, ok := httpStatusCodes[statusCode]; ok {
+		return c
 	}
+	if statusCode >= 500 {
+		return codes.Internal
+	}
+	return codes.Unknown
 }
