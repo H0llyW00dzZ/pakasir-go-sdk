@@ -186,6 +186,7 @@ func TestE2EPayAPIErrorStatusCodes(t *testing.T) {
 		{"404 not found", http.StatusNotFound, `{"error":"not found"}`, codes.NotFound},
 		{"409 conflict", http.StatusConflict, `{"error":"duplicate order"}`, codes.AlreadyExists},
 		{"429 rate limited", http.StatusTooManyRequests, `{"error":"too many requests"}`, codes.Unavailable},
+		{"500 internal", http.StatusInternalServerError, `{"error":"internal server error"}`, codes.Internal},
 		{"502 bad gateway", http.StatusBadGateway, `{"error":"bad gateway"}`, codes.Unavailable},
 		{"503 unavailable", http.StatusServiceUnavailable, `{"error":"unavailable"}`, codes.Unavailable},
 		{"504 gateway timeout", http.StatusGatewayTimeout, `{"error":"gateway timeout"}`, codes.Unavailable},
