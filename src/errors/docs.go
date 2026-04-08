@@ -27,7 +27,7 @@
 //   - [ErrNilRequest]: nil request pointer passed to a service method
 //   - [ErrEncodeJSON]: JSON marshaling of a request body failed
 //   - [ErrDecodeJSON]: JSON unmarshaling of a response body failed
-//   - [ErrRequestFailed]: HTTP non-2xx response
+//   - [ErrRequestFailed]: permanent non-retryable network failure (TLS, DNS, address)
 //   - [ErrRequestFailedAfterRetries]: all retry attempts exhausted
 //   - [ErrResponseTooLarge]: response body exceeds configured maximum size
 //   - [ErrBodyTooLarge]: request or webhook body exceeds configured maximum size
