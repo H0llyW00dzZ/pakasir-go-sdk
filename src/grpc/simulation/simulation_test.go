@@ -60,33 +60,11 @@ func mockPakasirServer(t *testing.T) *httptest.Server {
 	}))
 }
 
-// startGRPCServer creates a gRPC server with the simulation service and
-// optional interceptors, starts it on a bufconn listener, and returns
-// the client connection and a cleanup function.
-func startGRPCServer(t *testing.T, svc *Service, unary []grpc.UnaryServerInterceptor) (*grpc.ClientConn, func()) {
-	t.Helper()
-	lis := grpctest.NewBufListener()
-
-	var opts []grpc.ServerOption
-	if len(unary) > 0 {
-		opts = append(opts, grpc.ChainUnaryInterceptor(unary...))
-	}
-
-	srv := grpc.NewServer(opts...)
-	pakasirv1.RegisterSimulationServiceServer(srv, svc)
-
-	go func() {
-		if err := srv.Serve(lis); err != nil {
-			// Server stopped; expected during cleanup.
-		}
-	}()
-
-	conn, err := grpctest.DialBufNet(context.Background(), lis)
-	require.NoError(t, err)
-
-	return conn, func() {
-		conn.Close()
-		srv.GracefulStop()
+// registerSimulation returns a registration callback for use with
+// [grpctest.StartServer].
+func registerSimulation(svc *Service) func(grpc.ServiceRegistrar) {
+	return func(r grpc.ServiceRegistrar) {
+		pakasirv1.RegisterSimulationServiceServer(r, svc)
 	}
 }
 
@@ -103,7 +81,7 @@ func TestE2ESimulatePay(t *testing.T) {
 	sdkSvc := sdksim.NewService(c)
 	grpcSvc := NewService(sdkSvc)
 
-	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	conn, cleanup := grpctest.StartServer(t, registerSimulation(grpcSvc), nil)
 	defer cleanup()
 
 	simClient := pakasirv1.NewSimulationServiceClient(conn)
@@ -133,7 +111,7 @@ func TestE2ESimulatePayError(t *testing.T) {
 	sdkSvc := sdksim.NewService(c)
 	grpcSvc := NewService(sdkSvc)
 
-	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	conn, cleanup := grpctest.StartServer(t, registerSimulation(grpcSvc), nil)
 	defer cleanup()
 
 	simClient := pakasirv1.NewSimulationServiceClient(conn)
@@ -165,7 +143,7 @@ func TestE2EPayValidationErrors(t *testing.T) {
 	)
 	grpcSvc := NewService(sdksim.NewService(c))
 
-	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	conn, cleanup := grpctest.StartServer(t, registerSimulation(grpcSvc), nil)
 	defer cleanup()
 
 	simClient := pakasirv1.NewSimulationServiceClient(conn)
@@ -206,8 +184,11 @@ func TestE2EPayAPIErrorStatusCodes(t *testing.T) {
 		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
 		{"403 not sandbox", 403, `{"error":"not sandbox"}`, codes.PermissionDenied},
 		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
+		{"409 conflict", 409, `{"error":"duplicate order"}`, codes.AlreadyExists},
 		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.Unavailable},
+		{"502 bad gateway", 502, `{"error":"bad gateway"}`, codes.Unavailable},
 		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Unavailable},
+		{"504 gateway timeout", 504, `{"error":"gateway timeout"}`, codes.Unavailable},
 	}
 
 	for _, tt := range tests {
@@ -221,7 +202,7 @@ func TestE2EPayAPIErrorStatusCodes(t *testing.T) {
 			)
 			grpcSvc := NewService(sdksim.NewService(c))
 
-			conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+			conn, cleanup := grpctest.StartServer(t, registerSimulation(grpcSvc), nil)
 			defer cleanup()
 
 			simClient := pakasirv1.NewSimulationServiceClient(conn)
@@ -242,21 +223,8 @@ func TestE2EPayAPIErrorStatusCodes(t *testing.T) {
 
 // --- E2E tests (context cancellation) ---
 
-// slowPakasirServer returns an httptest.Server that delays responses
-// long enough for context cancellation to trigger. The handler
-// uses a bounded sleep to avoid blocking server cleanup.
-func slowPakasirServer(t *testing.T) *httptest.Server {
-	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case <-r.Context().Done():
-		case <-time.After(1 * time.Second):
-		}
-	}))
-}
-
 func TestE2ESimulatePayContextCanceled(t *testing.T) {
-	mock := slowPakasirServer(t)
+	mock := grpctest.SlowServer(t)
 	defer mock.Close()
 
 	c := client.New("testproject", "test-api-key",
@@ -265,7 +233,7 @@ func TestE2ESimulatePayContextCanceled(t *testing.T) {
 	)
 	grpcSvc := NewService(sdksim.NewService(c))
 
-	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	conn, cleanup := grpctest.StartServer(t, registerSimulation(grpcSvc), nil)
 	defer cleanup()
 
 	simClient := pakasirv1.NewSimulationServiceClient(conn)
@@ -286,7 +254,7 @@ func TestE2ESimulatePayContextCanceled(t *testing.T) {
 }
 
 func TestE2ESimulatePayContextDeadlineExceeded(t *testing.T) {
-	mock := slowPakasirServer(t)
+	mock := grpctest.SlowServer(t)
 	defer mock.Close()
 
 	c := client.New("testproject", "test-api-key",
@@ -295,7 +263,7 @@ func TestE2ESimulatePayContextDeadlineExceeded(t *testing.T) {
 	)
 	grpcSvc := NewService(sdksim.NewService(c))
 
-	conn, cleanup := startGRPCServer(t, grpcSvc, nil)
+	conn, cleanup := grpctest.StartServer(t, registerSimulation(grpcSvc), nil)
 	defer cleanup()
 
 	simClient := pakasirv1.NewSimulationServiceClient(conn)
@@ -317,17 +285,6 @@ func TestE2ESimulatePayContextDeadlineExceeded(t *testing.T) {
 
 // --- Interceptor pluggability tests ---
 
-// loggingInterceptor increments a counter for every RPC handled and
-// logs the method and duration.
-func loggingInterceptor(t *testing.T, counter *atomic.Int64) grpc.UnaryServerInterceptor {
-	return grpctest.LoggingInterceptor(t, counter)
-}
-
-// authInterceptor rejects requests without a valid "authorization" metadata key.
-func authInterceptor(validToken string) grpc.UnaryServerInterceptor {
-	return grpctest.AuthInterceptor(validToken)
-}
-
 func TestE2ESimulatePayWithLogging(t *testing.T) {
 	mock := mockPakasirServer(t)
 	defer mock.Close()
@@ -340,8 +297,8 @@ func TestE2ESimulatePayWithLogging(t *testing.T) {
 	grpcSvc := NewService(sdkSvc)
 
 	var callCount atomic.Int64
-	conn, cleanup := startGRPCServer(t, grpcSvc, []grpc.UnaryServerInterceptor{
-		loggingInterceptor(t, &callCount),
+	conn, cleanup := grpctest.StartServer(t, registerSimulation(grpcSvc), []grpc.UnaryServerInterceptor{
+		grpctest.LoggingInterceptor(t, &callCount),
 	})
 	defer cleanup()
 
@@ -374,8 +331,8 @@ func TestE2ESimulatePayWithAuthSuccess(t *testing.T) {
 	sdkSvc := sdksim.NewService(c)
 	grpcSvc := NewService(sdkSvc)
 
-	conn, cleanup := startGRPCServer(t, grpcSvc, []grpc.UnaryServerInterceptor{
-		authInterceptor("sim-token"),
+	conn, cleanup := grpctest.StartServer(t, registerSimulation(grpcSvc), []grpc.UnaryServerInterceptor{
+		grpctest.AuthInterceptor("sim-token"),
 	})
 	defer cleanup()
 
@@ -406,8 +363,8 @@ func TestE2ESimulatePayWithAuthReject(t *testing.T) {
 	sdkSvc := sdksim.NewService(c)
 	grpcSvc := NewService(sdkSvc)
 
-	conn, cleanup := startGRPCServer(t, grpcSvc, []grpc.UnaryServerInterceptor{
-		authInterceptor("sim-token"),
+	conn, cleanup := grpctest.StartServer(t, registerSimulation(grpcSvc), []grpc.UnaryServerInterceptor{
+		grpctest.AuthInterceptor("sim-token"),
 	})
 	defer cleanup()
 
@@ -437,9 +394,9 @@ func TestE2ESimulatePayWithChainedInterceptors(t *testing.T) {
 	grpcSvc := NewService(sdkSvc)
 
 	var callCount atomic.Int64
-	conn, cleanup := startGRPCServer(t, grpcSvc, []grpc.UnaryServerInterceptor{
-		loggingInterceptor(t, &callCount),
-		authInterceptor("chain-sim"),
+	conn, cleanup := grpctest.StartServer(t, registerSimulation(grpcSvc), []grpc.UnaryServerInterceptor{
+		grpctest.LoggingInterceptor(t, &callCount),
+		grpctest.AuthInterceptor("chain-sim"),
 	})
 	defer cleanup()
 
