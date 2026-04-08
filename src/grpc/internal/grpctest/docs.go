@@ -34,6 +34,13 @@
 //   - [MockHTTPStatusServer] — returns the given status code and body.
 //   - [SlowServer] — delays responses for context cancellation tests.
 //
+// # Shared Test Data
+//
+// [APIErrorStatusCases] provides the canonical set of HTTP status → gRPC
+// code mappings (including 408 → [codes.DeadlineExceeded]) used by all
+// E2E API error tests. Centralizing the table prevents drift when new
+// mappings are added.
+//
 // # Interceptor Factories
 //
 // Interceptor factories verify interceptor pluggability in E2E tests:

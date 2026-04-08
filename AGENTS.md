@@ -74,7 +74,7 @@ src/
   grpc/transaction/         — gRPC TransactionServiceServer implementation (delegates to SDK transaction.Service)
   grpc/simulation/          — gRPC SimulationServiceServer implementation (delegates to SDK simulation.Service)
   grpc/internal/convert/    — Shared enum/timestamp mapping between SDK constants and proto types (unexported)
-  grpc/internal/grpctest/   — In-memory bufconn test helpers, shared mock HTTP servers, and interceptor factories (unexported)
+  grpc/internal/grpctest/   — In-memory bufconn test helpers, shared mock HTTP servers, interceptor factories, and shared E2E test data (unexported)
   helper/gc/                — Buffer/Pool interfaces wrapping bytebufferpool
   helper/qr/                — QR code generation for QRIS payment strings (go-qrcode)
   helper/url/               — Payment redirect URL builder
@@ -205,6 +205,7 @@ In `readResponseBody`, manual pool management (explicit `Reset`+`Put` on each re
 - **Test helpers** use `t.Helper()` for clean stack traces.
 - **HTTP mocking** via `httptest.NewServer` with inline `http.HandlerFunc`.
 - **Error assertions**: `assert.ErrorIs` for sentinels, `assert.ErrorAs` for types, `assert.Contains` for messages.
+- **gRPC E2E tests** use `grpctest.StartServer` (bufconn) with per-subtest mock servers. API error status code tests use the shared `grpctest.APIErrorStatusCases` table to avoid duplication across RPC methods. Independent subtests use `t.Parallel()` for faster wall-clock time.
 
 ### Dependencies
 

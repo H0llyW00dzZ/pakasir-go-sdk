@@ -468,27 +468,11 @@ func TestE2EDetailValidationErrors(t *testing.T) {
 // --- E2E tests (APIError → gRPC status code mapping) ---
 
 func TestE2ECreateAPIErrorStatusCodes(t *testing.T) {
-	tests := []struct {
-		name       string
-		httpStatus int
-		httpBody   string
-		grpcCode   codes.Code
-	}{
-		{"400 bad request", http.StatusBadRequest, `{"error":"bad request"}`, codes.InvalidArgument},
-		{"401 unauthorized", http.StatusUnauthorized, `{"error":"unauthorized"}`, codes.Unauthenticated},
-		{"403 forbidden", http.StatusForbidden, `{"error":"forbidden"}`, codes.PermissionDenied},
-		{"404 not found", http.StatusNotFound, `{"error":"not found"}`, codes.NotFound},
-		{"409 conflict", http.StatusConflict, `{"error":"duplicate order"}`, codes.AlreadyExists},
-		{"429 rate limited", http.StatusTooManyRequests, `{"error":"too many requests"}`, codes.Unavailable},
-		{"500 internal", http.StatusInternalServerError, `{"error":"internal server error"}`, codes.Internal},
-		{"502 bad gateway", http.StatusBadGateway, `{"error":"bad gateway"}`, codes.Unavailable},
-		{"503 unavailable", http.StatusServiceUnavailable, `{"error":"unavailable"}`, codes.Unavailable},
-		{"504 gateway timeout", http.StatusGatewayTimeout, `{"error":"gateway timeout"}`, codes.Unavailable},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mock := grpctest.MockHTTPStatusServer(t, tt.httpStatus, tt.httpBody)
+	t.Parallel()
+	for _, tt := range grpctest.APIErrorStatusCases {
+		t.Run(tt.Name, func(t *testing.T) {
+			t.Parallel()
+			mock := grpctest.MockHTTPStatusServer(t, tt.HTTPStatus, tt.HTTPBody)
 			defer mock.Close()
 
 			c := client.New("testproject", "test-api-key",
@@ -511,34 +495,18 @@ func TestE2ECreateAPIErrorStatusCodes(t *testing.T) {
 
 			st, ok := status.FromError(err)
 			require.True(t, ok)
-			assert.Equal(t, tt.grpcCode, st.Code())
-			t.Logf("  HTTP %d → gRPC %s: %s", tt.httpStatus, st.Code(), st.Message())
+			assert.Equal(t, tt.GRPCCode, st.Code())
+			t.Logf("  HTTP %d → gRPC %s: %s", tt.HTTPStatus, st.Code(), st.Message())
 		})
 	}
 }
 
 func TestE2ECancelAPIErrorStatusCodes(t *testing.T) {
-	tests := []struct {
-		name       string
-		httpStatus int
-		httpBody   string
-		grpcCode   codes.Code
-	}{
-		{"400 bad request", http.StatusBadRequest, `{"error":"bad request"}`, codes.InvalidArgument},
-		{"401 unauthorized", http.StatusUnauthorized, `{"error":"unauthorized"}`, codes.Unauthenticated},
-		{"403 forbidden", http.StatusForbidden, `{"error":"forbidden"}`, codes.PermissionDenied},
-		{"404 not found", http.StatusNotFound, `{"error":"not found"}`, codes.NotFound},
-		{"409 conflict", http.StatusConflict, `{"error":"duplicate order"}`, codes.AlreadyExists},
-		{"429 rate limited", http.StatusTooManyRequests, `{"error":"too many requests"}`, codes.Unavailable},
-		{"500 internal", http.StatusInternalServerError, `{"error":"internal server error"}`, codes.Internal},
-		{"502 bad gateway", http.StatusBadGateway, `{"error":"bad gateway"}`, codes.Unavailable},
-		{"503 unavailable", http.StatusServiceUnavailable, `{"error":"unavailable"}`, codes.Unavailable},
-		{"504 gateway timeout", http.StatusGatewayTimeout, `{"error":"gateway timeout"}`, codes.Unavailable},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mock := grpctest.MockHTTPStatusServer(t, tt.httpStatus, tt.httpBody)
+	t.Parallel()
+	for _, tt := range grpctest.APIErrorStatusCases {
+		t.Run(tt.Name, func(t *testing.T) {
+			t.Parallel()
+			mock := grpctest.MockHTTPStatusServer(t, tt.HTTPStatus, tt.HTTPBody)
 			defer mock.Close()
 
 			c := client.New("testproject", "test-api-key",
@@ -560,34 +528,18 @@ func TestE2ECancelAPIErrorStatusCodes(t *testing.T) {
 
 			st, ok := status.FromError(err)
 			require.True(t, ok)
-			assert.Equal(t, tt.grpcCode, st.Code())
-			t.Logf("  HTTP %d → gRPC %s: %s", tt.httpStatus, st.Code(), st.Message())
+			assert.Equal(t, tt.GRPCCode, st.Code())
+			t.Logf("  HTTP %d → gRPC %s: %s", tt.HTTPStatus, st.Code(), st.Message())
 		})
 	}
 }
 
 func TestE2EDetailAPIErrorStatusCodes(t *testing.T) {
-	tests := []struct {
-		name       string
-		httpStatus int
-		httpBody   string
-		grpcCode   codes.Code
-	}{
-		{"400 bad request", http.StatusBadRequest, `{"error":"bad request"}`, codes.InvalidArgument},
-		{"401 unauthorized", http.StatusUnauthorized, `{"error":"unauthorized"}`, codes.Unauthenticated},
-		{"403 forbidden", http.StatusForbidden, `{"error":"forbidden"}`, codes.PermissionDenied},
-		{"404 not found", http.StatusNotFound, `{"error":"not found"}`, codes.NotFound},
-		{"409 conflict", http.StatusConflict, `{"error":"duplicate order"}`, codes.AlreadyExists},
-		{"429 rate limited", http.StatusTooManyRequests, `{"error":"too many requests"}`, codes.Unavailable},
-		{"500 internal", http.StatusInternalServerError, `{"error":"internal server error"}`, codes.Internal},
-		{"502 bad gateway", http.StatusBadGateway, `{"error":"bad gateway"}`, codes.Unavailable},
-		{"503 unavailable", http.StatusServiceUnavailable, `{"error":"unavailable"}`, codes.Unavailable},
-		{"504 gateway timeout", http.StatusGatewayTimeout, `{"error":"gateway timeout"}`, codes.Unavailable},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mock := grpctest.MockHTTPStatusServer(t, tt.httpStatus, tt.httpBody)
+	t.Parallel()
+	for _, tt := range grpctest.APIErrorStatusCases {
+		t.Run(tt.Name, func(t *testing.T) {
+			t.Parallel()
+			mock := grpctest.MockHTTPStatusServer(t, tt.HTTPStatus, tt.HTTPBody)
 			defer mock.Close()
 
 			c := client.New("testproject", "test-api-key",
@@ -609,8 +561,8 @@ func TestE2EDetailAPIErrorStatusCodes(t *testing.T) {
 
 			st, ok := status.FromError(err)
 			require.True(t, ok)
-			assert.Equal(t, tt.grpcCode, st.Code())
-			t.Logf("  HTTP %d → gRPC %s: %s", tt.httpStatus, st.Code(), st.Message())
+			assert.Equal(t, tt.GRPCCode, st.Code())
+			t.Logf("  HTTP %d → gRPC %s: %s", tt.HTTPStatus, st.Code(), st.Message())
 		})
 	}
 }

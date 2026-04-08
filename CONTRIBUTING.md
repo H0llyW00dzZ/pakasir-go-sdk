@@ -109,7 +109,7 @@ When adding new user-facing messages:
 - Do **not** edit generated files in `src/grpc/pakasir/v1/`. Regenerate from `proto/` definitions using `make proto` (runs `buf generate`).
 - gRPC service implementations delegate to the SDK's REST-based services — they should not contain business logic.
 - Enum conversions between proto and SDK types live in `src/grpc/internal/convert/`.
-- Use `src/grpc/internal/grpctest/` helpers (bufconn) for in-memory gRPC tests.
+- Use `src/grpc/internal/grpctest/` helpers (bufconn) for in-memory gRPC tests. Use the shared `APIErrorStatusCases` table for HTTP status → gRPC code mapping E2E tests.
 
 ## Submitting Changes
 
