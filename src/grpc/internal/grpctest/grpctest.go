@@ -19,6 +19,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
@@ -75,9 +76,7 @@ func StartServer(t *testing.T, register func(grpc.ServiceRegistrar), unary []grp
 	}()
 
 	conn, err := DialBufNet(context.Background(), lis)
-	if err != nil {
-		t.Fatalf("grpctest: dial bufconn: %v", err)
-	}
+	require.NoError(t, err, "grpctest: dial bufconn")
 
 	return conn, func() {
 		conn.Close()
