@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -257,4 +258,84 @@ func TestAuthInterceptorWrongToken(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, codes.Unauthenticated, st.Code())
 	assert.Contains(t, st.Message(), "invalid token")
+}
+
+// --- StartServer ---
+
+func TestStartServer(t *testing.T) {
+	registered := false
+	conn, cleanup := StartServer(t, func(r grpc.ServiceRegistrar) {
+		registered = true
+	}, nil)
+	defer cleanup()
+
+	assert.True(t, registered)
+	require.NotNil(t, conn)
+
+	conn.Connect()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	conn.WaitForStateChange(ctx, connectivity.Idle)
+
+	t.Logf("StartServer: target=%s state=%s", conn.Target(), conn.GetState())
+}
+
+func TestStartServerWithInterceptors(t *testing.T) {
+	var counter atomic.Int64
+	conn, cleanup := StartServer(t, func(r grpc.ServiceRegistrar) {
+		// No services; just testing that interceptor opts are applied.
+	}, []grpc.UnaryServerInterceptor{
+		LoggingInterceptor(t, &counter),
+	})
+	defer cleanup()
+
+	require.NotNil(t, conn)
+	t.Logf("StartServer with interceptors: target=%s", conn.Target())
+}
+
+// --- SlowServer ---
+
+func TestSlowServer(t *testing.T) {
+	srv := SlowServer(t)
+	defer srv.Close()
+
+	require.NotNil(t, srv)
+
+	// A request with an already-cancelled context should return
+	// immediately (handler sees r.Context().Done()) instead of
+	// blocking for the full 1-second timeout.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL, nil)
+	require.NoError(t, err)
+
+	start := time.Now()
+	_, err = http.DefaultClient.Do(req)
+	elapsed := time.Since(start)
+
+	require.Error(t, err)
+	assert.Less(t, elapsed, 500*time.Millisecond)
+	t.Logf("SlowServer cancelled request returned in %v", elapsed)
+}
+
+func TestSlowServerRespondsAfterDelay(t *testing.T) {
+	srv := SlowServer(t)
+	defer srv.Close()
+
+	// With a generous timeout the server responds after its 1s delay.
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL, nil)
+	require.NoError(t, err)
+
+	start := time.Now()
+	resp, err := http.DefaultClient.Do(req)
+	elapsed := time.Since(start)
+
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.GreaterOrEqual(t, elapsed, 900*time.Millisecond)
+	t.Logf("SlowServer responded after %v", elapsed)
 }
