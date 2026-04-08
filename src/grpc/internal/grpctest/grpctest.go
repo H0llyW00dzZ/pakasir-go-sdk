@@ -17,6 +17,7 @@ package grpctest
 import (
 	"context"
 	"net"
+	"testing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -42,4 +43,44 @@ func DialBufNet(ctx context.Context, lis *bufconn.Listener, opts ...grpc.DialOpt
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 	return grpc.NewClient("passthrough:///bufconn", append(base, opts...)...)
+}
+
+// StartServer creates a gRPC server on a bufconn listener, registers
+// services via the provided register callback, and returns a client
+// connection plus a cleanup function. Optional unary interceptors are
+// chained in order.
+//
+// Example:
+//
+//	conn, cleanup := grpctest.StartServer(t, func(r grpc.ServiceRegistrar) {
+//	    pakasirv1.RegisterTransactionServiceServer(r, txnSvc)
+//	}, nil)
+//	defer cleanup()
+func StartServer(t *testing.T, register func(grpc.ServiceRegistrar), unary []grpc.UnaryServerInterceptor) (*grpc.ClientConn, func()) {
+	t.Helper()
+	lis := NewBufListener()
+
+	var opts []grpc.ServerOption
+	if len(unary) > 0 {
+		opts = append(opts, grpc.ChainUnaryInterceptor(unary...))
+	}
+
+	srv := grpc.NewServer(opts...)
+	register(srv)
+
+	go func() {
+		if err := srv.Serve(lis); err != nil {
+			// Server stopped; expected during cleanup.
+		}
+	}()
+
+	conn, err := DialBufNet(context.Background(), lis)
+	if err != nil {
+		t.Fatalf("grpctest: dial bufconn: %v", err)
+	}
+
+	return conn, func() {
+		conn.Close()
+		srv.GracefulStop()
+	}
 }
