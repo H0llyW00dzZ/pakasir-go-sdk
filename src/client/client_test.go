@@ -167,7 +167,7 @@ func TestDo4xxReturnsAPIError(t *testing.T) {
 	assert.Equal(t, 400, apiErr.StatusCode)
 }
 
-func TestDoRetryOn5xxThenSuccess(t *testing.T) {
+func TestDoRetryOnGatewayErrorThenSuccess(t *testing.T) {
 	var attempt atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n := attempt.Add(1)
@@ -189,6 +189,33 @@ func TestDoRetryOn5xxThenSuccess(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"ok":true}`, string(data))
 	assert.Equal(t, int32(3), attempt.Load())
+}
+
+func TestDo500NotRetried(t *testing.T) {
+	var attempt atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempt.Add(1)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error":"server bug"}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL,
+		WithRetries(2),
+		WithRetryWait(1*time.Millisecond, 5*time.Millisecond),
+	)
+	_, err := c.Do(context.Background(), http.MethodGet, "/test", nil)
+	require.Error(t, err)
+	t.Log(err)
+
+	// 500 is not retryable — must fail on the first attempt.
+	assert.Equal(t, int32(1), attempt.Load(), "500 must not be retried")
+
+	// Must surface as an APIError, not ErrRequestFailedAfterRetries.
+	var apiErr *sdkerrors.APIError
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, 500, apiErr.StatusCode)
+	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
 }
 
 func TestDoRetryOn429ThenSuccess(t *testing.T) {
@@ -937,6 +964,7 @@ func TestParseRetryAfter(t *testing.T) {
 		{"seconds with spaces", "  5  ", 5 * time.Second},
 		{"zero seconds", "0", 0},
 		{"negative seconds", "-1", 0},
+		{"huge seconds capped", "999999", 24 * time.Hour},
 		{"invalid string", "not-a-number", 0},
 	}
 

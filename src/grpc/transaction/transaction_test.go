@@ -523,8 +523,16 @@ func TestE2ECancelAPIErrorStatusCodes(t *testing.T) {
 		httpBody   string
 		grpcCode   codes.Code
 	}{
+		{"400 bad request", 400, `{"error":"bad request"}`, codes.InvalidArgument},
 		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
+		{"403 forbidden", 403, `{"error":"forbidden"}`, codes.PermissionDenied},
 		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
+		{"409 conflict", 409, `{"error":"duplicate order"}`, codes.AlreadyExists},
+		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.Unavailable},
+		{"500 internal", 500, `{"error":"internal server error"}`, codes.Internal},
+		{"502 bad gateway", 502, `{"error":"bad gateway"}`, codes.Unavailable},
+		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Unavailable},
+		{"504 gateway timeout", 504, `{"error":"gateway timeout"}`, codes.Unavailable},
 	}
 
 	for _, tt := range tests {
@@ -564,8 +572,16 @@ func TestE2EDetailAPIErrorStatusCodes(t *testing.T) {
 		httpBody   string
 		grpcCode   codes.Code
 	}{
+		{"400 bad request", 400, `{"error":"bad request"}`, codes.InvalidArgument},
 		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
+		{"403 forbidden", 403, `{"error":"forbidden"}`, codes.PermissionDenied},
 		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
+		{"409 conflict", 409, `{"error":"duplicate order"}`, codes.AlreadyExists},
+		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.Unavailable},
+		{"500 internal", 500, `{"error":"internal server error"}`, codes.Internal},
+		{"502 bad gateway", 502, `{"error":"bad gateway"}`, codes.Unavailable},
+		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Unavailable},
+		{"504 gateway timeout", 504, `{"error":"gateway timeout"}`, codes.Unavailable},
 	}
 
 	for _, tt := range tests {
