@@ -168,7 +168,8 @@ var sentinelCodes = [...]struct {
 //   - [context.DeadlineExceeded] → [codes.DeadlineExceeded]
 //   - [sdkerrors.APIError] → mapped by HTTP status code (400 → [codes.InvalidArgument],
 //     401 → [codes.Unauthenticated], 403 → [codes.PermissionDenied],
-//     404 → [codes.NotFound], 409 → [codes.AlreadyExists],
+//     404 → [codes.NotFound], 408 → [codes.DeadlineExceeded],
+//     409 → [codes.AlreadyExists],
 //     502/503/504 → [codes.Unavailable], other 5xx → [codes.Internal],
 //     other non-5xx → [codes.Unknown])
 //   - All other errors → [codes.Internal]
@@ -197,6 +198,10 @@ func Error(err error) error {
 // unlisted 5xx defaults to [codes.Internal] and unlisted non-5xx defaults
 // to [codes.Unknown] in [httpStatusToCode].
 //
+// HTTP 408 maps to [codes.DeadlineExceeded] because the server timed out
+// waiting for the request — the client was too slow, and the condition is
+// unlikely to change on retry (the SDK client does not retry 408).
+//
 // Gateway/proxy errors (502, 503, 504) all map to [codes.Unavailable]
 // because they indicate the upstream service is unreachable, not a bug
 // in the server's logic. This is consistent regardless of whether retries
@@ -211,6 +216,7 @@ func Error(err error) error {
 // before the [sdkerrors.APIError] branch is reached).
 var httpStatusCodes = map[int]codes.Code{
 	http.StatusBadRequest:         codes.InvalidArgument,
+	http.StatusRequestTimeout:     codes.DeadlineExceeded,
 	http.StatusUnauthorized:       codes.Unauthenticated,
 	http.StatusForbidden:          codes.PermissionDenied,
 	http.StatusNotFound:           codes.NotFound,
