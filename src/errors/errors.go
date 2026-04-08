@@ -48,7 +48,10 @@ var (
 	// ErrDecodeJSON is returned when JSON unmarshaling of a response fails.
 	ErrDecodeJSON = errors.New("decode json")
 
-	// ErrRequestFailed is returned when the API returns a non-2xx status code.
+	// ErrRequestFailed is returned when a request fails due to a permanent,
+	// non-retryable error such as a TLS certificate failure, DNS NXDOMAIN,
+	// or address misconfiguration. Non-2xx HTTP responses produce [APIError]
+	// instead.
 	ErrRequestFailed = errors.New("request failed")
 
 	// ErrRequestFailedAfterRetries is returned when all retry attempts are exhausted.
