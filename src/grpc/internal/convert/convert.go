@@ -144,6 +144,8 @@ var sentinelCodes = [...]struct {
 	{sdkerrors.ErrBodyTooLarge, codes.ResourceExhausted},
 
 	// Transport failures → Unavailable.
+	// ErrRequestFailedAfterRetries must be scanned before ErrRequestFailed
+	// because retries-exhausted errors may wrap ErrRequestFailed in their chain.
 	{sdkerrors.ErrRequestFailedAfterRetries, codes.Unavailable},
 	{sdkerrors.ErrRequestFailed, codes.Unavailable},
 
