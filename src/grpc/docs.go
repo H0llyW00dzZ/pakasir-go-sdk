@@ -88,6 +88,7 @@
 //   - [sdkerrors.APIError] 401 → [codes.Unauthenticated]
 //   - [sdkerrors.APIError] 403 → [codes.PermissionDenied]
 //   - [sdkerrors.APIError] 404 → [codes.NotFound]
+//   - [sdkerrors.APIError] 408 → [codes.DeadlineExceeded]
 //   - [sdkerrors.APIError] 409 → [codes.AlreadyExists]
 //   - [sdkerrors.APIError] 502/503/504 → [codes.Unavailable]
 //   - [sdkerrors.APIError] other 5xx → [codes.Internal]

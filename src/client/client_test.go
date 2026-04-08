@@ -846,6 +846,7 @@ func TestIsRetryableStatus(t *testing.T) {
 		{"503", http.StatusServiceUnavailable, true},
 		{"504", http.StatusGatewayTimeout, true},
 		{"500", http.StatusInternalServerError, false},
+		{"408", http.StatusRequestTimeout, false},
 		{"400", http.StatusBadRequest, false},
 		{"401", http.StatusUnauthorized, false},
 		{"403", http.StatusForbidden, false},

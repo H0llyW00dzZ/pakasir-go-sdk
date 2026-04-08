@@ -268,6 +268,7 @@ func TestErrorAPIError(t *testing.T) {
 		{"401 unauthorized", http.StatusUnauthorized, codes.Unauthenticated},
 		{"403 forbidden", http.StatusForbidden, codes.PermissionDenied},
 		{"404 not found", http.StatusNotFound, codes.NotFound},
+		{"408 request timeout", http.StatusRequestTimeout, codes.DeadlineExceeded},
 		{"409 conflict", http.StatusConflict, codes.AlreadyExists},
 		{"429 too many requests", http.StatusTooManyRequests, codes.Unknown},
 		{"500 internal", http.StatusInternalServerError, codes.Internal},
