@@ -64,6 +64,19 @@ func LoggingInterceptor(t *testing.T, counter *atomic.Int64) grpc.UnaryServerInt
 	}
 }
 
+// SlowServer returns an httptest.Server that delays responses long
+// enough for context cancellation to trigger. The handler uses a
+// bounded sleep to avoid blocking server cleanup.
+func SlowServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-time.After(1 * time.Second):
+		}
+	}))
+}
+
 // AuthInterceptor returns a unary server interceptor that rejects
 // requests without a valid "authorization" metadata key.
 func AuthInterceptor(validToken string) grpc.UnaryServerInterceptor {

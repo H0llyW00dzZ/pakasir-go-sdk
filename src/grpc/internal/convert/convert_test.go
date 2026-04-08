@@ -211,6 +211,22 @@ func TestErrorWrappedRequestFailedAfterRetries(t *testing.T) {
 	assert.Equal(t, codes.Unavailable, st.Code())
 }
 
+func TestErrorRequestFailed(t *testing.T) {
+	grpcErr := Error(sdkerrors.ErrRequestFailed)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Unavailable, st.Code())
+	assert.Contains(t, st.Message(), "request failed")
+}
+
+func TestErrorWrappedRequestFailed(t *testing.T) {
+	wrapped := fmt.Errorf("tls handshake failure: %w", sdkerrors.ErrRequestFailed)
+	grpcErr := Error(wrapped)
+	st, ok := status.FromError(grpcErr)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Unavailable, st.Code())
+}
+
 func TestErrorContextCanceled(t *testing.T) {
 	grpcErr := Error(context.Canceled)
 	st, ok := status.FromError(grpcErr)
@@ -252,10 +268,11 @@ func TestErrorAPIError(t *testing.T) {
 		{"403 forbidden", 403, codes.PermissionDenied},
 		{"404 not found", 404, codes.NotFound},
 		{"409 conflict", 409, codes.AlreadyExists},
-		{"429 too many requests", 429, codes.ResourceExhausted},
+		{"429 too many requests", 429, codes.Unknown},
 		{"500 internal", 500, codes.Internal},
-		{"502 bad gateway", 502, codes.Internal},
+		{"502 bad gateway", 502, codes.Unavailable},
 		{"503 unavailable", 503, codes.Unavailable},
+		{"504 gateway timeout", 504, codes.Unavailable},
 		{"418 teapot", 418, codes.Unknown},
 	}
 

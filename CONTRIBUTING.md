@@ -9,6 +9,7 @@ Thank you for your interest in contributing! This guide will help you get set up
 - **Go 1.26** or later
 - `git`
 - `buf` (for proto generation — install via `make deps`)
+- `gocyclo` (for complexity analysis — install via `make deps`)
 
 ## Getting Started
 
@@ -53,7 +54,7 @@ pakasir-go-sdk/
 │   └── internal/
 │       ├── request/     # Shared internal request body
 │       └── timefmt/     # Shared RFC3339 time-parsing helper
-├── Makefile             # Build, test, proto generation targets
+├── Makefile             # Build, test, proto generation, quality analysis targets
 ├── buf.yaml             # Buf module config for proto linting
 ├── buf.gen.yaml         # Buf code generation config
 ├── proto/               # Protobuf definitions (.proto files)
@@ -123,11 +124,12 @@ When adding new user-facing messages:
 3. Ensure all checks pass:
 
    ```bash
-   make build
-   make test
-   make vet
-   make fmt
-   ```
+    make build
+    make test
+    make vet
+    make fmt
+    make gocyclo
+    ```
 
 4. Push and open a Pull Request against `master`.
 

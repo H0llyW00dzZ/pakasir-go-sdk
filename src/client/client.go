@@ -216,9 +216,13 @@ func (c *Client) executeAttempt(ctx context.Context, method, path string, body [
 
 // handleResponse reads the response body and classifies the HTTP status.
 // It returns the body bytes on 2xx, a non-retryable [sdkerrors.APIError]
-// on 4xx (except 429), or a retryable error for 5xx/429 statuses.
-// A non-zero duration is returned when a 429 response includes a
+// on 4xx (except 429) and 500, or a retryable error for 502/503/504/429
+// statuses. A non-zero duration is returned when a 429 response includes a
 // Retry-After header.
+//
+// Read errors from [readResponseBody] (including oversize rejection via
+// [sdkerrors.ErrResponseTooLarge]) are classified by [isRetryable] before
+// reaching the status code logic.
 func (c *Client) handleResponse(resp *http.Response) ([]byte, time.Duration, error) {
 	data, readErr := c.readResponseBody(resp)
 	if readErr != nil {
@@ -391,11 +395,13 @@ func (c *Client) calculateBackoff(attempt int) time.Duration {
 }
 
 // isRetryableStatus determines whether a request should be retried
-// based on the HTTP status code.
+// based on the HTTP status code. Only gateway/proxy errors (502, 503, 504)
+// and rate limiting (429) are retried. A 500 Internal Server Error maps to
+// [codes.Internal] in the gRPC layer, indicating a server-side bug rather
+// than a transient condition, and is therefore not retried.
 func isRetryableStatus(statusCode int) bool {
 	switch statusCode {
 	case http.StatusTooManyRequests,
-		http.StatusInternalServerError,
 		http.StatusBadGateway,
 		http.StatusServiceUnavailable,
 		http.StatusGatewayTimeout:
@@ -406,9 +412,10 @@ func isRetryableStatus(statusCode int) bool {
 }
 
 // isRetryable determines whether a network-level error is transient
-// and worth retrying. TLS certificate/handshake errors, system root pool
-// errors, permanent DNS failures, oversized responses, and other permanent
-// failures return false to avoid wasting retry attempts.
+// and worth retrying. TLS certificate/handshake errors, ECH rejection,
+// system root pool errors, permanent DNS failures, address misconfiguration,
+// oversized responses, and other permanent failures return false to avoid
+// wasting retry attempts.
 //
 // The [errors.AsType] checks traverse the entire error chain, including
 // errors nested inside [net/url.Error] via its Unwrap method, so no
@@ -430,14 +437,21 @@ func isRetryable(err error) bool {
 	// Oversized responses are deterministic — do not retry.
 	case errors.Is(err, sdkerrors.ErrResponseTooLarge):
 		return false
-	// TLS/x509 certificate and handshake errors are permanent — do not retry.
+	// TLS/x509 certificate, handshake, and ECH rejection errors are
+	// permanent — do not retry.
 	case sdkerrors.HasType[*tls.CertificateVerificationError](err),
 		sdkerrors.HasType[*x509.UnknownAuthorityError](err),
 		sdkerrors.HasType[*x509.HostnameError](err),
 		sdkerrors.HasType[*x509.CertificateInvalidError](err),
 		sdkerrors.HasType[*x509.SystemRootsError](err),
 		sdkerrors.HasType[tls.AlertError](err),
-		sdkerrors.HasType[tls.RecordHeaderError](err):
+		sdkerrors.HasType[tls.RecordHeaderError](err),
+		sdkerrors.HasType[*tls.ECHRejectionError](err):
+		return false
+	// Address misconfiguration errors are permanent — do not retry.
+	case sdkerrors.HasType[*net.AddrError](err),
+		sdkerrors.HasType[net.UnknownNetworkError](err),
+		sdkerrors.HasType[net.InvalidAddrError](err):
 		return false
 	// All other network errors (timeouts, connection refused, etc.)
 	// are considered transient.

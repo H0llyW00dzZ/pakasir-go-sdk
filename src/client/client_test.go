@@ -332,8 +332,8 @@ func TestDoPostRetryWithBody(t *testing.T) {
 
 func TestDoRetriesExhausted(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`error`))
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte(`unavailable`))
 	}))
 	defer srv.Close()
 
@@ -815,14 +815,15 @@ func TestIsRetryableStatus(t *testing.T) {
 		want   bool
 	}{
 		{"429", http.StatusTooManyRequests, true},
-		{"500", http.StatusInternalServerError, true},
 		{"502", http.StatusBadGateway, true},
 		{"503", http.StatusServiceUnavailable, true},
 		{"504", http.StatusGatewayTimeout, true},
+		{"500", http.StatusInternalServerError, false},
 		{"400", http.StatusBadRequest, false},
 		{"401", http.StatusUnauthorized, false},
 		{"403", http.StatusForbidden, false},
 		{"404", http.StatusNotFound, false},
+		{"409", http.StatusConflict, false},
 		{"200", http.StatusOK, false},
 	}
 
@@ -860,6 +861,12 @@ func TestIsRetryable(t *testing.T) {
 		{"tls alert handshake failure", tls.AlertError(40), false},
 		{"tls record header error", tls.RecordHeaderError{Msg: "not TLS"}, false},
 		{"url error wrapping tls alert", &neturl.Error{Op: "Get", Err: tls.AlertError(70)}, false},
+		{"ech rejection", &tls.ECHRejectionError{}, false},
+		{"url error wrapping ech rejection", &neturl.Error{Op: "Get", Err: &tls.ECHRejectionError{}}, false},
+		{"addr error", &net.AddrError{Err: "mismatched address", Addr: "bad"}, false},
+		{"unknown network error", net.UnknownNetworkError("tcp7"), false},
+		{"invalid addr error", net.InvalidAddrError("wrong type"), false},
+		{"url error wrapping addr error", &neturl.Error{Op: "Get", Err: &net.AddrError{Err: "bad", Addr: "x"}}, false},
 	}
 
 	for _, tt := range tests {

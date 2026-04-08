@@ -119,6 +119,38 @@ func TimeString(ts *timestamppb.Timestamp) string {
 	return ""
 }
 
+// sentinelCodes maps SDK sentinel errors to their corresponding gRPC
+// status codes. The table is scanned linearly by [Error], so ordering
+// matters only for readability — each sentinel is unique.
+var sentinelCodes = [...]struct {
+	target error
+	code   codes.Code
+}{
+	// Validation sentinels → InvalidArgument.
+	{sdkerrors.ErrNilRequest, codes.InvalidArgument},
+	{sdkerrors.ErrInvalidOrderID, codes.InvalidArgument},
+	{sdkerrors.ErrInvalidAmount, codes.InvalidArgument},
+	{sdkerrors.ErrInvalidPaymentMethod, codes.InvalidArgument},
+	{sdkerrors.ErrInvalidProject, codes.InvalidArgument},
+	{sdkerrors.ErrInvalidAPIKey, codes.InvalidArgument},
+
+	// Encoding/decoding → Internal.
+	{sdkerrors.ErrEncodeJSON, codes.Internal},
+	{sdkerrors.ErrDecodeJSON, codes.Internal},
+
+	// Size limits → ResourceExhausted.
+	{sdkerrors.ErrResponseTooLarge, codes.ResourceExhausted},
+	{sdkerrors.ErrBodyTooLarge, codes.ResourceExhausted},
+
+	// Transport failures → Unavailable.
+	{sdkerrors.ErrRequestFailedAfterRetries, codes.Unavailable},
+	{sdkerrors.ErrRequestFailed, codes.Unavailable},
+
+	// Context errors.
+	{context.Canceled, codes.Canceled},
+	{context.DeadlineExceeded, codes.DeadlineExceeded},
+}
+
 // Error maps an SDK error to a gRPC [status.Error] with an appropriate
 // [codes.Code]. The original error message is preserved.
 //
@@ -130,45 +162,25 @@ func TimeString(ts *timestamppb.Timestamp) string {
 //   - Encoding/decoding errors ([sdkerrors.ErrEncodeJSON], [sdkerrors.ErrDecodeJSON]) → [codes.Internal]
 //   - Size limit errors ([sdkerrors.ErrResponseTooLarge], [sdkerrors.ErrBodyTooLarge]) → [codes.ResourceExhausted]
 //   - [sdkerrors.ErrRequestFailedAfterRetries] → [codes.Unavailable]
+//   - [sdkerrors.ErrRequestFailed] (permanent network failures) → [codes.Unavailable]
 //   - [context.Canceled] → [codes.Canceled]
 //   - [context.DeadlineExceeded] → [codes.DeadlineExceeded]
 //   - [sdkerrors.APIError] → mapped by HTTP status code (400 → [codes.InvalidArgument],
 //     401 → [codes.Unauthenticated], 403 → [codes.PermissionDenied],
 //     404 → [codes.NotFound], 409 → [codes.AlreadyExists],
-//     429 → [codes.ResourceExhausted], 503 → [codes.Unavailable],
-//     other 5xx → [codes.Internal], other non-5xx → [codes.Unknown])
+//     502/503/504 → [codes.Unavailable], other 5xx → [codes.Internal],
+//     other non-5xx → [codes.Unknown])
 //   - All other errors → [codes.Internal]
 func Error(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	// Validation sentinels → InvalidArgument.
-	switch {
-	case errors.Is(err, sdkerrors.ErrNilRequest),
-		errors.Is(err, sdkerrors.ErrInvalidOrderID),
-		errors.Is(err, sdkerrors.ErrInvalidAmount),
-		errors.Is(err, sdkerrors.ErrInvalidPaymentMethod),
-		errors.Is(err, sdkerrors.ErrInvalidProject),
-		errors.Is(err, sdkerrors.ErrInvalidAPIKey):
-		return status.Error(codes.InvalidArgument, err.Error())
-
-	case errors.Is(err, sdkerrors.ErrEncodeJSON),
-		errors.Is(err, sdkerrors.ErrDecodeJSON):
-		return status.Error(codes.Internal, err.Error())
-
-	case errors.Is(err, sdkerrors.ErrResponseTooLarge),
-		errors.Is(err, sdkerrors.ErrBodyTooLarge):
-		return status.Error(codes.ResourceExhausted, err.Error())
-
-	case errors.Is(err, sdkerrors.ErrRequestFailedAfterRetries):
-		return status.Error(codes.Unavailable, err.Error())
-
-	case errors.Is(err, context.Canceled):
-		return status.Error(codes.Canceled, err.Error())
-
-	case errors.Is(err, context.DeadlineExceeded):
-		return status.Error(codes.DeadlineExceeded, err.Error())
+	// Sentinel errors → corresponding gRPC code.
+	for _, sc := range sentinelCodes {
+		if errors.Is(err, sc.target) {
+			return status.Error(sc.code, err.Error())
+		}
 	}
 
 	// APIError → map HTTP status to gRPC code.
@@ -179,28 +191,44 @@ func Error(err error) error {
 	return status.Error(codes.Internal, err.Error())
 }
 
+// httpStatusCodes maps HTTP status codes to the appropriate gRPC
+// [codes.Code]. Only non-5xx and special 5xx codes need explicit entries;
+// unlisted 5xx defaults to [codes.Internal] and unlisted non-5xx defaults
+// to [codes.Unknown] in [httpStatusToCode].
+//
+// Gateway/proxy errors (502, 503, 504) all map to [codes.Unavailable]
+// because they indicate the upstream service is unreachable, not a bug
+// in the server's logic. This is consistent regardless of whether retries
+// are enabled: with retries the SDK exhausts attempts and returns
+// [sdkerrors.ErrRequestFailedAfterRetries] (caught earlier by [Error]),
+// but with retries disabled (WithRetries(0)) the raw [sdkerrors.APIError]
+// reaches [httpStatusToCode] directly.
+//
+// HTTP 429 is intentionally absent: the SDK client retries 429 responses,
+// so the error reaching [Error] is always
+// [sdkerrors.ErrRequestFailedAfterRetries] (mapped to [codes.Unavailable]
+// before the [sdkerrors.APIError] branch is reached).
+var httpStatusCodes = map[int]codes.Code{
+	400: codes.InvalidArgument,
+	401: codes.Unauthenticated,
+	403: codes.PermissionDenied,
+	404: codes.NotFound,
+	409: codes.AlreadyExists,
+	502: codes.Unavailable,
+	503: codes.Unavailable,
+	504: codes.Unavailable,
+}
+
 // httpStatusToCode maps an HTTP status code to the appropriate gRPC
-// [codes.Code] following the conventions in gRPC documentation.
+// [codes.Code]. Known codes are looked up in [httpStatusCodes]; unknown
+// 5xx codes default to [codes.Internal], and unknown non-5xx codes
+// default to [codes.Unknown].
 func httpStatusToCode(statusCode int) codes.Code {
-	switch statusCode {
-	case 400:
-		return codes.InvalidArgument
-	case 401:
-		return codes.Unauthenticated
-	case 403:
-		return codes.PermissionDenied
-	case 404:
-		return codes.NotFound
-	case 409:
-		return codes.AlreadyExists
-	case 429:
-		return codes.ResourceExhausted
-	case 503:
-		return codes.Unavailable
-	default:
-		if statusCode >= 500 {
-			return codes.Internal
-		}
-		return codes.Unknown
+	if c, ok := httpStatusCodes[statusCode]; ok {
+		return c
 	}
+	if statusCode >= 500 {
+		return codes.Internal
+	}
+	return codes.Unknown
 }

@@ -21,7 +21,9 @@
 //
 // [NewBufListener] creates a 1 MB in-memory listener. [DialBufNet]
 // creates a gRPC client connection to a bufconn listener with
-// insecure credentials.
+// insecure credentials. [StartServer] combines both into a single call
+// that creates a server, registers services via a callback, and returns
+// a client connection with a cleanup function.
 //
 // # Mock HTTP Servers
 //
@@ -30,6 +32,7 @@
 //
 //   - [MockErrorServer] — always returns HTTP 500 with a JSON error body.
 //   - [MockHTTPStatusServer] — returns the given status code and body.
+//   - [SlowServer] — delays responses for context cancellation tests.
 //
 // # Interceptor Factories
 //
