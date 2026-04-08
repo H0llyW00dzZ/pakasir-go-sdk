@@ -30,8 +30,8 @@
 //   - pakasir/v1/       — Generated protobuf code: server interfaces + client stubs (do not edit).
 //   - transaction/      — Server: [pakasirv1.TransactionServiceServer] implementation.
 //   - simulation/       — Server: [pakasirv1.SimulationServiceServer] implementation.
-//   - internal/convert  — Shared enum and timestamp mapping (unexported).
-//   - internal/grpctest — In-memory bufconn test helpers (unexported).
+//   - internal/convert  — Shared enum/timestamp mapping and SDK-to-gRPC error conversion (unexported).
+//   - internal/grpctest — In-memory bufconn helpers, mock HTTP servers, and interceptor factories (unexported).
 //
 // # Server Registration
 //
@@ -245,8 +245,10 @@
 // [codes.Unauthenticated]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.PermissionDenied]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.NotFound]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.AlreadyExists]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.ResourceExhausted]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.Unavailable]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.Unknown]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.Canceled]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.DeadlineExceeded]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.Internal]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
