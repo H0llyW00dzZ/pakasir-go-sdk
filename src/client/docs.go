@@ -56,8 +56,10 @@
 // # Retry Logic
 //
 // The client automatically retries requests that encounter transient
-// failures (429 Too Many Requests, 5xx server errors, and network errors)
-// using exponential backoff with full jitter. When a 429 response includes
+// failures (429 Too Many Requests, gateway errors 502/503/504, and
+// network errors) using exponential backoff with full jitter. A 500
+// Internal Server Error is not retried because it indicates a server-side
+// bug rather than a transient condition. When a 429 response includes
 // a Retry-After header (delay-seconds or HTTP-date per RFC 9110), the
 // indicated delay is used instead of the calculated backoff, clamped to the
 // configured maximum wait ([WithRetryWait]). Delay-seconds values are
@@ -72,9 +74,11 @@
 //
 // Permanent failures are never retried:
 //
+//   - HTTP 500 Internal Server Error (server bug, not transient)
 //   - Client errors (4xx other than 429)
-//   - TLS certificate/handshake errors ([tls.CertificateVerificationError], [x509.UnknownAuthorityError], [x509.SystemRootsError], [tls.AlertError], [tls.RecordHeaderError], etc.)
+//   - TLS certificate/handshake errors ([tls.CertificateVerificationError], [x509.UnknownAuthorityError], [x509.SystemRootsError], [tls.AlertError], [tls.RecordHeaderError], [tls.ECHRejectionError], etc.)
 //   - Permanent DNS failures ([net.DNSError] with IsNotFound: true, i.e., NXDOMAIN)
+//   - Address misconfiguration ([net.AddrError], [net.UnknownNetworkError], [net.InvalidAddrError])
 //   - Oversized responses ([errors.ErrResponseTooLarge])
 //
 // DNS timeouts remain retryable. Response body reads are limited to
