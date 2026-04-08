@@ -119,6 +119,38 @@ func TimeString(ts *timestamppb.Timestamp) string {
 	return ""
 }
 
+// sentinelCodes maps SDK sentinel errors to their corresponding gRPC
+// status codes. The table is scanned linearly by [Error], so ordering
+// matters only for readability — each sentinel is unique.
+var sentinelCodes = [...]struct {
+	target error
+	code   codes.Code
+}{
+	// Validation sentinels → InvalidArgument.
+	{sdkerrors.ErrNilRequest, codes.InvalidArgument},
+	{sdkerrors.ErrInvalidOrderID, codes.InvalidArgument},
+	{sdkerrors.ErrInvalidAmount, codes.InvalidArgument},
+	{sdkerrors.ErrInvalidPaymentMethod, codes.InvalidArgument},
+	{sdkerrors.ErrInvalidProject, codes.InvalidArgument},
+	{sdkerrors.ErrInvalidAPIKey, codes.InvalidArgument},
+
+	// Encoding/decoding → Internal.
+	{sdkerrors.ErrEncodeJSON, codes.Internal},
+	{sdkerrors.ErrDecodeJSON, codes.Internal},
+
+	// Size limits → ResourceExhausted.
+	{sdkerrors.ErrResponseTooLarge, codes.ResourceExhausted},
+	{sdkerrors.ErrBodyTooLarge, codes.ResourceExhausted},
+
+	// Transport failures → Unavailable.
+	{sdkerrors.ErrRequestFailedAfterRetries, codes.Unavailable},
+	{sdkerrors.ErrRequestFailed, codes.Unavailable},
+
+	// Context errors.
+	{context.Canceled, codes.Canceled},
+	{context.DeadlineExceeded, codes.DeadlineExceeded},
+}
+
 // Error maps an SDK error to a gRPC [status.Error] with an appropriate
 // [codes.Code]. The original error message is preserved.
 //
@@ -144,37 +176,11 @@ func Error(err error) error {
 		return nil
 	}
 
-	// Validation sentinels → InvalidArgument.
-	switch {
-	case errors.Is(err, sdkerrors.ErrNilRequest),
-		errors.Is(err, sdkerrors.ErrInvalidOrderID),
-		errors.Is(err, sdkerrors.ErrInvalidAmount),
-		errors.Is(err, sdkerrors.ErrInvalidPaymentMethod),
-		errors.Is(err, sdkerrors.ErrInvalidProject),
-		errors.Is(err, sdkerrors.ErrInvalidAPIKey):
-		return status.Error(codes.InvalidArgument, err.Error())
-
-	case errors.Is(err, sdkerrors.ErrEncodeJSON),
-		errors.Is(err, sdkerrors.ErrDecodeJSON):
-		return status.Error(codes.Internal, err.Error())
-
-	case errors.Is(err, sdkerrors.ErrResponseTooLarge),
-		errors.Is(err, sdkerrors.ErrBodyTooLarge):
-		return status.Error(codes.ResourceExhausted, err.Error())
-
-	case errors.Is(err, sdkerrors.ErrRequestFailedAfterRetries):
-		return status.Error(codes.Unavailable, err.Error())
-
-	// Permanent network failures (TLS certificate errors, DNS NXDOMAIN,
-	// address misconfiguration) — the server is unreachable, not buggy.
-	case errors.Is(err, sdkerrors.ErrRequestFailed):
-		return status.Error(codes.Unavailable, err.Error())
-
-	case errors.Is(err, context.Canceled):
-		return status.Error(codes.Canceled, err.Error())
-
-	case errors.Is(err, context.DeadlineExceeded):
-		return status.Error(codes.DeadlineExceeded, err.Error())
+	// Sentinel errors → corresponding gRPC code.
+	for _, sc := range sentinelCodes {
+		if errors.Is(err, sc.target) {
+			return status.Error(sc.code, err.Error())
+		}
 	}
 
 	// APIError → map HTTP status to gRPC code.
