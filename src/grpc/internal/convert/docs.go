@@ -47,7 +47,11 @@
 //   - Permanent network failures → [codes.Unavailable]
 //   - [context.Canceled] → [codes.Canceled]
 //   - [context.DeadlineExceeded] → [codes.DeadlineExceeded]
-//   - [sdkerrors.APIError] → mapped by HTTP status code
+//   - [sdkerrors.APIError] → mapped by HTTP status code (400 → [codes.InvalidArgument],
+//     401 → [codes.Unauthenticated], 403 → [codes.PermissionDenied],
+//     404 → [codes.NotFound], 408 → [codes.DeadlineExceeded],
+//     409 → [codes.AlreadyExists], 502/503/504 → [codes.Unavailable],
+//     other 5xx → [codes.Internal], other non-5xx → [codes.Unknown])
 //   - All other errors → [codes.Internal]
 //
 // [constants.PaymentMethod]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/constants#PaymentMethod
@@ -62,7 +66,6 @@
 // [codes.Canceled]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.DeadlineExceeded]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [sdkerrors.APIError]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#APIError
-//
 // [codes.Unauthenticated]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.PermissionDenied]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.NotFound]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
