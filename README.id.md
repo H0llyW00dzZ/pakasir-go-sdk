@@ -91,7 +91,7 @@ pakasir-go-sdk/
 │   └── internal/
 │       ├── request/     # Body request internal bersama
 │       └── timefmt/     # Helper parsing waktu RFC3339 bersama
-├── Makefile             # Target build, test, pembuatan proto
+├── Makefile             # Target build, test, pembuatan proto, analisis kualitas
 ├── buf.yaml             # Konfigurasi modul Buf untuk linting proto
 ├── buf.gen.yaml         # Konfigurasi pembuatan kode Buf
 ├── proto/               # Definisi Protobuf (berkas .proto)

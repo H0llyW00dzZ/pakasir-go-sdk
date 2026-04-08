@@ -14,9 +14,10 @@ make test-cover   # Tests + coverage report
 make test-e2e     # gRPC end-to-end payment flow test
 make vet          # Static analysis
 make fmt          # Check formatting (fails if unformatted)
+make gocyclo      # Cyclomatic complexity analysis (threshold=10, configurable)
 make proto        # Regenerate Go code from proto files (buf generate)
 make lint-proto   # Lint proto files (buf lint)
-make deps         # Install buf + protoc-gen-go tools
+make deps         # Install buf + protoc-gen-go + gocyclo tools
 make clean        # Remove coverage artifacts
 
 # ── Raw Go commands ──────────────────────────────────────
@@ -45,6 +46,9 @@ gofmt -s -w .
 
 # Check formatting without writing (CI check)
 gofmt -s -d .
+
+# Cyclomatic complexity (excludes generated proto code)
+gocyclo -over 10 $(go list -f '{{.Dir}}' ./src/... | grep -v /grpc/pakasir/)
 ```
 
 CI runs on 8 OS matrix combinations (ubuntu x86/ARM, macOS, Windows x86/ARM) testing Go 1.26.0 and 1.26.1.
@@ -54,7 +58,7 @@ CI and Makefile test targets exclude the generated proto package (`grpc/pakasir/
 ## Project Layout
 
 ```
-Makefile                    — Build, test, proto generation, benchmarks
+Makefile                    — Build, test, proto generation, quality analysis
 buf.yaml                    — Buf module config for proto linting/breaking changes
 buf.gen.yaml                — Buf code generation config (Go output to src/grpc)
 src/

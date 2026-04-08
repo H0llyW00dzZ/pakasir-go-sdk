@@ -9,6 +9,7 @@ Terima kasih atas minat Anda untuk berkontribusi! Panduan ini akan membantu Anda
 - **Go 1.26** atau lebih baru
 - `git`
 - `buf` (untuk pembuatan proto — instal melalui `make deps`)
+- `gocyclo` (untuk analisis kompleksitas — instal melalui `make deps`)
 
 ## Memulai
 
@@ -53,7 +54,7 @@ pakasir-go-sdk/
 │   └── internal/
 │       ├── request/     # Body request internal bersama
 │       └── timefmt/     # Helper parsing waktu RFC3339 bersama
-├── Makefile             # Target build, test, pembuatan proto
+├── Makefile             # Target build, test, pembuatan proto, analisis kualitas
 ├── buf.yaml             # Konfigurasi modul Buf untuk linting proto
 ├── buf.gen.yaml         # Konfigurasi pembuatan kode Buf
 ├── proto/               # Definisi Protobuf (berkas .proto)
@@ -123,11 +124,12 @@ Saat menambahkan pesan baru yang ditampilkan ke pengguna:
 3. Pastikan semua pengecekan berhasil:
 
    ```bash
-   make build
-   make test
-   make vet
-   make fmt
-   ```
+    make build
+    make test
+    make vet
+    make fmt
+    make gocyclo
+    ```
 
 4. Push dan buat Pull Request ke branch `master`.
 
