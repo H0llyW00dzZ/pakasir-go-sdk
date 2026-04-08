@@ -252,7 +252,7 @@ func TestErrorAPIError(t *testing.T) {
 		{"403 forbidden", 403, codes.PermissionDenied},
 		{"404 not found", 404, codes.NotFound},
 		{"409 conflict", 409, codes.AlreadyExists},
-		{"429 too many requests", 429, codes.ResourceExhausted},
+		{"429 too many requests", 429, codes.Unknown},
 		{"500 internal", 500, codes.Internal},
 		{"502 bad gateway", 502, codes.Internal},
 		{"503 unavailable", 503, codes.Unavailable},

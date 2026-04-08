@@ -135,8 +135,8 @@ func TimeString(ts *timestamppb.Timestamp) string {
 //   - [sdkerrors.APIError] → mapped by HTTP status code (400 → [codes.InvalidArgument],
 //     401 → [codes.Unauthenticated], 403 → [codes.PermissionDenied],
 //     404 → [codes.NotFound], 409 → [codes.AlreadyExists],
-//     429 → [codes.ResourceExhausted], 503 → [codes.Unavailable],
-//     other 5xx → [codes.Internal], other non-5xx → [codes.Unknown])
+//     503 → [codes.Unavailable], other 5xx → [codes.Internal],
+//     other non-5xx → [codes.Unknown])
 //   - All other errors → [codes.Internal]
 func Error(err error) error {
 	if err == nil {
@@ -181,6 +181,11 @@ func Error(err error) error {
 
 // httpStatusToCode maps an HTTP status code to the appropriate gRPC
 // [codes.Code] following the conventions in gRPC documentation.
+//
+// HTTP 429 is intentionally absent: the SDK client retries 429 responses,
+// so the error reaching this function is always
+// [sdkerrors.ErrRequestFailedAfterRetries] (mapped to [codes.Unavailable]
+// by [Error] before the [sdkerrors.APIError] branch is reached).
 func httpStatusToCode(statusCode int) codes.Code {
 	switch statusCode {
 	case 400:
@@ -193,8 +198,6 @@ func httpStatusToCode(statusCode int) codes.Code {
 		return codes.NotFound
 	case 409:
 		return codes.AlreadyExists
-	case 429:
-		return codes.ResourceExhausted
 	case 503:
 		return codes.Unavailable
 	default:

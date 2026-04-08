@@ -433,17 +433,16 @@ func isRetryable(err error) bool {
 	// Oversized responses are deterministic — do not retry.
 	case errors.Is(err, sdkerrors.ErrResponseTooLarge):
 		return false
-	// TLS/x509 certificate and handshake errors are permanent — do not retry.
+	// TLS/x509 certificate, handshake, and ECH rejection errors are
+	// permanent — do not retry.
 	case sdkerrors.HasType[*tls.CertificateVerificationError](err),
 		sdkerrors.HasType[*x509.UnknownAuthorityError](err),
 		sdkerrors.HasType[*x509.HostnameError](err),
 		sdkerrors.HasType[*x509.CertificateInvalidError](err),
 		sdkerrors.HasType[*x509.SystemRootsError](err),
 		sdkerrors.HasType[tls.AlertError](err),
-		sdkerrors.HasType[tls.RecordHeaderError](err):
-		return false
-	// ECH rejection is permanent with the same TLS config — do not retry.
-	case sdkerrors.HasType[*tls.ECHRejectionError](err):
+		sdkerrors.HasType[tls.RecordHeaderError](err),
+		sdkerrors.HasType[*tls.ECHRejectionError](err):
 		return false
 	// Address misconfiguration errors are permanent — do not retry.
 	case sdkerrors.HasType[*net.AddrError](err),
