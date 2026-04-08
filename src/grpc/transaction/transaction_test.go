@@ -294,7 +294,7 @@ func TestE2ECreateTransactionError(t *testing.T) {
 	require.Error(t, err)
 	st, ok := status.FromError(err)
 	require.True(t, ok)
-	assert.Equal(t, codes.Unavailable, st.Code())
+	assert.Equal(t, codes.Internal, st.Code())
 	t.Logf("  code=%s message=%s", st.Code(), st.Message())
 }
 
@@ -325,7 +325,7 @@ func TestE2ECancelTransactionError(t *testing.T) {
 	require.Error(t, err)
 	st, ok := status.FromError(err)
 	require.True(t, ok)
-	assert.Equal(t, codes.Unavailable, st.Code())
+	assert.Equal(t, codes.Internal, st.Code())
 	t.Logf("  code=%s message=%s", st.Code(), st.Message())
 }
 
@@ -356,7 +356,7 @@ func TestE2EGetTransactionDetailError(t *testing.T) {
 	require.Error(t, err)
 	st, ok := status.FromError(err)
 	require.True(t, ok)
-	assert.Equal(t, codes.Unavailable, st.Code())
+	assert.Equal(t, codes.Internal, st.Code())
 	t.Logf("  code=%s message=%s", st.Code(), st.Message())
 }
 

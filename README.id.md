@@ -59,7 +59,7 @@ func main() {
 - **Context-First** — Semua operasi I/O menerima `context.Context`
 - **Request/Response Bertipe** — Tanpa raw map; struct bertipe penuh dengan tag JSON
 - **Buffer Pooling** — Serialisasi request yang hemat memori menggunakan [`bytebufferpool`](https://github.com/valyala/bytebufferpool)
-- **Exponential Backoff dengan Jitter** — Retry otomatis untuk kegagalan sementara (429, 5xx, error jaringan) dengan dukungan header Retry-After
+- **Exponential Backoff dengan Jitter** — Retry otomatis untuk kegagalan sementara (429, 502/503/504, error jaringan) dengan dukungan header Retry-After
 - **i18n** — Pesan error dalam Bahasa Inggris dan Indonesia
 - **Sentinel Errors** — Penanganan error secara programatik melalui `errors.Is` dan `errors.As`
 - **Helper Parsing Waktu** — Method `ParseTime()` pada tipe response

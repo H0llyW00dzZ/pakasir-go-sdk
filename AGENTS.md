@@ -133,7 +133,7 @@ Alias `net/url` as `neturl` when inside the `url` package.
 - **Functional options**: `type Option func(*Client)` with `With*` functions. Webhook parsing uses `type ParseOption func(*parseConfig)` with `WithMaxBodySize`.
 - **Getters**: exported read-only accessors for encapsulated fields — `Project()`, `APIKey()`, `Lang()`, `GetBufferPool()`, `QR()`. Service packages use these to read client state.
 - **Receivers**: single-letter matching the type (`c *Client`, `s *Service`, `e *Event`, `m PaymentMethod`, `s TransactionStatus`).
-- **Unexported helpers**: camelCase (`isRetryable`, `calculateBackoff`, `parseRetryAfter`, `validateCredentials`, `executeAttempt`, `handleResponse`, `validateRequest`).
+- **Unexported helpers**: camelCase (`isRetryable`, `isRetryableStatus`, `calculateBackoff`, `parseRetryAfter`, `validateCredentials`, `executeAttempt`, `handleResponse`, `validateRequest`).
 
 ### Struct Tags
 
@@ -224,7 +224,7 @@ Five direct dependencies — keep the footprint minimal:
 - Response body limiting: `client.Do` caps reads at `DefaultMaxResponseSize` (1 MB) configurable via `WithMaxResponseSize`; `webhook.Parse`/`ParseRequest` cap at `DefaultMaxBodySize` (1 MB) configurable via `WithMaxBodySize`.
 - Centralized sentinel errors: all SDK-wide sentinels live in `src/errors/`. Standalone packages (client, webhook) do not define their own `errors.New()` sentinels; they reference or wrap the central ones via `fmt.Errorf("webhook: %w", sdkerrors.Err*)`.
 - API path constants: all endpoint paths live in `src/constants/paths.go` (`PathTransactionCreate`, `PathTransactionCancel`, `PathTransactionDetail`, `PathPaymentSimulation`). Service packages reference these instead of hardcoding path strings.
-- Retry on 429 Too Many Requests in addition to 5xx and network errors; 4xx (other than 429), TLS certificate/handshake errors (`tls.AlertError`, `tls.RecordHeaderError`), and x509 verification errors are never retried.
+- Retry on 429 Too Many Requests and gateway errors (502, 503, 504); 500 Internal Server Error is not retried because it maps to `codes.Internal` (server bug, not transient). 4xx (other than 429), TLS certificate/handshake errors (`tls.AlertError`, `tls.RecordHeaderError`), ECH rejection (`tls.ECHRejectionError`), x509 verification errors, and address misconfiguration (`net.AddrError`, `net.UnknownNetworkError`, `net.InvalidAddrError`) are never retried.
 - Retry-After header support: when a 429 response includes a `Retry-After` header (seconds or HTTP-date), the client uses the indicated delay (clamped to `retryWaitMax`) instead of calculated backoff. Parsed by `parseRetryAfter`, which caps delay-seconds at 24 hours to prevent `time.Duration` overflow before the clamp is applied.
 - Permanent DNS failures (`*net.DNSError` with `IsNotFound: true`) are classified as non-retryable; DNS timeouts remain retryable.
 - `WithBaseURL` strips trailing slashes to prevent double-slash paths in constructed URLs.
