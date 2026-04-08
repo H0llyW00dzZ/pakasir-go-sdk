@@ -109,7 +109,7 @@ Saat menambahkan pesan baru yang ditampilkan ke pengguna:
 - **Jangan** mengedit berkas yang di-generate di `src/grpc/pakasir/v1/`. Generate ulang dari definisi `proto/` menggunakan `make proto` (menjalankan `buf generate`).
 - Implementasi layanan gRPC mendelegasikan ke layanan berbasis REST SDK — tidak boleh mengandung logika bisnis.
 - Konversi enum antara tipe proto dan SDK berada di `src/grpc/internal/convert/`.
-- Gunakan helper `src/grpc/internal/grpctest/` (bufconn) untuk pengujian gRPC in-memory.
+- Gunakan helper `src/grpc/internal/grpctest/` (bufconn) untuk pengujian gRPC in-memory. Gunakan tabel `APIErrorStatusCases` yang dibagikan untuk pengujian E2E pemetaan status HTTP → kode gRPC.
 
 ## Mengirim Perubahan
 

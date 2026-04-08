@@ -31,7 +31,7 @@
 //   - [transaction]       — Server: [pakasirv1.TransactionServiceServer] implementation.
 //   - [simulation]        — Server: [pakasirv1.SimulationServiceServer] implementation.
 //   - internal/convert  — Shared enum/timestamp mapping and SDK-to-gRPC error conversion (unexported).
-//   - internal/grpctest — In-memory bufconn helpers, mock HTTP servers, and interceptor factories (unexported).
+//   - internal/grpctest — In-memory bufconn helpers, mock HTTP servers, interceptor factories, and shared E2E test data (unexported).
 //
 // # Server Registration
 //
