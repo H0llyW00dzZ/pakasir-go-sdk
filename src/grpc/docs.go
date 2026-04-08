@@ -15,7 +15,7 @@
 // Package grpc provides server-side gRPC service implementations for the
 // Pakasir payment gateway SDK.
 //
-// The transaction/ and simulation/ sub-packages implement the generated
+// The [transaction] and [simulation] sub-packages implement the generated
 // [pakasirv1.TransactionServiceServer] and [pakasirv1.SimulationServiceServer]
 // interfaces by delegating to the SDK's REST-based services. All proto-to-SDK
 // conversion is handled internally — consumers only work with proto messages
@@ -27,9 +27,9 @@
 //
 // # Package Layout
 //
-//   - pakasir/v1/       — Generated protobuf code: server interfaces + client stubs (do not edit).
-//   - transaction/      — Server: [pakasirv1.TransactionServiceServer] implementation.
-//   - simulation/       — Server: [pakasirv1.SimulationServiceServer] implementation.
+//   - [pakasirv1]         — Generated protobuf code: server interfaces + client stubs (do not edit).
+//   - [transaction]       — Server: [pakasirv1.TransactionServiceServer] implementation.
+//   - [simulation]        — Server: [pakasirv1.SimulationServiceServer] implementation.
 //   - internal/convert  — Shared enum/timestamp mapping and SDK-to-gRPC error conversion (unexported).
 //   - internal/grpctest — In-memory bufconn helpers, mock HTTP servers, and interceptor factories (unexported).
 //
@@ -103,7 +103,7 @@
 //
 // # Embedding into Existing Codebases
 //
-// The [Service] types in transaction/ and simulation/ are exported structs
+// The [Service] types in [transaction] and [simulation] are exported structs
 // that can be embedded into your own types. This lets you combine the
 // Pakasir RPCs with your own dependencies — databases, caches, message
 // queues, metrics, loggers — while delegating the core payment logic to
@@ -232,6 +232,9 @@
 //	go test -v -race -run TestE2EPaymentFlowSuccess ./src/grpc/
 //
 // [grpc-template]: https://github.com/H0llyW00dzZ/grpc-template
+// [transaction]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/transaction
+// [simulation]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/simulation
+// [pakasirv1]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1
 // [pakasirv1.TransactionServiceServer]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1#TransactionServiceServer
 // [pakasirv1.SimulationServiceServer]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1#SimulationServiceServer
 // [pakasirv1.NewTransactionServiceClient]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/grpc/pakasir/v1#NewTransactionServiceClient

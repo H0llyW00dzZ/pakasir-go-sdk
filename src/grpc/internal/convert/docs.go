@@ -56,10 +56,16 @@
 // [status.Error]: https://pkg.go.dev/google.golang.org/grpc/status#Error
 // [codes.Code]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.InvalidArgument]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
-// [codes.Internal]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.ResourceExhausted]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.Unavailable]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.Internal]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.Canceled]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [codes.DeadlineExceeded]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 // [sdkerrors.APIError]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#APIError
+//
+// [codes.Unauthenticated]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.PermissionDenied]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.NotFound]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.AlreadyExists]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
+// [codes.Unknown]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 package convert
