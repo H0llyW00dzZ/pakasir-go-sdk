@@ -87,9 +87,11 @@
 //   - [sdkerrors.APIError] 401 → [codes.Unauthenticated]
 //   - [sdkerrors.APIError] 403 → [codes.PermissionDenied]
 //   - [sdkerrors.APIError] 404 → [codes.NotFound]
+//   - [sdkerrors.APIError] 409 → [codes.AlreadyExists]
 //   - [sdkerrors.APIError] 429 → [codes.ResourceExhausted]
 //   - [sdkerrors.APIError] 503 → [codes.Unavailable]
 //   - [sdkerrors.APIError] other 5xx → [codes.Internal]
+//   - [sdkerrors.APIError] other non-5xx → [codes.Unknown]
 //   - All other errors → [codes.Internal]
 //
 // gRPC clients check errors via [status.FromError]:

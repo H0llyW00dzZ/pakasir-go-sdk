@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package convert provides shared enum mapping between SDK constants and
-// proto enum types. It is internal to the grpc packages and not exported
-// to consumers.
 package convert
 
 import (
@@ -135,8 +132,11 @@ func TimeString(ts *timestamppb.Timestamp) string {
 //   - [sdkerrors.ErrRequestFailedAfterRetries] → [codes.Unavailable]
 //   - [context.Canceled] → [codes.Canceled]
 //   - [context.DeadlineExceeded] → [codes.DeadlineExceeded]
-//   - [sdkerrors.APIError] → mapped by HTTP status code (503 → [codes.Unavailable],
-//     other 5xx → [codes.Internal])
+//   - [sdkerrors.APIError] → mapped by HTTP status code (400 → [codes.InvalidArgument],
+//     401 → [codes.Unauthenticated], 403 → [codes.PermissionDenied],
+//     404 → [codes.NotFound], 409 → [codes.AlreadyExists],
+//     429 → [codes.ResourceExhausted], 503 → [codes.Unavailable],
+//     other 5xx → [codes.Internal], other non-5xx → [codes.Unknown])
 //   - All other errors → [codes.Internal]
 func Error(err error) error {
 	if err == nil {
