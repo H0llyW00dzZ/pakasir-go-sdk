@@ -219,6 +219,10 @@ func (c *Client) executeAttempt(ctx context.Context, method, path string, body [
 // on 4xx (except 429) and 500, or a retryable error for 502/503/504/429
 // statuses. A non-zero duration is returned when a 429 response includes a
 // Retry-After header.
+//
+// Read errors from [readResponseBody] (including oversize rejection via
+// [sdkerrors.ErrResponseTooLarge]) are classified by [isRetryable] before
+// reaching the status code logic.
 func (c *Client) handleResponse(resp *http.Response) ([]byte, time.Duration, error) {
 	data, readErr := c.readResponseBody(resp)
 	if readErr != nil {
