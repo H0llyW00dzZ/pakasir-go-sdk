@@ -106,4 +106,6 @@
 //
 // [errors.ErrResponseTooLarge]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/errors#ErrResponseTooLarge
 // [qr]: https://pkg.go.dev/github.com/H0llyW00dzZ/pakasir-go-sdk/src/helper/qr
+//
+// [codes.Internal]: https://pkg.go.dev/google.golang.org/grpc/codes#Code
 package client
