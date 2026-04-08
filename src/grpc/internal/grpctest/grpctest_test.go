@@ -107,9 +107,9 @@ func TestMockHTTPStatusServer(t *testing.T) {
 		statusCode int
 		body       string
 	}{
-		{"400 bad request", 400, `{"error":"bad"}`},
-		{"401 unauthorized", 401, `{"error":"unauthorized"}`},
-		{"200 ok", 200, `{"status":"ok"}`},
+		{"400 bad request", http.StatusBadRequest, `{"error":"bad"}`},
+		{"401 unauthorized", http.StatusUnauthorized, `{"error":"unauthorized"}`},
+		{"200 ok", http.StatusOK, `{"status":"ok"}`},
 	}
 
 	for _, tt := range tests {

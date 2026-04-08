@@ -17,6 +17,7 @@ package convert
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -263,17 +264,17 @@ func TestErrorAPIError(t *testing.T) {
 		statusCode int
 		code       codes.Code
 	}{
-		{"400 bad request", 400, codes.InvalidArgument},
-		{"401 unauthorized", 401, codes.Unauthenticated},
-		{"403 forbidden", 403, codes.PermissionDenied},
-		{"404 not found", 404, codes.NotFound},
-		{"409 conflict", 409, codes.AlreadyExists},
-		{"429 too many requests", 429, codes.Unknown},
-		{"500 internal", 500, codes.Internal},
-		{"502 bad gateway", 502, codes.Unavailable},
-		{"503 unavailable", 503, codes.Unavailable},
-		{"504 gateway timeout", 504, codes.Unavailable},
-		{"418 teapot", 418, codes.Unknown},
+		{"400 bad request", http.StatusBadRequest, codes.InvalidArgument},
+		{"401 unauthorized", http.StatusUnauthorized, codes.Unauthenticated},
+		{"403 forbidden", http.StatusForbidden, codes.PermissionDenied},
+		{"404 not found", http.StatusNotFound, codes.NotFound},
+		{"409 conflict", http.StatusConflict, codes.AlreadyExists},
+		{"429 too many requests", http.StatusTooManyRequests, codes.Unknown},
+		{"500 internal", http.StatusInternalServerError, codes.Internal},
+		{"502 bad gateway", http.StatusBadGateway, codes.Unavailable},
+		{"503 unavailable", http.StatusServiceUnavailable, codes.Unavailable},
+		{"504 gateway timeout", http.StatusGatewayTimeout, codes.Unavailable},
+		{"418 teapot", http.StatusTeapot, codes.Unknown},
 	}
 
 	for _, tt := range tests {
@@ -289,7 +290,7 @@ func TestErrorAPIError(t *testing.T) {
 }
 
 func TestErrorWrappedAPIError(t *testing.T) {
-	apiErr := &sdkerrors.APIError{StatusCode: 403, Body: `{"error":"forbidden"}`}
+	apiErr := &sdkerrors.APIError{StatusCode: http.StatusForbidden, Body: `{"error":"forbidden"}`}
 	wrapped := fmt.Errorf("request failed: %w", apiErr)
 	grpcErr := Error(wrapped)
 	st, ok := status.FromError(grpcErr)

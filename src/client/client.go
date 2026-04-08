@@ -232,7 +232,7 @@ func (c *Client) handleResponse(resp *http.Response) ([]byte, time.Duration, err
 		return nil, 0, readErr
 	}
 
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
 		return data, 0, nil
 	}
 

@@ -33,7 +33,7 @@ go test -v -race ./src/client/
 go test -v -race ./src/transaction/
 
 # Run a single test by name (regex match)
-go test -v -race -run TestDoRetryOn5xxThenSuccess ./src/client/
+go test -v -race -run TestDoRetryOnGatewayErrorThenSuccess ./src/client/
 
 # Run the gRPC E2E payment flow test
 go test -v -race -run TestE2EPaymentFlowSuccess ./src/grpc/
@@ -233,6 +233,7 @@ Five direct dependencies — keep the footprint minimal:
 - Permanent DNS failures (`*net.DNSError` with `IsNotFound: true`) are classified as non-retryable; DNS timeouts remain retryable.
 - `WithBaseURL` strips trailing slashes to prevent double-slash paths in constructed URLs.
 - `Accept: application/json` header is set on all requests by `buildRequest`.
+- HTTP status codes use `net/http` constants (`http.StatusOK`, `http.StatusBadRequest`, `http.StatusInternalServerError`, etc.) instead of magic numbers. This applies to both production code and tests.
 - `Client.Do` is decomposed into small helpers (`validateCredentials`, `executeAttempt`, `handleResponse`, `retriesExhaustedError`) to keep cyclomatic complexity low. Non-retryable errors are propagated via the unexported `stopRetry` wrapper, which `Do` unwraps before returning to the caller.
 - Response JSON decode errors are localized via `sdkerrors.New(lang, sdkerrors.ErrDecodeJSON, i18n.MsgFailedToDecode, err)` in transaction service methods.
 - gRPC error mapping: `conv.Error` in `grpc/internal/convert` maps SDK errors to proper gRPC status codes. Validation sentinels → `codes.InvalidArgument`, `APIError` → mapped by HTTP status (400→InvalidArgument, 401→Unauthenticated, 403→PermissionDenied, 404→NotFound, 409→AlreadyExists, 502/503/504→Unavailable, other 5xx→Internal, other non-5xx→Unknown), encode/decode → `codes.Internal`, size limits → `codes.ResourceExhausted`, retries exhausted → `codes.Unavailable`, permanent network failures (`ErrRequestFailed`) → `codes.Unavailable`, `context.Canceled` → `codes.Canceled`, `context.DeadlineExceeded` → `codes.DeadlineExceeded`. HTTP 429 is intentionally absent from `httpStatusToCode` because the SDK client always retries 429 responses; the resulting `ErrRequestFailedAfterRetries` maps to `codes.Unavailable`. All gRPC service methods call `conv.Error(err)` instead of returning raw SDK errors.

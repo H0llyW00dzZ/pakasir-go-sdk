@@ -17,6 +17,7 @@ package convert
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -209,14 +210,14 @@ func Error(err error) error {
 // [sdkerrors.ErrRequestFailedAfterRetries] (mapped to [codes.Unavailable]
 // before the [sdkerrors.APIError] branch is reached).
 var httpStatusCodes = map[int]codes.Code{
-	400: codes.InvalidArgument,
-	401: codes.Unauthenticated,
-	403: codes.PermissionDenied,
-	404: codes.NotFound,
-	409: codes.AlreadyExists,
-	502: codes.Unavailable,
-	503: codes.Unavailable,
-	504: codes.Unavailable,
+	http.StatusBadRequest:         codes.InvalidArgument,
+	http.StatusUnauthorized:       codes.Unauthenticated,
+	http.StatusForbidden:          codes.PermissionDenied,
+	http.StatusNotFound:           codes.NotFound,
+	http.StatusConflict:           codes.AlreadyExists,
+	http.StatusBadGateway:         codes.Unavailable,
+	http.StatusServiceUnavailable: codes.Unavailable,
+	http.StatusGatewayTimeout:     codes.Unavailable,
 }
 
 // httpStatusToCode maps an HTTP status code to the appropriate gRPC
@@ -227,7 +228,7 @@ func httpStatusToCode(statusCode int) codes.Code {
 	if c, ok := httpStatusCodes[statusCode]; ok {
 		return c
 	}
-	if statusCode >= 500 {
+	if statusCode >= http.StatusInternalServerError {
 		return codes.Internal
 	}
 	return codes.Unknown

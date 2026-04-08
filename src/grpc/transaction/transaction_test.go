@@ -474,15 +474,15 @@ func TestE2ECreateAPIErrorStatusCodes(t *testing.T) {
 		httpBody   string
 		grpcCode   codes.Code
 	}{
-		{"400 bad request", 400, `{"error":"bad request"}`, codes.InvalidArgument},
-		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
-		{"403 forbidden", 403, `{"error":"forbidden"}`, codes.PermissionDenied},
-		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
-		{"409 conflict", 409, `{"error":"duplicate order"}`, codes.AlreadyExists},
-		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.Unavailable},
-		{"502 bad gateway", 502, `{"error":"bad gateway"}`, codes.Unavailable},
-		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Unavailable},
-		{"504 gateway timeout", 504, `{"error":"gateway timeout"}`, codes.Unavailable},
+		{"400 bad request", http.StatusBadRequest, `{"error":"bad request"}`, codes.InvalidArgument},
+		{"401 unauthorized", http.StatusUnauthorized, `{"error":"unauthorized"}`, codes.Unauthenticated},
+		{"403 forbidden", http.StatusForbidden, `{"error":"forbidden"}`, codes.PermissionDenied},
+		{"404 not found", http.StatusNotFound, `{"error":"not found"}`, codes.NotFound},
+		{"409 conflict", http.StatusConflict, `{"error":"duplicate order"}`, codes.AlreadyExists},
+		{"429 rate limited", http.StatusTooManyRequests, `{"error":"too many requests"}`, codes.Unavailable},
+		{"502 bad gateway", http.StatusBadGateway, `{"error":"bad gateway"}`, codes.Unavailable},
+		{"503 unavailable", http.StatusServiceUnavailable, `{"error":"unavailable"}`, codes.Unavailable},
+		{"504 gateway timeout", http.StatusGatewayTimeout, `{"error":"gateway timeout"}`, codes.Unavailable},
 	}
 
 	for _, tt := range tests {
@@ -523,16 +523,16 @@ func TestE2ECancelAPIErrorStatusCodes(t *testing.T) {
 		httpBody   string
 		grpcCode   codes.Code
 	}{
-		{"400 bad request", 400, `{"error":"bad request"}`, codes.InvalidArgument},
-		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
-		{"403 forbidden", 403, `{"error":"forbidden"}`, codes.PermissionDenied},
-		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
-		{"409 conflict", 409, `{"error":"duplicate order"}`, codes.AlreadyExists},
-		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.Unavailable},
-		{"500 internal", 500, `{"error":"internal server error"}`, codes.Internal},
-		{"502 bad gateway", 502, `{"error":"bad gateway"}`, codes.Unavailable},
-		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Unavailable},
-		{"504 gateway timeout", 504, `{"error":"gateway timeout"}`, codes.Unavailable},
+		{"400 bad request", http.StatusBadRequest, `{"error":"bad request"}`, codes.InvalidArgument},
+		{"401 unauthorized", http.StatusUnauthorized, `{"error":"unauthorized"}`, codes.Unauthenticated},
+		{"403 forbidden", http.StatusForbidden, `{"error":"forbidden"}`, codes.PermissionDenied},
+		{"404 not found", http.StatusNotFound, `{"error":"not found"}`, codes.NotFound},
+		{"409 conflict", http.StatusConflict, `{"error":"duplicate order"}`, codes.AlreadyExists},
+		{"429 rate limited", http.StatusTooManyRequests, `{"error":"too many requests"}`, codes.Unavailable},
+		{"500 internal", http.StatusInternalServerError, `{"error":"internal server error"}`, codes.Internal},
+		{"502 bad gateway", http.StatusBadGateway, `{"error":"bad gateway"}`, codes.Unavailable},
+		{"503 unavailable", http.StatusServiceUnavailable, `{"error":"unavailable"}`, codes.Unavailable},
+		{"504 gateway timeout", http.StatusGatewayTimeout, `{"error":"gateway timeout"}`, codes.Unavailable},
 	}
 
 	for _, tt := range tests {
@@ -572,16 +572,16 @@ func TestE2EDetailAPIErrorStatusCodes(t *testing.T) {
 		httpBody   string
 		grpcCode   codes.Code
 	}{
-		{"400 bad request", 400, `{"error":"bad request"}`, codes.InvalidArgument},
-		{"401 unauthorized", 401, `{"error":"unauthorized"}`, codes.Unauthenticated},
-		{"403 forbidden", 403, `{"error":"forbidden"}`, codes.PermissionDenied},
-		{"404 not found", 404, `{"error":"not found"}`, codes.NotFound},
-		{"409 conflict", 409, `{"error":"duplicate order"}`, codes.AlreadyExists},
-		{"429 rate limited", 429, `{"error":"too many requests"}`, codes.Unavailable},
-		{"500 internal", 500, `{"error":"internal server error"}`, codes.Internal},
-		{"502 bad gateway", 502, `{"error":"bad gateway"}`, codes.Unavailable},
-		{"503 unavailable", 503, `{"error":"unavailable"}`, codes.Unavailable},
-		{"504 gateway timeout", 504, `{"error":"gateway timeout"}`, codes.Unavailable},
+		{"400 bad request", http.StatusBadRequest, `{"error":"bad request"}`, codes.InvalidArgument},
+		{"401 unauthorized", http.StatusUnauthorized, `{"error":"unauthorized"}`, codes.Unauthenticated},
+		{"403 forbidden", http.StatusForbidden, `{"error":"forbidden"}`, codes.PermissionDenied},
+		{"404 not found", http.StatusNotFound, `{"error":"not found"}`, codes.NotFound},
+		{"409 conflict", http.StatusConflict, `{"error":"duplicate order"}`, codes.AlreadyExists},
+		{"429 rate limited", http.StatusTooManyRequests, `{"error":"too many requests"}`, codes.Unavailable},
+		{"500 internal", http.StatusInternalServerError, `{"error":"internal server error"}`, codes.Internal},
+		{"502 bad gateway", http.StatusBadGateway, `{"error":"bad gateway"}`, codes.Unavailable},
+		{"503 unavailable", http.StatusServiceUnavailable, `{"error":"unavailable"}`, codes.Unavailable},
+		{"504 gateway timeout", http.StatusGatewayTimeout, `{"error":"gateway timeout"}`, codes.Unavailable},
 	}
 
 	for _, tt := range tests {
