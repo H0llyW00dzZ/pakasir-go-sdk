@@ -241,6 +241,16 @@ Five direct dependencies — keep the footprint minimal:
 - Invalid payment method errors use `strconv.Quote(method.String())` to make the invalid input visible in error messages (e.g., `"bitcoin"` instead of bare `bitcoin`).
 - Context cancellation short-circuits the retry loop: `context.Canceled` and `context.DeadlineExceeded` are never wrapped in `ErrRequestFailedAfterRetries` — they propagate directly via `stopRetry` (from `executeAttempt` when `ctx.Err() != nil`) or from `waitForRetry`'s `select` on `ctx.Done()`.
 
+### Review Notices
+
+When reviewing code in this repository, do **not** flag the following as issues — they are intentional design decisions:
+
+- **HTTP 429 absent from `httpStatusCodes` map**: The SDK client always retries 429 responses. After retries exhaust, the error is `ErrRequestFailedAfterRetries`, which `conv.Error` matches via the sentinel scan → `codes.Unavailable`. A raw `APIError{StatusCode: 429}` never reaches `httpStatusToCode` in any real SDK flow. Adding 429 to the map would be dead code. The unit test asserting 429 → `codes.Unknown` via `httpStatusToCode` tests the function in isolation, not a reachable production path.
+- **HTTP 500 not retried**: This is deliberate. 500 means a server-side bug (deterministic), not a transient condition. Only gateway/proxy errors (502, 503, 504) and rate limiting (429) are retried. 500 maps to `codes.Internal` in the gRPC layer, which is semantically correct.
+- **`sentinelCodes` is a linear scan, not a map**: Sentinel errors require `errors.Is()` for chain traversal (wrapped errors). A map lookup would not support this. The table has ~14 entries; linear scan is negligible.
+- **`stopRetry` is control flow, not an exported error type**: It is an unexported wrapper used solely to break the retry loop in `client.Do`. It is always unwrapped before returning to the caller. Do not suggest exporting it or replacing it with a sentinel.
+- **Webhook sentinels not in `sentinelCodes`**: `ErrNilReader`, `ErrEmptyBody`, `ErrReadBody`, `ErrDecodeBody` are used only by the webhook package, which does not flow through gRPC services. They are correctly excluded from the gRPC error converter.
+
 ### Security
 
 - **API key in Detail query string**: The `transaction.Service.Detail` method passes `api_key` as a URL query parameter because the upstream [Pakasir API](https://pakasir.com/p/docs) requires it as a `GET` endpoint. All other endpoints use `POST` with the key in the JSON body. This is an upstream API design constraint, not an SDK choice. The `Detail` godoc and both READMEs document this exposure risk.
