@@ -164,7 +164,7 @@ func TestDo4xxReturnsAPIError(t *testing.T) {
 
 	var apiErr *sdkerrors.APIError
 	require.ErrorAs(t, err, &apiErr)
-	assert.Equal(t, 400, apiErr.StatusCode)
+	assert.Equal(t, http.StatusBadRequest, apiErr.StatusCode)
 }
 
 func TestDoRetryOnGatewayErrorThenSuccess(t *testing.T) {
@@ -214,7 +214,7 @@ func TestDo500NotRetried(t *testing.T) {
 	// Must surface as an APIError, not ErrRequestFailedAfterRetries.
 	var apiErr *sdkerrors.APIError
 	require.ErrorAs(t, err, &apiErr)
-	assert.Equal(t, 500, apiErr.StatusCode)
+	assert.Equal(t, http.StatusInternalServerError, apiErr.StatusCode)
 	assert.NotErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
 }
 
@@ -1006,7 +1006,7 @@ func TestAsTypeAPIErrorOn4xx(t *testing.T) {
 
 	apiErr, ok := sdkerrors.AsType[*sdkerrors.APIError](err)
 	require.True(t, ok, "4xx error must be extractable via AsType")
-	assert.Equal(t, 403, apiErr.StatusCode)
+	assert.Equal(t, http.StatusForbidden, apiErr.StatusCode)
 	assert.Contains(t, apiErr.Body, "forbidden")
 }
 
@@ -1030,7 +1030,7 @@ func TestAsTypeAPIErrorOnRetriesExhausted(t *testing.T) {
 	assert.ErrorIs(t, err, sdkerrors.ErrRequestFailedAfterRetries)
 	apiErr, ok := sdkerrors.AsType[*sdkerrors.APIError](err)
 	require.True(t, ok, "APIError must be reachable inside retries-exhausted chain")
-	assert.Equal(t, 503, apiErr.StatusCode)
+	assert.Equal(t, http.StatusServiceUnavailable, apiErr.StatusCode)
 	assert.Contains(t, apiErr.Body, "unavailable")
 }
 

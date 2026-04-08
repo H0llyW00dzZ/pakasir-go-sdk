@@ -17,6 +17,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,7 @@ import (
 )
 
 func TestAPIErrorError(t *testing.T) {
-	e := &APIError{StatusCode: 400, Body: "bad request"}
+	e := &APIError{StatusCode: http.StatusBadRequest, Body: "bad request"}
 	assert.Equal(t, "pakasir api error: status 400: bad request", e.Error())
 }
 
@@ -142,10 +143,10 @@ func TestNewMultipleCauses(t *testing.T) {
 // --- AsType ---
 
 func TestAsTypeMatch(t *testing.T) {
-	err := fmt.Errorf("wrapped: %w", &APIError{StatusCode: 404, Body: "not found"})
+	err := fmt.Errorf("wrapped: %w", &APIError{StatusCode: http.StatusNotFound, Body: "not found"})
 	apiErr, ok := AsType[*APIError](err)
 	require.True(t, ok)
-	assert.Equal(t, 404, apiErr.StatusCode)
+	assert.Equal(t, http.StatusNotFound, apiErr.StatusCode)
 	assert.Equal(t, "not found", apiErr.Body)
 }
 
@@ -163,24 +164,24 @@ func TestAsTypeNilError(t *testing.T) {
 }
 
 func TestAsTypeDirect(t *testing.T) {
-	err := &APIError{StatusCode: 500, Body: "internal"}
+	err := &APIError{StatusCode: http.StatusInternalServerError, Body: "internal"}
 	apiErr, ok := AsType[*APIError](err)
 	require.True(t, ok)
-	assert.Equal(t, 500, apiErr.StatusCode)
+	assert.Equal(t, http.StatusInternalServerError, apiErr.StatusCode)
 }
 
 func TestAsTypeDeeplyNested(t *testing.T) {
-	err := fmt.Errorf("a: %w", fmt.Errorf("b: %w", &APIError{StatusCode: 502, Body: "bad gateway"}))
+	err := fmt.Errorf("a: %w", fmt.Errorf("b: %w", &APIError{StatusCode: http.StatusBadGateway, Body: "bad gateway"}))
 	apiErr, ok := AsType[*APIError](err)
 	require.True(t, ok)
-	assert.Equal(t, 502, apiErr.StatusCode)
+	assert.Equal(t, http.StatusBadGateway, apiErr.StatusCode)
 	assert.Equal(t, "bad gateway", apiErr.Body)
 }
 
 // --- HasType ---
 
 func TestHasTypeMatch(t *testing.T) {
-	err := fmt.Errorf("wrapped: %w", &APIError{StatusCode: 403, Body: "forbidden"})
+	err := fmt.Errorf("wrapped: %w", &APIError{StatusCode: http.StatusForbidden, Body: "forbidden"})
 	assert.True(t, HasType[*APIError](err))
 }
 
@@ -194,6 +195,6 @@ func TestHasTypeNilError(t *testing.T) {
 }
 
 func TestHasTypeDeeplyNested(t *testing.T) {
-	err := fmt.Errorf("a: %w", fmt.Errorf("b: %w", &APIError{StatusCode: 500, Body: "internal"}))
+	err := fmt.Errorf("a: %w", fmt.Errorf("b: %w", &APIError{StatusCode: http.StatusInternalServerError, Body: "internal"}))
 	assert.True(t, HasType[*APIError](err))
 }
