@@ -44,6 +44,7 @@
 //   - Encoding/decoding errors → [codes.Internal]
 //   - Size limit errors → [codes.ResourceExhausted]
 //   - Retries exhausted → [codes.Unavailable]
+//   - Permanent network failures → [codes.Unavailable]
 //   - [context.Canceled] → [codes.Canceled]
 //   - [context.DeadlineExceeded] → [codes.DeadlineExceeded]
 //   - [sdkerrors.APIError] → mapped by HTTP status code

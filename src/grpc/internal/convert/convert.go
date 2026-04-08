@@ -130,12 +130,13 @@ func TimeString(ts *timestamppb.Timestamp) string {
 //   - Encoding/decoding errors ([sdkerrors.ErrEncodeJSON], [sdkerrors.ErrDecodeJSON]) → [codes.Internal]
 //   - Size limit errors ([sdkerrors.ErrResponseTooLarge], [sdkerrors.ErrBodyTooLarge]) → [codes.ResourceExhausted]
 //   - [sdkerrors.ErrRequestFailedAfterRetries] → [codes.Unavailable]
+//   - [sdkerrors.ErrRequestFailed] (permanent network failures) → [codes.Unavailable]
 //   - [context.Canceled] → [codes.Canceled]
 //   - [context.DeadlineExceeded] → [codes.DeadlineExceeded]
 //   - [sdkerrors.APIError] → mapped by HTTP status code (400 → [codes.InvalidArgument],
 //     401 → [codes.Unauthenticated], 403 → [codes.PermissionDenied],
 //     404 → [codes.NotFound], 409 → [codes.AlreadyExists],
-//     503 → [codes.Unavailable], other 5xx → [codes.Internal],
+//     502/503/504 → [codes.Unavailable], other 5xx → [codes.Internal],
 //     other non-5xx → [codes.Unknown])
 //   - All other errors → [codes.Internal]
 func Error(err error) error {
@@ -164,6 +165,11 @@ func Error(err error) error {
 	case errors.Is(err, sdkerrors.ErrRequestFailedAfterRetries):
 		return status.Error(codes.Unavailable, err.Error())
 
+	// Permanent network failures (TLS certificate errors, DNS NXDOMAIN,
+	// address misconfiguration) — the server is unreachable, not buggy.
+	case errors.Is(err, sdkerrors.ErrRequestFailed):
+		return status.Error(codes.Unavailable, err.Error())
+
 	case errors.Is(err, context.Canceled):
 		return status.Error(codes.Canceled, err.Error())
 
@@ -182,6 +188,14 @@ func Error(err error) error {
 // httpStatusToCode maps an HTTP status code to the appropriate gRPC
 // [codes.Code] following the conventions in gRPC documentation.
 //
+// Gateway/proxy errors (502, 503, 504) all map to [codes.Unavailable]
+// because they indicate the upstream service is unreachable, not a bug
+// in the server's logic. This is consistent regardless of whether retries
+// are enabled: with retries the SDK exhausts attempts and returns
+// [sdkerrors.ErrRequestFailedAfterRetries] (caught earlier by [Error]),
+// but with retries disabled (WithRetries(0)) the raw [sdkerrors.APIError]
+// reaches this function directly.
+//
 // HTTP 429 is intentionally absent: the SDK client retries 429 responses,
 // so the error reaching this function is always
 // [sdkerrors.ErrRequestFailedAfterRetries] (mapped to [codes.Unavailable]
@@ -198,7 +212,7 @@ func httpStatusToCode(statusCode int) codes.Code {
 		return codes.NotFound
 	case 409:
 		return codes.AlreadyExists
-	case 503:
+	case 502, 503, 504:
 		return codes.Unavailable
 	default:
 		if statusCode >= 500 {
