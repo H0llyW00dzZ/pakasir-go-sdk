@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all proto lint-proto build test test-cover test-e2e vet fmt clean deps header
+.PHONY: all proto lint-proto build test test-cover test-e2e vet fmt gocyclo clean deps header
 
 # Test packages (excludes generated proto code that has no tests).
 TEST_PKGS := $(shell go list ./src/... | grep -v /grpc/pakasir/)
@@ -88,6 +88,17 @@ vet: header
 	go vet ./src/...
 	@echo "==> Done."
 
+# Run cyclomatic complexity analysis (requires gocyclo).
+# Scans src/ only — generated protobuf code in grpc/pakasir/v1 is excluded.
+# Usage:
+#   make gocyclo                    # report functions with complexity > 10
+#   make gocyclo CYCLO_THRESHOLD=15 # custom threshold
+CYCLO_THRESHOLD ?= 10
+gocyclo: header
+	@echo "==> Running gocyclo (threshold=$(CYCLO_THRESHOLD))..."
+	gocyclo -over $(CYCLO_THRESHOLD) $(shell go list -f '{{.Dir}}' ./src/... | grep -v /grpc/pakasir/)
+	@echo "==> Done."
+
 # Check formatting (must produce no output).
 fmt: header
 	@echo "==> Checking gofmt..."
@@ -113,9 +124,10 @@ clean: header
 ## Dependencies
 ## ──────────────────────────────────────────────
 
-# Install required tools for proto generation.
+# Install required tools for proto generation and analysis.
 deps: header
 	go install github.com/bufbuild/buf/cmd/buf@latest
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
 	@echo "==> Done."
